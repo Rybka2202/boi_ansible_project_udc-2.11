@@ -1,0 +1,71 @@
+---
+code: udc
+
+execution_environment: ansible_kyndryl_udc
+
+playbooks:
+  - name: udc
+    playbook: main.yml
+    title: "Unified Data Collector"
+    description: >
+      Unified Data Collector collects data required
+      for performing Best practice evaluation, from
+      Compute (OS and applications), Storage, Network
+      and Resiliency devices, sent to the Best Practice
+      engine for processing and providing reporting
+      and insights in AIOPs.
+    execution_frequency: daily
+    releases:
+      - 2.4.0
+      - 2.4.1
+      - 2.5.0
+      - 2.6.0
+      - 2.7.0
+      - 2.8.0
+      - 2.9.0
+      - 2.10.0
+      - 2.11.0
+    supported_platforms:
+      - "automation"
+      - "ansible"
+      - "windows"
+      - "ad"
+      - "unix"
+      - "aix"
+      - "linux"
+      - "solaris"
+      - "vios"
+      - "middleware"
+      - "apachehttp"
+      - "tomcat"
+      - "iis"
+      - "wlp"
+      - "database"
+      - "oracle"
+      - "db2"
+      - "mssql"
+      - "postgresql"
+      - "backup"
+      - "netbackup"
+      - "tsm"
+      - "spectrum-protect"
+      - "cloud"
+      - "aws"
+      - "azure"
+      - "gcp"
+      - "monitoring"
+      - "sciencelogic"
+      - "netcool"
+      - "network"
+      - "ciscoaci"
+      - "ciscoios"
+      - "cisconxos"
+      - "ciscoasa"
+      - "f5bigip"
+      - "junos"
+      - "nsxt"
+      - "otheros"
+      - "virtualization"
+      - "esxi"
+      - "vcenter"
+      - "hmc"

@@ -1,0 +1,166 @@
+{
+	"definitions": {},
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://github.kyndryl.net/Continuous-Engineering/ansible_project_udc/kyndryl-governance/udc.json",
+	"title": "Asset parameters, by default applied into extra_vars",
+	"type": "object",
+	"required": [
+		"udc_endpoint",
+		"bac_id"
+	],
+	"properties": {
+		"udc_endpoint": {
+			"$id": "#root/udc_endpoint",
+			"title": "Choose Supported Platform",
+			"description": "Define supported devices to map. The list of acceptable values can be found: https://github.kyndryl.net/Continuous-Engineering/ansible_project_udc#currently-supported-devices",
+			"type": "string",
+			"enum": [
+				"active_directory",
+				"aix",
+				"broadcom_brocade",
+				"checkpoint_firewall",
+				"cisco_asa",
+				"cisco_csp",
+				"cisco_ios",
+				"cisco_iosxr",
+				"cisco_mds",
+				"cisco_nxos",
+				"cisco_wlc",
+				"citrix_netscaler",
+				"commvault_simpana",
+				"emc_isilon",
+				"fortinet_fortigate",
+				"hpe_3par",
+				"ibm_flashsystem",
+				"ibm_svc",
+				"ibm_v5000",
+				"ibm_v7000",
+				"iis",
+				"juniper_junos",
+				"juniper_srx",
+				"mssql",
+				"netapp_cdot",
+				"oracle_db",
+				"paloalto_panos",
+				"purestorage_flasharray",
+				"purestorage_flashblade",
+				"rhel",
+				"sciencelogic_sl1",
+				"solaris",
+				"suse",
+				"veritas_netbackup",
+				"windows",
+				"apache_tomcat",
+				"apache_webserver",
+				"centos",
+				"debian",
+				"db2_unix",
+				"f5_ltm",
+				"hmc",
+				"hp_procurve",
+				"hpe_alletra_9k",
+				"ibm_netcoolimpact",
+				"ibm_netcoolobjectserver",
+				"ibm_netcoolprobe",
+				"ibm_netcoolwebgui",
+				"ibm_wlp",
+				"oracle_linux",
+				"postgresql",
+				"ubuntu",
+				"vio",
+				"veritas_clusterunix",
+				"netweaver_aix",
+				"openssh_unix",
+				"sap_hana",
+				"sudo_unix",
+				"veeam"
+			]
+		},
+		"bac_id": {
+			"$id": "#root/blueid",
+			"title": "BlueID Account ID",
+			"description": "BAC-ID is a unique identifier on an account from BlueID system.",
+			"type": "string",
+			"pattern": "^(BAM|BAC)[a-zA-Z0-9]{7}$"
+		},
+		"chipid": {
+			"$id": "#root/chipid",
+			"title": "CHIP ID",
+			"description": "ECM (Enterprise Compliance Management) supports GEO lists of active Account's Chip ID which is updated everyday. Can be left as default.",
+			"type": "string",
+			"default": "MyChip"
+		},
+		"udc_results": {
+			"$id": "#root/udc_results",
+			"title": "udc_results",
+			"description": "Controls if results should be created and uploaded to SFS.",
+			"type": "string",
+			"default": "send",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		},
+		"udc_ecm": {
+			"$id": "#root/udc_ecm",
+			"title": "udc_ecm",
+			"description": "Controls if results should be created and sent to ECM. Accepted values are 'off', 'create', 'send'. Default is 'create'.",
+			"type": "string",
+			"default": "create",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		},
+		"udc_escm": {
+			"$id": "#root/udc_escm",
+			"title": "udc_escm",
+			"description": "Controls if results should be created and sent to ESCM. Accepted values are 'off', 'create', 'send'. Default is 'create'.",
+			"type": "string",
+			"default": "create",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		},
+		"udc_aiops": {
+			"$id": "#root/udc_aiops",
+			"title": "udc_aiops",
+			"description": "Controls if results should be created and sent to AIOps. Accepted values are 'off', 'create', 'send'. Default is 'send'.",
+			"type": "string",
+			"default": "send",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		},
+		"udc_uat": {
+			"$id": "#root/udc_uat",
+			"title": "udc_uat",
+			"description": "Controls if results should be created and sent to UAT. Accepted values are 'off', 'create', 'send'. Default is 'send'.",
+			"type": "string",
+			"default": "send",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		},
+		"udc_invscanner": {
+			"$id": "#root/udc_invscanner",
+			"title": "udc_invscanner",
+			"description": "Controls if results should be created and sent to Inventory Services. Accepted values are 'off', 'create', 'send'. Default is 'send'.",
+			"type": "string",
+			"default": "send",
+			"enum": [
+				"off",
+				"create",
+				"send"
+			]
+		}
+	}
+}

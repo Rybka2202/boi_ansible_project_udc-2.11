@@ -1,0 +1,74 @@
+# CACF specific variables
+account_code: "{{ gsma_code | default('NA') | lower }}"
+trans_num: "{{ tower_job_id | default(omit) }}"
+udc_chipid: "{{ chipid | default('MyChip') }}"
+udc_bac_id: "{{ bac_id | default(blueid | default(hwsw_blueid_bac_id | default('BAC9999999'))) }}"
+udc_account_name: "{{ account_name | default('SDE') | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}"
+udc_country: "{{ country | default('Kyndryl') }}"
+# event-socks-tunnel reqs
+acc_id: "{{ account_code }}"
+transaction_id: "{{ trans_num | default(omit) }}"
+# Generic variables
+tower_collector: "{{ tower_job_id is defined | ternary(true, false) }}"
+# UDC tpchc_version and build_version
+udc_tpchc_version: "2.11.0"
+udc_build_version: "2.11.0.20250430"
+# List of pexpect-based data collectors -> j2 files are just placeholders!
+udc_pexpect_list:
+  - ibm_ap_a9000
+  - ibm_ap_xiv
+  - ibm_ap_ds8000
+  - ibm_mw_spectrumprotect
+  - emc_ap_powerstore
+udc_parent_child_list:
+  - oracle_db_oracle
+  - ibm_db_db2unix
+  - postgresql_db_postgresql
+  - ibm_ap_wlp
+# Namebases part of this list will not have osversion in their rules_server segments
+udc_rules_server_skip_osversion:
+  - apache_mw_tomcat
+  - apache_mw_webserver
+  - ibm_mw_netcoolimpact
+  - ibm_mw_netcoolobjectserver
+  - ibm_mw_netcoolprobe
+  - ibm_mw_netcoolwebgui
+  - sciencelogic_ap_sl1
+  - veritas_mw_clusterunix
+  - veritas_mw_netbackup
+  - microsoft_db_mssql
+  - microsoft_mw_iis
+  - unix_mw_sudo
+  - sap_mw_netweaver
+  - sap_db_hana
+  - veeam_mw_vbr
+  - unix_mw_openssh
+# ansible_network_os
+udc_network_device_list:
+  - cisco_ap_asa
+  - cisco_ap_ios
+  - cisco_ap_iosxr
+  - cisco_ap_mds
+  - cisco_ap_nxos
+  - juniper_ap_junos
+  - juniper_ap_srx
+# netmiko
+udc_netmiko_device_list:
+  - cisco_ap_wlc
+  - paloalto_ap_firewall
+  - f5_ap_ltm
+  - hp_ap_procurve
+# Fact gathering
+udc_gather_subset_unix:
+  - '!all'
+  - '!min'
+  - 'distribution'
+  - 'python'
+  - 'env'
+  - 'architecture'
+udc_gather_subset_windows:
+  - '!all'
+  - '!min'
+  - 'distribution'
+latest_techspec_version:
+  oracle_os_solaris.11: 'v1.0'

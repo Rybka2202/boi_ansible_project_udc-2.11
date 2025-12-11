@@ -1,0 +1,277 @@
+---
+udc_return_codes:
+  unexpected_failure:
+    rc_support: developer
+    rc_group: framework_playbook
+    rc_number: 2201
+    rc_message: The playbook failed unexpectedly. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/
+  missing_mandatory_var:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1400
+    rc_message: At least one mandatory variable is missing
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/missing_mandatory_var/
+  minimum_ansible_version:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1401
+    rc_message: Ansible version is outdated - requirement is >= 2.15
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/minimum_ansible_version/
+  misconfigured_techspec_control:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1402
+    rc_message: Tech Spec control variables are misconfigured - please refer to the documentation
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/misconfigured_techspec_control/
+  win_localhost_missing:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1403
+    rc_message: localhost needs to be in the Limit field when targeting Windows endpoints (event-socks-tunnel prerequisite)
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/win_localhost_missing/
+  j2_not_found:
+    rc_support: developer
+    rc_group: framework_playbook
+    rc_number: 2200
+    rc_message: No template file found for the specified device type. This is likely an issue on our side, please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/j2_not_found/
+  sfs_role_error:
+    rc_support: account
+    rc_group: service_issue
+    rc_number: 1500
+    rc_message: The SFS upload role has reported an error. Please check the Details tab for Artifacts to see what was the issue
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/sfs_role_error/
+  socks_role_error:
+    rc_support: account
+    rc_group: service_issue
+    rc_number: 1501
+    rc_message: >-
+      The event-socks-tunnel role has reported that the socks file was not created. Please check the Details tab for Artifacts to see what was the issue
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/socks_role_error/
+  local_template_issue:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1404
+    rc_message: >-
+      Construncting setting_local variable based on local j2 template failed.
+      This is most likely caused by syntax errors in your template file, please investigate
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/local_template_issue/
+  wrong_encoding:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1405
+    rc_message: >-
+      Ansible (not UDC!) expects text to be UTF-8 encoded. This error means ansible encountered a different encoding it could not handle in one of the datasets.
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/wrong_encoding/
+  appliance_auth:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1101
+    rc_message: Failed to authenticate on target using the Machine credential
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/appliance_auth/
+  appliance_unreachable:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1102
+    rc_message: Could not connect to the target
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/appliance_unreachable/
+  api_auth:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1103
+    rc_message: Failed to authenticate on target using the Network credential
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/api_auth/
+  api_unreachable:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1104
+    rc_message: Could not connect to the target's API
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/api_unreachable/
+  compute_conn:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1105
+    rc_message: Could not connect to the target
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/compute_conn/
+  oracle_authorization:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1406
+    rc_message: ansible_user cannot become oracle user or udc_db_user has insufficient permissions for database access
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/oracle_authorization/
+  hyperscaler_pwsh:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1700
+    rc_message: pwsh is not present in the Execution Environment. Check if correct EE is used
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/hyperscaler_pwsh/
+  netapp_authorization:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1407
+    rc_message: insufficient permissions - user cannot execute 'echo'
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/netapp_authorization/
+  powershell_script_error:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3200
+    rc_message: Script failed to execute successfully. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/powershell_script_error/
+  sat_conn:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1107
+    rc_message: Could not connect to the SAT server (Push-to-SAT method)
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/sat_conn/
+  launch_conn:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1108
+    rc_message: Could not connect to the Launch Node using the Machine credential
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/launch_conn/
+  prereq_vendorcli_missing:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1701
+    rc_message: VendorCLI driver is missing
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/prereq_vendorcli_missing/
+  prereq_pexpect_missing:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1702
+    rc_message: Pexpect is missing or wrong version is present
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/prereq_pexpect_missing/
+  prereq_netmiko_missing:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1703
+    rc_message: Netmiko is missing or wrong version is present
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/prereq_netmiko_missing/
+  pexpect_auth_conn:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1109
+    rc_message: Could not connect to the target (Authentication phase)
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_auth_conn/
+  pexpect_auth_auth:
+    rc_support: account
+    rc_group: connection_issue
+    rc_number: 1110
+    rc_message: Could not authenticate to the target (Authentication phase)
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_auth_auth/
+  pexpect_auth_eof_pseudo_tty:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1408
+    rc_message: ansible_pipelining / ansible_ssh_pipelining should be set to false (Authentication phase)
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_auth_eof_pseudo_tty/
+  pexpect_auth_eof_unknown:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3201
+    rc_message: Unknown EOFerror in Authentication phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_auth_eof_unknown/
+  pexpect_auth_timeout_unknown:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3202
+    rc_message: Unknown TIMEOUT error in Authentication phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_auth_timeout_unknown/
+  python_wtf_ioerror_unhandled:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3203
+    rc_message: Unhandled error in Write-to-File phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/python_wtf_ioerror_unhandled/
+  pexpect_send_command_eof:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3204
+    rc_message: Unknown EOF error in Send-Command phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_send_command_eof/
+  pexpect_send_command_timeout:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3205
+    rc_message: Unknown TIMEOUT error in Send-Command phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_send_command_timeout/
+  pexpect_send_command_unhandled:
+    rc_support: undetermined
+    rc_group: framework_playbook
+    rc_number: 3206
+    rc_message: Unhandled error in Send-Command phase. Please open an incident against BPS Support
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/pexpect_send_command_unhandled/
+  invalid_check_list:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1409
+    rc_message: check_list variable is misconfigured
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/invalid_check_list/
+  oracle_oratab:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1410
+    rc_message: /etc/oratab is missing or cannot be read
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/oracle_oratab/
+  compute_privilege:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1411
+    rc_message: Privilege escalation error. The ansible_user should have passwordless sudo rights
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/compute_privilege/
+  prereq_pwsh_missing:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1704
+    rc_message: Powershell (as pwsh) is missing
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/prereq_pwsh_missing/
+  prereq_pandas_missing:
+    rc_support: account
+    rc_group: prerequisite
+    rc_number: 1705
+    rc_message: Pandas is missing or wrong version is present
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/prereq_pandas_missing/
+  db2_no_running_instances:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1412
+    rc_message: No running DB2 instances detected
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/db2_no_running_instances/
+  minimum_powershell_version:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1413
+    rc_message: Powershell version is outdated - requirement is >= 5.1
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/minimum_powershell_version/
+  hyperscaler_cred_missing:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1414
+    rc_message: A required credential is missing for Hyperscaler data collection
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/hyperscaler_cred_missing/
+  wlp_no_servers_found:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1415
+    rc_message: UDC did not find any WLP servers - please make sure the target server hosts WLP instances and your udc_wlp_base_dir is set up correctly
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/wlp_no_servers_found/
+  psql_no_installation_found:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1416
+    rc_message: No installation of PostgreSQL detected
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest/returncodes/psql_no_installation_found/
+  # These are so generic they have no standalone page
+  misconfigured_optional_var:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1417
+    rc_message: An optional variable is misconfigured, please check the documentation to see what the problem is
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest
+  missing_aap_credential:
+    rc_support: account
+    rc_group: misconfiguration
+    rc_number: 1418
+    rc_message: Red Hat Ansible Automation Platform credential is missing
+    documentation: https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc/latest
