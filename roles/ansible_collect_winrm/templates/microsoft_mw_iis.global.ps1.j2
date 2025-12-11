@@ -1,0 +1,1295 @@
+Param (
+    $LogPath,
+    $LogFile,
+    [String]$AnsibleMode,
+    [String]$DeviceName,
+    [String]$ZipLog,
+    [String]$account,
+    [String]$blueid,
+    [String]$chipid,
+    [String]$location,
+    [String]$satteam,
+    [String]$hwswdomain,
+    [String]$udcmode,
+    [String]$tpchcversion,
+    [String]$buildversion
+)
+
+# SATHC variables
+$tpchc_description = "microsoft_mw_iis"          # Value for description
+$tpchc_identifier = "None"                          # Value for identifier
+$log_to_logfile = $true                             # Always generate log file
+$computer = ($env:COMPUTERNAME).ToLower()
+
+# Default variables
+if(!($tpchcversion)) {
+   $tpchcversion = "2.5.0"                       # Value for tpchversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -Tpchversion parameter. Using default: $tpchcversion"
+}
+ # Code level for this script
+if(!($buildversion)) {
+   $buildversion	= "2.5.0.20240924"           # Value for buildversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -BuildVersion parameter. Using default: $buildversion"
+}
+if(!($AnsibleMode)){
+    $AnsibleMode = $false
+    Write-Host -ForegroundColor Yellow "Missing -AnsibleMode parameter. Using default: $false"
+}
+if(!($DeviceName)){
+    $DeviceName = $computer+"_microsoft_mw_iis"
+    Write-Host -ForegroundColor Yellow "Missing -DeviceName parameter. Using default: $DeviceName"
+}
+if(!($ZipLog)){
+    $ZipLog = $True
+    Write-Host -ForegroundColor Yellow "Missing -ZipLog parameter. Using default: $True"
+}
+if(!($account)){
+    $account = "SDE"
+    Write-Host -ForegroundColor Yellow "Missing -Account parameter. Using default: $account"
+}
+if(!($blueid)){
+    $blueid = "BAC9999999"
+    Write-Host -ForegroundColor Yellow "Missing -BlueID parameter. Using default: $blueid"
+}
+if(!($chipid)){
+    $chipid = "MyChip"
+    Write-Host -ForegroundColor Yellow "Missing -ChipID parameter. Using default: $chipid"
+}
+if(!($location)){
+    $location = "Tucson"
+    Write-Host -ForegroundColor Yellow "Missing -Location parameter. Using default: $location"
+}
+if(!($satteam)){
+    $satteam = "Compute"
+    Write-Host -ForegroundColor Yellow "Missing -SATTeam parameter. Using default: $satteam"
+}
+if(!($hwswdomain)){
+    $hwswdomain = "Compute"
+    Write-Host -ForegroundColor Yellow "Missing -HWSWDomain parameter. Using default: $hwswdomain"
+}
+if(!($udcmode)){
+    $udcmode = $false
+    Write-Host -ForegroundColor Yellow "Missing -UDCmode parameter. Using default: $udcmode"
+}
+if(!($LogPath)){
+    $LogPath = "$DeviceName.out"
+    Write-Host -ForegroundColor Yellow "Missing -LogPath parameter. Using default: $LogPath"
+}
+if(!($LogFile)){
+    $LogFile = "$DeviceName.log"
+    Write-Host -ForegroundColor Yellow "Missing -LogFile parameter. Using default: $LogFile"
+}
+$crt = 0
+
+function MsgPrint([string]$ShowStep, [string]$textMsg) {
+    if ($log_to_logfile) {
+        switch ($ShowStep.ToLower()) {
+            "info"		{Write-Output "INFO:     $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "highlight"	{Write-Output "HIGHLIGHT:$(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "ok"		{Write-Output "OK:       $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "error"		{Write-Output "ERROR:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "warning"	{Write-Output "WARNING:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "filelist"	{Write-Output "FILES:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            default		{Write-Output "DEFAULT:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+        }
+    }
+	return
+}
+
+# System variables
+$HostIP = (
+    Get-WmiObject Win32_NetworkAdapterConfiguration |
+    Where-Object {$_.IPAddress -ne $null -and $_.DefaultIPGateway -ne $null}
+).IPAddress[0]
+$computerOS = (Get-CimInstance -Class Win32_OperatingSystem).Caption
+$websites = Get-Website
+$SystemUsers = ".+ANONYMOUS.+","Everyone",".+IUSR.+"
+$regex = ($SystemUsers -join '|')
+
+# Cleaning old logs
+$loglocation = Get-Location
+try{(Get-ChildItem -Path $loglocation -Filter "$DeviceName.out" -ErrorAction Stop).FullName | Remove-Item -Force -ErrorAction Stop}catch{}
+try{(Get-ChildItem -Path $loglocation -Filter "$DeviceName.log" -ErrorAction Stop).FullName | Remove-Item -Force -ErrorAction Stop}catch{}
+
+function SAT-Header{
+    Write "#### <devicelist_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """Devicename"";""Deviceaddress"";""Devicetype""" | Out-File -Append -FilePath $LogPath
+    Write """$DeviceName"";""$HostIP"";""$tpchc_description""" | Out-File -Append -FilePath $LogPath
+    Write "#### </devicelist_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    Write "#### <tpchc_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """tpchc_version"";""build_version"";""blue_id"";""chip_id"";""account"";""location"";""tpchc_description"";""tpchc_identifier"";""satteam"";""hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write """$tpchcversion"";""$buildversion"";""$blueid"";""$chipid"";""$account"";""$location"";""$tpchc_description"";""$tpchc_identifier"";""$satteam"";""$hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write "#### </tpchc_cfg>`r`n" | out-file -Append -FilePath $LogPath
+
+    Write "#### <policy_cfg>" | Out-File -Append -FilePath $LogPath
+    Write "#### </policy_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    if ($udcmode -eq $false) {
+        $timestamp = get-date -format "yyyyMMdd-HHmmss"
+        $OS = Get-CimInstance -Class Win32_OperatingSystem
+        $OS_Version = $OS.Version
+        $PowerShell_Version = $PSVersionTable.PSVersion.tostring()
+        $iso8601DateTime = Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz"
+        Write "#### <cacf_cfg>" | Out-File -Append -FilePath $LogPath
+        Write """collected_on"";""timestamp"";""gsma_code"";""tower_version"";""os_distribution"";""os_version"";""ansible_version"";""python_version"";""powershell_version"";""udc_version"";""healthcheck_timestamp_utc""" | Out-File -Append -FilePath $LogPath
+        Write """$computer"";""$timestamp"";""$account"";"""";""Windows"";""$OS_Version"";"""";""0"";""$PowerShell_Version"";"""";""$iso8601DateTime""" | Out-File -Append -FilePath $LogPath
+        Write "#### </cacf_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+    }
+}
+
+try{
+    $WebServerRole = (Get-WindowsFeature | Where-Object {$_.Installed -eq "True" -and $_.FeatureType -eq "Role" -and $_.name -eq "Web-Server"}).name
+    if (!($WebServerRole)){
+        # Exit. Terminate log file
+        # SATHC header start
+        SAT-Header
+        $crt++;MsgPrint "error" "$crt. Web-Server role: missing"
+        $crt++;MsgPrint "error" "$crt. DATA COLLECTION ON $computer FINISHED WITH ERRORS (1)"
+        Write-Host
+        Write-Host -ForegroundColor Red "Execute script on server with Web-Server role enabled!"
+        Write-Output "$(Get-Date -Format "yyyy-mm-ddTHH.mm.ss"): Data collection status: FAILED" | Out-File $LogFile -encoding UTF8 -Append
+        Exit
+    }
+    else{
+        # SATHC header start
+        SAT-Header
+        $DataCollectionStatus = "OK"
+    }
+}
+catch{
+    # Exit. Terminate log file
+    # SATHC header start
+    SAT-Header
+    $crt++;MsgPrint "error" "$crt. Not a Windows Server"
+    $crt++;MsgPrint "error" "$crt. DATA COLLECTION ON $computer FINISHED WITH ERRORS (2)"
+    Write-Output "$(Get-Date -Format "yyyy-mm-ddTHH.mm.ss"): Data collection status: FAILED" | Out-File $LogFile -encoding UTF8 -Append
+    Write-Host
+    Write-Host -ForegroundColor Red "Run script on a Windows Server!"
+    Exit
+}
+Write-Host -ForegroundColor Yellow "Web-Server role is enabled. OK!"
+Write-Host
+
+$accessMaskFolders = [ordered]@{
+  [uint32]'0x80000000' = 'GenericRead'
+  [uint32]'0x40000000' = 'GenericWrite'
+  [uint32]'0x20000000' = 'GenericExecute'
+  [uint32]'0x10000000' = 'GenericAll'
+  [uint32]'0x02000000' = 'MaximumAllowed'
+  [uint32]'0x01000000' = 'AccessSystemSecurity'
+  [uint32]'0x00100000' = 'Synchronize'
+  [uint32]'0x00080000' = 'WriteOwner' #Take Ownership
+  [uint32]'0x00040000' = 'WriteDAC' #Change Permissions
+  [uint32]'0x00020000' = 'ReadControl' #Read Permissions
+  [uint32]'0x00010000' = 'Delete' #Delete
+  [uint32]'0x00000100' = 'WriteAttributes' #Write Attributes
+  [uint32]'0x00000080' = 'ReadAttributes' #Read Attributes
+  [uint32]'0x00000040' = 'DeleteChild' #Delete Subfolders and Files
+  [uint32]'0x00000020' = 'Execute/Traverse' #Traverse Folder/Execute File
+  [uint32]'0x00000010' = 'WriteExtendedAttributes' #Write Extended Attributes
+  [uint32]'0x00000008' = 'ReadExtendedAttributes' #Read Extended Attributes
+  [uint32]'0x00000004' = 'AppendData/AddSubdirectory' #Create Folders / Append Data
+  [uint32]'0x00000002' = 'WriteData/AddFile' #Create Files / Write Data
+  [uint32]'0x00000001' = 'ReadData/ListDirectory' #List Folder/Read Data
+}
+
+$accessMaskRegistry = [ordered]@{
+  [uint32]'0x80000000' = 'GenericRead'
+  [uint32]'0x40000000' = 'GenericWrite'
+  [uint32]'0x20000000' = 'GenericExecute'
+  [uint32]'0x10000000' = 'GenericAll'
+  [uint32]'0x02000000' = 'MaximumAllowed'
+  [uint32]'0x01000000' = 'AccessSystemSecurity'
+  [uint32]'0x00100000' = 'Synchronize'
+  [uint32]'0x00080000' = 'WriteOwner'
+  [uint32]'0x00040000' = 'WriteDAC'
+  [uint32]'0x00020000' = 'ReadControl'
+  [uint32]'0x00010000' = 'Delete'
+  [uint32]'0x00000100' = 'WriteAttributes'
+  [uint32]'0x00000080' = 'ReadAttributes'
+  [uint32]'0x00000040' = 'DeleteChild'
+  [uint32]'0x00000020' = 'CreateLink'
+  [uint32]'0x00000010' = 'Notify'
+  [uint32]'0x00000008' = 'EnumerateSubkeys'
+  [uint32]'0x00000004' = 'CreateSubkey'
+  [uint32]'0x00000002' = 'SetValue'
+  [uint32]'0x00000001' = 'QueryValue'
+}
+
+<#{% if ('SystemInfo' in check_list or 'all' in check_list) and '-SystemInfo' not in check_list %}#>
+$crt++
+MsgPrint "info" "$crt. System Information"
+Write "#### <SystemInfo>" | out-file -Append -FilePath $LogPath
+$SystemInfo = New-Object -TypeName PSobject
+$computerSystem = Get-CimInstance -Class Win32_ComputerSystem
+$computerSystemProduct = Get-CimInstance -Class Win32_ComputerSystemProduct
+$computerBIOS = Get-CimInstance -Class Win32_BIOS
+$computerOS = Get-CimInstance -Class Win32_OperatingSystem
+$computerCPU = Get-CimInstance -Class Win32_Processor
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+# set up the different possible types of licenses in an array:
+$licenseStatus=@{0="Unlicensed"; 1="Licensed"; 2="OOBGrace"; 3="OOTGrace"; 4="NonGenuineGrace"; 5="Notification"; 6="ExtendedGrace"}
+# Now get the license details and assign the object to $r
+$r = Get-CimInstance -Class SoftwareLicensingProduct | Where-Object {$_.ApplicationID -eq "55c92734-d682-4d71-983e-d6ec3f16059f" -AND $_.PartialProductKey -ne $null}
+$PageFileResults = Get-CimInstance -Class Win32_PageFileUsage
+$IISinfo = Get-ItemProperty -Path registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\InetStp\
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "MachineName" -Value $computerSystem.Name
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Manufacturer" -Value $computerSystem.Manufacturer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Model" -Value $computerSystem.Model
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value $computerOS.caption
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem ServicePack" -Value $computerOS.ServicePackMajorVersion
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BuildNumber" -Value $computerOS.BuildNumber
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Version" -Value $computerOS.Version
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "InstallDate" -value $ComputerOS.InstallDate.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "License" -Value $licenseStatus[[int]$r.LicenseStatus]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Uptime" -value  $computerOS.LastBootUpTime.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BootDevice" -Value $computerOS.BootDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDevice" -Value $computerOS.SystemDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDirectory" -Value $computerOS.SystemDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "WindowsDirectory" -Value $computerOS.WindowsDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OSArchitecture" -Value $computerOS.OSArchitecture
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PowerShellVersion" -Value $PSVersionTable.PSVersion.tostring()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CurrentTimeZone" -Value $computerOS.CurrentTimeZone
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Debug" -Value $computerOS.Debug
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Distributed" -Value $computerOS.Distributed
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "EncryptionLevel" -Value $computerOS.EncryptionLevel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "DNS Host Name" -Value $computerSystem.DNSHostName
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Domain Role" -Value $DomainRole[$computerSystem.DomainRole]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Roles" -Value ($computerSystem.Roles -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Serial Number" -Value $computerBIOS.SerialNumber
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Type" -Value "0000" #Not defined
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Firmware" -Value "$($IISinfo.MajorVersion).$($IISinfo.MinorVersion)"
+
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU Array" -Value $computerCPU.Name[0]
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU" -Value $computerCPU.Name
+}
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value ($computerCPU.NumberOfCores | Measure-Object -sum).sum
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value $computerCPU.NumberOfCores
+}
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value ($computerCPU.NumberOfLogicalProcessors | Measure-Object -sum).sum
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value $computerCPU.NumberOfLogicalProcessors
+}
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "RAM (GB)" -Value ([math]::Round($computerSystem.TotalPhysicalMemory/1GB,2))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePath" -Value ($PageFileResults.Description -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "AutoManagedPageFile" -Value $computerSystem.AutomaticManagedPagefile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileSize(MB)" -Value ($PageFileResults.AllocatedBaseSize -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileUsage(MB)" -Value ($PageFileResults.CurrentUsage -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePeakUsage(MB)" -Value ($PageFileResults.PeakUsage -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "TempPageFileInUse" -Value ($PageFileResults.TempPageFile -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "ProductKeyChannel" -Value $r.ProductKeyChannel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "UUID" -Value $computerSystemProduct.UUID
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "FQDN" -Value $([System.Net.Dns]::GetHostByName($env:computerName).HostName)
+$SystemInfo |  Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-SystemInfo.csv
+Get-content -Path $logdir\$crt-SystemInfo.csv | out-file -Append -FilePath $LogPath
+Write "#### </SystemInfo>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+
+
+<#{% if ('System_services' in check_list or 'all' in check_list) and 'System_services' not in check_list %}
+#>
+$crt++;MsgPrint "info" "$crt. System services"
+Write "#### <System_services>" | out-file -Append -FilePath $LogPath
+$services=@()
+Get-CIMInstance Win32_Service | sort-object -property Name | foreach-object {
+    $services += [PSCustomObject]@{
+        "MachineName" = $computer
+        "DisplayName" = $_.caption
+        "Name" = $_.Name
+        "LogonAccount" = $_.startname
+        "Status" = $_.started
+        "StartType" = $_.StartMode
+    }
+}
+$services | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </System_services>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+
+<#{% if ('Website_Logging' in check_list or 'all' in check_list) and 'Website_Logging' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Website logging"
+Write "#### <Website_Logging>" | out-file -Append -FilePath $LogPath
+try {
+    $IISlogging=@()
+    foreach ($site in $websites){
+        $IISlogFile = Get-ItemProperty -Path "IIS:\Sites\$($site.Name)" -Name logfile
+        $LogDirectory = ($IISlogFile.Directory) -replace ("%SystemDrive%", "$env:SystemDrive")
+        $IISlogging += @([pscustomobject]@{
+            MachineName = $computer
+            Website = $site.Name;
+            State = $site.State;
+            Directory = $LogDirectory;
+            SystemDrive = $env:SystemDrive -eq (Split-Path -Path $LogDirectory -Qualifier);
+            Enabled = $IISlogFile.Enabled;
+            FlushByEntryCountw3clog = $IISlogFile.FlushByEntryCountw3clog;
+            LocalTimeRollover = $IISlogFile.LocalTimeRollover;
+            LogExtFileFlags = $IISlogFile.LogExtFileFlags;
+            LogFormat = $IISlogFile.LogFormat;
+            LogSiteID = $IISlogFile.LogSiteID;
+            LogTargetw3c = $IISlogFile.LogTargetw3c;
+            MaxLogLineLength = $IISlogFile.MaxLogLineLength;
+            Period = $IISlogFile.Period;
+            PsChildName = $IISlogFile.PsChildName;
+            PsDrive = $IISlogFile.PsDrive;
+            PsParentPath = $IISlogFile.PsParentPath;
+            PsPath = $IISlogFile.PsPath;
+        })
+    }
+    $IISlogging | convertto-csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+}
+catch {
+    MsgPrint "error" "$crt. Logging Settings:$error[0]"
+}
+Write "#### </Website_Logging>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Audit_Metabase' in check_list or 'all' in check_list) and 'Audit_Metabase' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Audit metabase"
+Write "#### <Audit_Metabase> "| out-file -Append -FilePath $LogPath
+$iisMetabaseArray = @()
+try {
+    $iisMetabase = Get-LogProperties -Name Microsoft-IIS-Configuration/Operational -ErrorAction Stop | select @{N='MachineName';E={$computer}},Name,AutoBackup,Enabled,MaxLogSize,Retention,Type
+    $iisMetabaseArray += $iisMetabase
+}
+catch{
+    $iisMetabaseError = [pscustomobject]@{
+        MachineName = $computer
+        Name = "Microsoft-IIS-Configuration/Operational"
+        AutoBackup = "n/a"
+        Enabled = "n/a"
+        MaxLogSize = "n/a"
+        Retention = "n/a"
+        Type = "n/a"
+    }
+    $iisMetabaseArray += $iisMetabaseError
+}
+$iisMetabaseArray | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Audit_Metabase>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Audit_SystemFolders' in check_list or 'all' in check_list) and '-Audit_SystemFolders' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Audit system folders"
+Write "#### <Audit_SystemFolders>" | out-file -Append -FilePath $LogPath
+$folders =  "$env:systemroot\system32\inetsrv","$env:systemroot\system32\inetsrv\config","$env:systemroot\sysWOW64\inetsrv\config"
+$vIdentity="Everyone"
+$sacl = $null
+$sacl=@()
+foreach ($folder in $folders){
+    $SACLIdentity = Get-Acl -Path $folder -Audit
+    $identity = $SACLIdentity.Audit | Where-Object {$_.IdentityReference -match $vIdentity}
+    if ($identity) {
+        foreach ($idnt in $identity){
+            $permissionIdentity=@()
+            if ($idnt.FileSystemRights) {
+                $permissions = $accessMaskFolders.Keys | Where-Object { $idnt.FileSystemRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskFolders[$_];}
+                $AuditFlags = $idnt.AuditFlags
+                $IsInherited = $idnt.IsInherited
+                $InheritanceFlags = $idnt.InheritanceFlags
+                $PropagationFlags = $idnt.PropagationFlags
+            }
+            else{
+                $IsInherited = "n/a"
+                $InheritanceFlags ="n/a";
+                $AuditFlags = "Missing";
+                $permissionIdentity = "n/a"
+            }
+            $sacl += [pscustomobject]@{
+                MachineName = $computer
+                Path=$folder;
+                Identity = $vIdentity
+                AuditFlags = $AuditFlags
+                InheritanceFlags = $InheritanceFlags
+                FileSystemRights = $permissionIdentity -join ','
+                PropagationFlags =$PropagationFlags
+                IsInherited = $IsInherited
+            }
+        }
+    }
+    else{
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Path = $folder;
+            Identity = $vIdentity
+            AuditFlags = "Missing";
+            InheritanceFlags = "n/a";
+            FileSystemRights = "n/a"
+            PropagationFlags = "n/a";
+            IsInherited = "n/a"
+        }
+    }
+}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Audit_SystemFolders>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Audit_WebsitesFolders' in check_list or 'all' in check_list) and 'Audit_WebsitesFolders' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Audit websites folders"
+Write "#### <Audit_WebsitesFolders>" | out-file -Append -FilePath $LogPath
+$vIdentity="Everyone"
+$sacl = $null
+$sacl=@()
+foreach ($item in $websites){
+    $permissionIdentity=@()
+    $sitename = $item.name
+    $folder = $item.physicalPath -replace ("%systemdrive%",$env:SystemDrive)
+    $SACLIdentity = Get-Acl -Path $folder -Audit
+    $identity = $SACLIdentity.Audit | Where-Object {$_.IdentityReference -match $vIdentity}
+    if ($identity) {
+        foreach ($idnt in $identity){
+            $permissionIdentity=@()
+            if ($idnt.FileSystemRights) {
+                $permissions = $accessMaskFolders.Keys | Where-Object { $idnt.FileSystemRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskFolders[$_];}
+                $AuditFlags = $idnt.AuditFlags
+                $IsInherited = $idnt.IsInherited
+                $InheritanceFlags = $idnt.InheritanceFlags
+                $PropagationFlags = $idnt.PropagationFlags
+            }
+            else{
+                $IsInherited = "n/a"
+                $InheritanceFlags ="n/a";
+                $AuditFlags = "Missing";
+                $permissionIdentity = "n/a"
+            }
+            $sacl += [pscustomobject]@{
+                MachineName = $computer
+                Website=$sitename
+                Path=$folder;
+                Identity = $vIdentity
+                AuditFlags = $AuditFlags
+                InheritanceFlags = $InheritanceFlags
+                FileSystemRights = $permissionIdentity -join ','
+                PropagationFlags =$PropagationFlags
+                IsInherited = $IsInherited
+            }
+        }
+    }
+    else{
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Website=$sitename
+            Path = $folder;
+            Identity = $vIdentity
+            AuditFlags = "Missing";
+            InheritanceFlags = "n/a";
+            FileSystemRights = "n/a"
+            PropagationFlags = "Missing";
+            IsInherited = "n/a"
+        }
+    }
+}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Audit_WebsitesFolders>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Audit_Registry' in check_list or 'all' in check_list) and 'Audit_Registry' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Audit registry"
+Write "#### <Audit_Registry>" | out-file -Append -FilePath $LogPath
+$folders =  "HKLM:\SYSTEM\CurrentControlSet\Services\W3SVC"
+$vIdentity="Everyone"
+$sacl = $null
+$sacl=@()
+foreach ($folder in $folders){
+    $SACLIdentity = Get-Acl -Path $folder -Audit
+    $identity = $SACLIdentity.Audit | Where-Object {$_.IdentityReference -match $vIdentity}
+    if ($identity) {
+        foreach ($idnt in $identity){
+            $permissionIdentity=@()
+            if ($idnt.RegistryRights) {
+                $permissions = $accessMaskRegistry.Keys | Where-Object { $idnt.RegistryRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskRegistry[$_];}
+                $AuditFlags = $idnt.AuditFlags
+                $IsInherited = $idnt.IsInherited
+                $InheritanceFlags = $idnt.InheritanceFlags
+                $PropagationFlags = $idnt.PropagationFlags
+            }
+            else{
+                $IsInherited = "n/a"
+                $InheritanceFlags ="n/a"
+                $AuditFlags = "Missing";
+                $permissionIdentity = "n/a"
+            }
+            $sacl += [pscustomobject]@{
+                MachineName = $computer
+                Path=$folder
+                Identity = $vIdentity
+                AuditFlags = $AuditFlags
+                InheritanceFlags = $InheritanceFlags
+                FileSystemRights = $permissionIdentity -join ','
+                PropagationFlags =$PropagationFlags
+                IsInherited = $IsInherited
+            }
+        }
+    }
+    else{
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Path = $folder;
+            Identity = $vIdentity
+            AuditFlags = "Missing"
+            InheritanceFlags = "n/a"
+            FileSystemRights = "n/a"
+            PropagationFlags = "n/a"
+            IsInherited = "n/a"
+        }
+    }
+}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Audit_Registry>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Permissions_Metabase' in check_list or 'all' in check_list) and '-Permissions_Metabase' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Permissions metabase"
+Write "#### <Permissions_Metabase>" | out-file -Append -FilePath $LogPath
+$sacl = $null
+$sacl = @()
+$folder = "$env:systemroot\system32\inetsrv"
+$MetabaseIUSR = (Get-Acl -path $folder).Access | Where-Object {$_.IdentityReference -like "*IUSR*"}
+if ($MetabaseIUSR){
+    $sacl += $MetabaseIUSR
+}else{
+    $sacl += [pscustomobject]@{
+        IdentityReference = "none"
+        AccessControlType = "none"
+        FileSystemRights = "none"
+    }
+}
+$sacl | select @{N='MachineName';E={$computer}},@{N='Path';E={$folder}},IdentityReference,AccessControlType,FileSystemRights | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Permissions_Metabase>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Permissions_SystemFolders' in check_list or 'all' in check_list) and '-Permissions_SystemFolders' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Permissions system folders"
+Write "#### <Permissions_SystemFolders>" | out-file -Append -FilePath $LogPath
+$folders =  "$env:systemroot\system32\inetsrv","$env:systemroot\system32\inetsrv\config","$env:systemroot\sysWOW64\inetsrv\config"
+$sacl = $null
+$sacl=@()
+foreach ($folder in $folders){
+    $identity = (Get-Acl -path $folder).Access
+    foreach ($idnt in $identity){
+        $permissionIdentity=@()
+        $permissions = $accessMaskFolders.Keys | Where-Object { $idnt.FileSystemRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskFolders[$_];}
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Path = $folder
+            Identity = ($idnt.IdentityReference) -join ","
+            AccessControlType = ($idnt.AccessControlType) -join ","
+            InheritanceFlags = ($idnt.InheritanceFlags) -join ","
+            FileSystemRights = $permissionIdentity -join ","
+            IsInherited = ($idnt.IsInherited) -join ","
+            PropagationFlags = ($idnt.PropagationFlags) -join ","
+        }
+    }
+}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Permissions_SystemFolders>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Permissions_Websites' in check_list or 'all' in check_list) and 'Permissions_Websites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Permissions websites folders"
+Write "#### <Permissions_Websites>" | out-file -Append -FilePath $LogPath
+$sacl = $null
+$sacl=@()
+foreach ($item in $websites){
+    $sitename = $item.name
+    $folder = $item.physicalPath -replace ("%systemdrive%",$env:SystemDrive)
+    $identity = (Get-Acl -path $folder).Access
+    foreach ($idnt in $identity){
+        $permissionIdentity=@()
+        $permissions = $accessMaskFolders.Keys | Where-Object { $idnt.FileSystemRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskFolders[$_];}
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Website=$sitename
+            Path = $folder
+            Identity = ($idnt.IdentityReference) -join ","
+            AccessControlType = ($idnt.AccessControlType) -join ","
+            InheritanceFlags = ($idnt.InheritanceFlags) -join ","
+            FileSystemRights = $permissionIdentity -join ","
+            IsInherited = ($idnt.IsInherited) -join ","
+            PropagationFlags = ($idnt.PropagationFlags) -join ","
+        }
+    }
+}
+$sacl_websites = $sacl | Where-Object {$_.Identity -like "*IUSR*"}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Permissions_Websites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Permissions_Registry' in check_list or 'all' in check_list) and 'Permissions_Registry' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Permissions registry"
+Write "#### <Permissions_Registry>" | out-file -Append -FilePath $LogPath
+$folders =  "HKLM:\SYSTEM\CurrentControlSet\Services\W3SVC"
+$sacl = $null
+$sacl=@()
+foreach ($folder in $folders){
+    $identity = (Get-Acl -path $folder).Access
+    foreach ($idnt in $identity){
+        $permissionIdentity=@()
+        $permissions = $accessMaskRegistry.Keys | Where-Object { $idnt.RegistryRights.value__ -band $_ } | ForEach-Object { $permissionIdentity+=$accessMaskRegistry[$_];}
+        $sacl += [pscustomobject]@{
+            MachineName = $computer
+            Path = $folder
+            Identity = ($idnt.IdentityReference) -join ","
+            AccessControlType = ($idnt.AccessControlType) -join ","
+            InheritanceFlags = ($idnt.InheritanceFlags) -join ","
+            FileSystemRights = $permissionIdentity -join ","
+            IsInherited = ($idnt.IsInherited) -join ","
+            PropagationFlags = ($idnt.PropagationFlags) -join ","
+        }
+    }
+}
+$sacl | sort folder | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Permissions_Registry>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Permissions_IUSR_websites' in check_list or 'all' in check_list) and 'Permissions_IUSR_websites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Permissions IUSR websites"
+Write "#### <Permissions_IUSR_websites>" | out-file -Append -FilePath $LogPath
+$sacl = @()
+if ($sacl_websites){
+    $sacl += $sacl_websites
+}else{
+    $sacl += [pscustomobject]@{
+        Identity = "none"
+        AccessControlType = "none"
+        FileSystemRights = "none"
+    }
+}
+$sacl | select Machinename,Website,Identity,AccessControlType,FileSystemRights |
+ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Permissions_IUSR_websites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Application_pools' in check_list or 'all' in check_list) and 'Application_pools' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Application pools"
+Write "#### <Application_pools>" | out-file -Append -FilePath $LogPath
+$applicationPools = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $ApplicationPool = $website.applicationPool
+    $ApplicationPoolidentity = (Get-ChildItem -Path IIS:\AppPools\ | where name -EQ $ApplicationPool | Select @{e={$_.processModel.identityType};l="IdentityType"}).IdentityType
+    $applicationPools += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        ApplicationPool = $ApplicationPool
+        ApplicationPoolidentity = $ApplicationPoolidentity
+    })
+}
+$applicationPools| ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Application_pools>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Authentication_Forms' in check_list or 'all' in check_list) and 'Authentication_Forms' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Authentication Forms"
+Write "#### <Authentication_Forms>" | out-file -Append -FilePath $LogPath
+$authenticationForms = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $authenticationForms += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        RequireSSL = $(Get-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$websiteName" -filter "system.web/authentication/forms" -name "requireSSL").Value
+    })
+}
+$authenticationForms| ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Authentication_Forms>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Global_NET_trust_level' in check_list or 'all' in check_list) and 'Global_NET_trust_level' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Global .NET trust level"
+Write "#### <Global_NET_trust_level>" | out-file -Append -FilePath $LogPath
+Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT' -filter "system.web/trust" -name "level" | select @{N='MachineName';E={$computer}},value |
+ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Global_NET_trust_level>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('CookieProtection_Mode' in check_list or 'all' in check_list) and 'CookieProtection_Mode' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Cookie Protection Mode"
+Write "#### <CookieProtection_Mode>" | out-file -Append -FilePath $LogPath
+$CookieProtectionMode = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $CookieProtection = Get-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$websiteName" -filter 'system.web/authentication/forms' -name 'protection'
+    $CookieProtectionMode += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        CookieProtection = $CookieProtection
+    })
+}
+$CookieProtectionMode | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </CookieProtection_Mode>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('httpErrors_Mode' in check_list or 'all' in check_list) and 'httpErrors_Mode' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Http Errors Mode"
+Write "#### <httpErrors_Mode>" | out-file -Append -FilePath $LogPath
+$httpErrorsMode = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $ErrorsMode = Get-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$websiteName" -filter "system.webServer/httpErrors" -name "errorMode"
+    $httpErrorsMode += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        ErrorsMode = $ErrorsMode
+    })
+}
+$httpErrorsMode | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </httpErrors_Mode>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Password_Format' in check_list or 'all' in check_list) and 'Password_Format' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Password Format"
+Write "#### <Password_Format>" | out-file -Append -FilePath $LogPath
+$PasswordFormatMode = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $PasswordFormat = Get-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$websiteName" -filter 'system.web/authentication/forms/credentials' -name 'passwordFormat'
+    $PasswordFormatMode += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        PasswordFormat = $PasswordFormat
+    })
+}
+$PasswordFormatMode | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Password_Format>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('TLSBasic_Mode' in check_list or 'all' in check_list) and 'TLSBasic_Mode' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Password Format"
+Write "#### <TLSBasic_Mode>" | out-file -Append -FilePath $LogPath
+$TLSBasicMode = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $RequireSSL = Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -location $websiteName -filter 'system.webServer/security/access' -name 'sslFlags'
+    if ($RequireSSL -ne "Ssl"){
+        $RequireSSL = "False"
+    }else{$RequireSSL = "True"}
+    $TLSBasicMode += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        RequireSSL = $RequireSSL
+    })
+}
+$TLSBasicMode | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </TLSBasic_Mode>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('MachineKey_Validation' in check_list or 'all' in check_list) and 'MachineKey_Validation' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Machine Key Validation"
+Write "#### <MachineKey_Validation>" | out-file -Append -FilePath $LogPath
+$MachineKeyValidation = @()
+$MachineKeyValidation += @([pscustomobject]@{
+    MachineName = $computer
+    MachineKey = Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT' -filter "system.web/machineKey" -name "validation"
+})
+$MachineKeyValidation | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </MachineKey_Validation>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Allow_Double_Escaping' in check_list or 'all' in check_list) and 'Allow_Double_Escaping' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Allow Double Escaping"
+Write "#### <Allow_Double_Escaping>" | out-file -Append -FilePath $LogPath
+$AllowDoubleEscaping = @()
+$AllowDoubleEscaping += @([pscustomobject]@{
+    MachineName = $computer
+    DoubleEscaping = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/security/requestFiltering" -name "allowDoubleEscaping").value
+})
+$AllowDoubleEscaping | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Allow_Double_Escaping>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Unlisted_File_Extensions' in check_list or 'all' in check_list) and 'Unlisted_File_Extensions' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Unlisted File Extensions"
+Write "#### <Unlisted_File_Extensions>" | out-file -Append -FilePath $LogPath
+$UnlistedFileExtensions = @()
+$UnlistedFileExtensions += @([pscustomobject]@{
+    MachineName = $computer
+    AllowUnlisted = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/security/requestFiltering/fileExtensions" -name "allowUnlisted").value
+})
+$UnlistedFileExtensions | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Unlisted_File_Extensions>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('NotListedIsapisAllowed' in check_list or 'all' in check_list) and 'NotListedIsapisAllowed' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. NotListedIsapisAllowed"
+Write "#### <NotListedIsapisAllowed>" | out-file -Append -FilePath $LogPath
+$NotListedIsapisAllowedConfig = @()
+$NotListedIsapisAllowedConfig += @([pscustomobject]@{
+    MachineName = $computer
+    NotListedIsapisAllowed = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/security/isapiCgiRestriction" -name "notListedIsapisAllowed").Value
+})
+$NotListedIsapisAllowedConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </NotListedIsapisAllowed>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('NotListedCgisAllowed' in check_list or 'all' in check_list) and 'NotListedCgisAllowed' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. NotListedCgisAllowed"
+Write "#### <NotListedCgisAllowed>" | out-file -Append -FilePath $LogPath
+$notListedCgisAllowedConfig = @()
+$notListedCgisAllowedConfig += @([pscustomobject]@{
+    MachineName = $computer
+    NotListedCgisAllowed = (Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/security/isapiCgiRestriction" -name "notListedCgisAllowed").Value
+})
+$notListedCgisAllowedConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </NotListedCgisAllowed>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('NULL_Cipher_Suites' in check_list or 'all' in check_list) and 'NULL_Cipher_Suites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. NULL Cipher Suites"
+Write "#### <NULL_Cipher_Suites>" | out-file -Append -FilePath $LogPath
+try{
+    $NULLCipherSuites = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\NULL' -name 'Enabled' -ErrorAction Stop
+    $NULLCipherSuites = $NULLCipherSuites.Enabled
+}
+catch{
+    $NULLCipherSuites = "registry key not found"
+}
+$NULLCipherSuitesConfig = @()
+$NULLCipherSuitesConfig += @([pscustomobject]@{
+    MachineName = $computer
+    NULLCipherSuites = $NULLCipherSuites
+})
+$NULLCipherSuitesConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </NULL_Cipher_Suites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('DES_Cipher_Suites' in check_list or 'all' in check_list) and 'DES_Cipher_Suites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. DES Cipher Suites"
+Write "#### <DES_Cipher_Suites>" | out-file -Append -FilePath $LogPath
+try{
+    $DESCipherSuites = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\DES 56/56' -name 'Enabled' -ErrorAction Stop
+    $DESCipherSuites = $DESCipherSuites.Enabled
+}
+catch{
+    $DESCipherSuites = "registry key not found"
+}
+$DESCipherSuitesConfig = @()
+$DESCipherSuitesConfig += @([pscustomobject]@{
+    MachineName = $computer
+    DESCipherSuites = $DESCipherSuites
+})
+$DESCipherSuitesConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </DES_Cipher_Suites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('AES_128_128_Cipher_Suites' in check_list or 'all' in check_list) and 'AES_128_128_Cipher_Suites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. AES 128/128 Cipher Suites"
+Write "#### <AES_128_128_Cipher_Suites>" | out-file -Append -FilePath $LogPath
+try{
+    $AES128_128CipherSuites = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\AES 128/128' -name 'Enabled' -ErrorAction Stop
+    $AES128_128CipherSuites = $AES128_128CipherSuites.Enabled
+}
+catch{
+    $AES128_128CipherSuites = "registry key not found"
+}
+$AES128_128CipherSuitesConfig = @()
+$AES128_128CipherSuitesConfig += @([pscustomobject]@{
+    MachineName = $computer
+    AES128_128CipherSuites = $AES128_128CipherSuites
+})
+$AES128_128CipherSuitesConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </AES_128_128_Cipher_Suites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('AES_256_256_Cipher_Suites' in check_list or 'all' in check_list) and 'AES_256_256_Cipher_Suites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. AES 256/256 Cipher Suites"
+Write "#### <AES_256_256_Cipher_Suites>" | out-file -Append -FilePath $LogPath
+try{
+    $AES256_256CipherSuites = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\AES 256/256' -name 'Enabled' -ErrorAction Stop
+    $AES256_256CipherSuites = $AES256_256CipherSuites.Enabled
+}
+catch{
+    $AES256_256CipherSuites = "registry key not found"
+}
+$AES256_256CipherSuitesConfig = @()
+$AES256_256CipherSuitesConfig += @([pscustomobject]@{
+    MachineName = $computer
+    AES256_256CipherSuites = $AES256_256CipherSuites
+})
+$AES256_256CipherSuitesConfig | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </AES_256_256_Cipher_Suites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('RC4_Cipher_Suites' in check_list or 'all' in check_list) and 'RC4_Cipher_Suites' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. RC4 Cipher Suites"
+Write "#### <RC4_Cipher_Suites>" | out-file -Append -FilePath $LogPath
+try{
+    $RC4_40_128 = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\RC4 40/128' -name 'Enabled' -ErrorAction Stop
+    $RC4_40_128 = $RC4_40_128.Enabled
+}
+catch{$RC4_40_128 = "registry key not found"}
+try{
+    $RC4_56_128 = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\RC4 56/128' -name 'Enabled' -ErrorAction Stop
+    $RC4_56_128 = $RC4_56_128.Enabled
+}
+catch{$RC4_56_128 = "registry key not found"}
+try{
+    $RC4_64_128 = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\RC4 64/128' -name 'Enabled' -ErrorAction Stop
+    $RC4_64_128 = $RC4_64_128.Enabled
+}
+catch{$RC4_64_128 = "registry key not found"}
+try{
+    $RC4_128_128 = Get-ItemProperty -path 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\RC4 128/128' -name 'Enabled' -ErrorAction Stop
+    $RC4_128_128 = $RC4_128_128.Enabled
+}
+catch{$RC4_128_128 = "registry key not found"}
+Write """MachineName"";""RegistryKey"";""Value""" | Out-File -Append -FilePath $LogPath
+Write """$computer"";""RC4_40_128"";""$RC4_40_128""" | Out-File -Append -FilePath $LogPath
+Write """$computer"";""RC4_56_128"";""$RC4_56_128""" | Out-File -Append -FilePath $LogPath
+Write """$computer"";""RC4_64_128"";""$RC4_64_128""" | Out-File -Append -FilePath $LogPath
+Write """$computer"";""RC4_128_128"";""$RC4_128_128""" | Out-File -Append -FilePath $LogPath
+Write "#### </RC4_Cipher_Suites>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('HttpOnly_Cookies' in check_list or 'all' in check_list) and 'HttpOnly_Cookies' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. HttpOnly Cookies"
+Write "#### <HttpOnly_Cookies>" | out-file -Append -FilePath $LogPath
+$httpOnlyCookiesAttribute = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $httpOnlyCookies = Get-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST/$websiteName"  -filter "system.web/httpCookies" -name "httpOnlyCookies"
+    $httpOnlyCookiesAttribute += @([pscustomobject]@{
+        MachineName = $computer
+        WebsiteName = $websiteName
+        State = $website.state
+        HttpOnlyCookies = $httpOnlyCookies.value
+    })
+}
+$httpOnlyCookiesAttribute | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </HttpOnly_Cookies>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Anonymous_Authentication' in check_list or 'all' in check_list) and 'Anonymous_Authentication' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Anonymous authentication"
+Write "#### <Anonymous_Authentication>" | out-file -Append -FilePath $LogPath
+$anonAuthFilter = "/system.WebServer/security/authentication/AnonymousAuthentication"
+$anonAuthArray = @()
+foreach ($site in $websites){
+    $Website = $site.Name
+    $State = $site.State
+    try{
+        $anonAuth = Get-WebConfigurationProperty -filter $anonAuthFilter -name Enabled -location $Website
+        $anonAuthUser = Get-WebConfigurationProperty -filter $anonAuthFilter -name userName -location $Website
+        $AppPoolUser = (Get-WebConfiguration system.webServer/security/authentication/anonymousAuthentication -Recurse | where {$_.enabled -eq $true}).location
+        if ($AppPoolUser -eq $Website){$AppPoolIdentityUser = "True"}else{$AppPoolIdentityUser = "False"}
+        $anonAuthState = @([pscustomobject]@{
+            MachineName = $computer
+            Website = $site.Name;
+            State = $site.State;
+            AnonymousEnabled = $anonAuth.Value
+            UserName = $anonAuthUser.Value
+            AppPoolIdentityUser = $AppPoolIdentityUser
+        })
+        $anonAuthArray += $anonAuthState
+    }
+    catch{
+        $anonAuthStateError = @([pscustomobject]@{
+            MachineName = $computer
+            Website = $site.Name;
+            State = $site.State;
+            AnonymousEnabled = "n/a"
+            UserName = "n/a"
+            AppPoolIdentityUser = "n/a"
+        })
+        $anonAuthArray += $anonAuthStateError
+    }
+}
+$anonAuthArray | convertto-csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+
+Write "#### </Anonymous_Authentication>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Directory_Browsing' in check_list or 'all' in check_list) and 'Directory_Browsing' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Directory browsing"
+Write "#### <Directory_Browsing>" | out-file -Append -FilePath $LogPath
+$directoryBrowseObj = $null
+$WebServerDirectoryBrowsing = (Get-WebConfigurationProperty -filter /system.webServer/directoryBrowse -name enabled).value
+foreach ($site in $websites){
+    $website = $site.name
+    $WebsitePsPath = $site.PsPath
+    $WebsiteDirectoryBrowsing = (Get-WebConfigurationProperty -pspath $WebsitePsPath -location $website -filter /system.webServer/directoryBrowse -name enabled).value
+    $directoryBrowseObj += @([pscustomobject]@{
+        MachineName = $computer
+        Website = $website;
+        ServerDirectoryBrowsing = $WebServerDirectoryBrowsing;
+        WebsiteDirectoryBrowsing = $WebsiteDirectoryBrowsing;
+    })
+}
+$directoryBrowseObj | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </Directory_Browsing>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('Websites_Binding' in check_list or 'all' in check_list) and 'Websites_Binding' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. Websites binding"
+Write "#### <Websites_Binding>" | out-file -Append -FilePath $LogPath
+$websiteInfo = @()
+foreach ($website in $websites) {
+    $websiteName = $website.Name
+    $bindingCollection = (Get-Item IIS:\Sites\$websiteName).Bindings.Collection
+    foreach ($item in $bindingCollection){
+        $binding = $item.bindingInformation
+        $Header = $binding | %{$_.split(':')[-1]} | sort -Unique
+        if(!($Header)){
+            $Header = "n/a"
+        }
+
+        # Initialize SSL details to null
+        $sslCertificate = $null
+        $sslThumbprint = $null
+        $sslSubject = $null
+        $sslExpiration = $null
+        $sslExpirationDays = $null
+        $sslThumbprint = $item.GetAttributeValue("certificateHash")
+
+        if ($sslThumbprint) {
+            $sslCertificate = Get-Item "Cert:\LocalMachine\My\$sslThumbprint"
+            $sslSubject = ($sslCertificate.Subject) -replace ("CN=","")
+            $sslExpiration = $sslCertificate.NotAfter.ToString("yyyy-MM-dd HH:mm:ss")
+            $sslExpirationDays = (New-TimeSpan -Start (Get-Date) -End $SSLExpiration).Days
+        }
+        else{
+            $sslThumbprint = "n/a"
+            $sslSubject =  "n/a"
+            $sslExpiration =  "n/a"
+            $sslExpirationDays = "n/a"
+        }
+
+        $websiteDetails = @([pscustomobject]@{
+            MachineName = $computer
+            WebsiteName = $websiteName
+            Binding = $binding -join ', ' -replace ("$Header","") -replace ".{1}$"
+            HostHeader = $Header
+            SSLThumbprint = $sslThumbprint
+            SSLSubject = $SSLSubject
+            SSLExpiration = $SSLExpiration
+            SSLExpirationDays = $SSLExpirationDays
+        })
+        $websiteInfo += $websiteDetails
+    }
+}
+$websiteInfo | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $LogPath
+Write "#### </Websites_Binding>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('IIS_Features' in check_list or 'all' in check_list) and 'IIS_Features' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. IIS features"
+Write "#### <IIS_Features>" | out-file -Append -FilePath $LogPath
+Get-WindowsFeature | Where-Object {$_.name -Like "Web-*"} | select @{N='MachineName';E={$computer}},DisplayName,Name,Installed | sort Displayname | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | out-file -Append -FilePath $LogPath
+Write "#### </IIS_Features>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+
+<#{% if ('SSL_TLS' in check_list or 'all' in check_list) and 'SSL_TLS' not in check_list %}#>
+$crt++;MsgPrint "info" "$crt. SSL/TLS encryption protocols"
+Write "#### <SSL_TLS>" | out-file -Append -FilePath $LogPath
+Write """MachineName"";""Protocol"";""Server-Client"";""SSL_TLS_State"";""RegistryKeyState""" | Out-File -Append -FilePath $LogPath
+$computerOS = Get-CimInstance -Class Win32_OperatingSystem
+$sslTable = @()
+$sslTable += [PSCustomObject]@{
+        "OS" = "2008"
+        "SSL20Client" = "Disabled"
+        "SSL20Server" = "Enabled"
+        "SSL30Client" = "Enabled"
+        "SSL30Server" = "Enabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Not supported"
+        "TLS11Server" = "Not supported"
+        "TLS12Client" = "Not supported"
+        "TLS12Server" = "Not supported"
+        "TLS13Client" = "Not supported"
+        "TLS13Server" = "Not supported"
+}
+
+$sslTable += [PSCustomObject]@{
+        "OS" = "2008 R2"
+        "SSL20Client" = "Disabled"
+        "SSL20Server" = "Enabled"
+        "SSL30Client" = "Enabled"
+        "SSL30Server" = "Enabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Disabled"
+        "TLS11Server" = "Disabled"
+        "TLS12Client" = "Disabled"
+        "TLS12Server" = "Disabled"
+        "TLS13Client" = "Not supported"
+        "TLS13Server" = "Not supported"
+}
+$sslTable += [PSCustomObject]@{
+        "OS" = "2012 R2"
+        "SSL20Client" = "Disabled"
+        "SSL20Server" = "Disabled"
+        "SSL30Client" = "Enabled"
+        "SSL30Server" = "Enabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Enabled"
+        "TLS11Server" = "Enabled"
+        "TLS12Client" = "Enabled"
+        "TLS12Server" = "Enabled"
+        "TLS13Client" = "Not supported"
+        "TLS13Server" = "Not supported"
+}
+$sslTable += [PSCustomObject]@{
+        "OS" = "2016"
+        "SSL20Client" = "Not supported"
+        "SSL20Server" = "Not supported"
+        "SSL30Client" = "Disabled"
+        "SSL30Server" = "Disabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Enabled"
+        "TLS11Server" = "Enabled"
+        "TLS12Client" = "Enabled"
+        "TLS12Server" = "Enabled"
+        "TLS13Client" = "Not supported"
+        "TLS13Server" = "Not supported"
+}
+$sslTable += [PSCustomObject]@{
+        "OS" = "2019"
+        "SSL20Client" = "Not supported"
+        "SSL20Server" = "Not supported"
+        "SSL30Client" = "Disabled"
+        "SSL30Server" = "Disabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Enabled"
+        "TLS11Server" = "Enabled"
+        "TLS12Client" = "Enabled"
+        "TLS12Server" = "Enabled"
+        "TLS13Client" = "Not supported"
+        "TLS13Server" = "Not supported"
+}
+$sslTable += [PSCustomObject]@{
+        "OS" = "2022"
+        "SSL20Client" = "Not supported"
+        "SSL20Server" = "Not supported"
+        "SSL30Client" = "Disabled"
+        "SSL30Server" = "Disabled"
+        "TLS10Client" = "Enabled"
+        "TLS10Server" = "Enabled"
+        "TLS11Client" = "Enabled"
+        "TLS11Server" = "Enabled"
+        "TLS12Client" = "Enabled"
+        "TLS12Server" = "Enabled"
+        "TLS13Client" = "Enabled"
+        "TLS13Server" = "Enabled"
+}
+
+$defaults = $sslTable | Where-Object -filterscript { ($computerOS.Caption).Contains($_.OS) }
+$pattern = '[^a-zA-Z0-9]'
+$SSLTLSState = @()
+$ProtocolList       = @("SSL 2.0","SSL 3.0","TLS 1.0","TLS 1.1","TLS 1.2","TLS 1.3")
+$ProtocolSubKeyList = @("Client","Server")
+$RegistryPath = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\"
+ForEach ($Protocol in $ProtocolList){
+    ForEach ($Key in $ProtocolSubKeyList) {
+    $CurrentRegPath = $RegistryPath + $Protocol + "\" + $key
+    $DisabledByDefaultValue = "none"
+    $EnabledValue = "none"
+    $def = ($Protocol -replace $pattern,'')+$key
+    $status = $defaults.$def
+    if (Test-Path $currentRegPath) {
+        If ((Get-ItemProperty $currentRegPath).PSObject.Properties.Name -contains "Enabled") {
+            $EnabledValue = Get-ItemProperty -Path $currentRegPath -Name "Enabled" | Select-Object "Enabled" -ExpandProperty "Enabled"
+        }
+        Else { $EnabledValue = "none" }
+        If ((Get-ItemProperty $currentRegPath).PSObject.Properties.Name -contains "DisabledByDefault") {
+            $DisabledByDefaultValue = Get-ItemProperty -Path $currentRegPath -Name "DisabledByDefault" | Select-Object "DisabledByDefault" -ExpandProperty "DisabledByDefault"
+        }
+        Else { $DisabledByDefaultValue = "none" }
+        $messg = "[$CurrentRegPath] exist with Enabled = $EnabledValue and DisabledByDefault = $DisabledByDefaultValue"
+    }
+    else {
+        $messg = "[$CurrentRegPath] does not exist"
+        }
+    switch ($status) {
+    "Not supported" {
+                $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Disabled"";""$messg, the protocol is not supported"""
+        }
+    "Enabled" {
+            If (($EnabledValue -eq "none") -and ($DisabledByDefaultValue -eq "none")) {
+                $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Enabled"";""$messg, the protocol is enabled by default"""
+                }
+            else {
+                If (($EnabledValue -eq 1) -and ($DisabledByDefaultValue -eq 0)){
+                    $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Enabled"";""$messg, the protocol is enabled by key"""
+                    }
+                    else {
+                        If (($EnabledValue -eq 0) -and ($DisabledByDefaultValue -eq 1)) {
+                            $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Disabled"";""$messg, the protocol is disabled by key"""
+                            }
+                        else {
+                            $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Incorrect configuration"";""$messg"""
+                        }
+                    }
+            }
+        }
+    "Disabled" {
+            If (($EnabledValue -eq "none") -and ($DisabledByDefaultValue -eq "none")) {
+                $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Disabled"";""$messg, the protocol is disabled by default"""
+                }
+            else {
+                If (($EnabledValue -eq 1) -and ($DisabledByDefaultValue -eq 0)){
+                    $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Enabled"";""$messg, the protocol is enabled by key"""
+                    }
+                    else {
+                        If (($EnabledValue -eq 0) -and ($DisabledByDefaultValue -eq 1)) {
+                            $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Disabled"";""$messg, the protocol is disabled by key"""
+                            }
+                        else {
+                            $SSLTLSState += """$computer"";""$Protocol"";""$key"";""Incorrect configuration"";""$messg"""
+                        }
+                    }
+            }
+        }
+    } #end switch
+   } #End ForEach Client/Server
+}#End ForEach Protocol
+$SSLTLSState | Out-File -Append -FilePath $LogPath
+Write "#### </SSL_TLS>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}#>
+
+Write "$(Get-Date -Format "yyyy-mm-ddTHH.mm.ss"): Data collection status: $DataCollectionStatus" | Out-File $LogFile -encoding UTF8 -Append

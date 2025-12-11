@@ -1,0 +1,2322 @@
+---
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 01 - SQ.C.1.1.1 - Ensure the Log Config Module Is Enabled.
+#
+{% if ('log_config_module' in check_list or 'all' in check_list) and '-log_config_module' not in check_list %}
+  - header: '#### <log_config_module>'
+    command: |
+      #!/bin/bash
+
+      # Verificar se o módulo log_config está carregado
+      module_info=$(httpd -M 2>&1 | grep log_config_module)
+
+      if echo "$module_info" | grep -q 'log_config_module'; then
+          # Verificar se o módulo está carregado como shared ou static
+          if echo "$module_info" | grep -q '(shared)'; then
+              echo "log_config_module is loaded as a shared module."
+              echo "Success."
+          elif echo "$module_info" | grep -q '(static)'; then
+              echo "log_config_module is loaded as a static module."
+              echo "Success."
+          else
+              echo "log_config_module is found but the loading type (shared/static) is unknown."
+              echo "Fail."
+          fi
+      else
+          echo "Error: log_config_module is not loaded."
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </log_config_module>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 02 - SQ.C.1.1.2 - Ensure the WebDAV Modules Are Disabled.
+#
+{% if ('webdav_modules' in check_list or 'all' in check_list) and '-webdav_modules' not in check_list %}
+  - header: '#### <webdav_modules>'
+    command: |
+      #!/bin/bash
+
+      # Check if any WebDAV modules are loaded
+      dav_modules=$(httpd -M 2>&1 | grep -E 'dav_.*_module')
+
+      if [ -z "$dav_modules" ]; then
+          echo "No WebDAV modules are loaded."
+          echo "Success."
+      else
+          echo "Error: The following WebDAV modules are loaded:"
+          echo "$dav_modules"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </webdav_modules>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 03 - SQ.C.1.1.3 - Ensure the Status Module Is Disabled.
+#
+{% if ('mod_status' in check_list or 'all' in check_list) and '-mod_status' not in check_list %}
+  - header: '#### <mod_status>'
+    command: |
+      #!/bin/bash
+
+      # Check if the status_module is loaded
+      status_module=$(httpd -M 2>&1 | grep -E 'status_module')
+
+      if [ -z "$status_module" ]; then
+          echo "status_module is not loaded."
+          echo "Success."
+      else
+          echo "status_module is loaded:"
+          echo "$status_module"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </mod_status>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 04 - SQ.C.1.1.4 - Ensure the Autoindex Module Is Disabled.
+#
+{% if ('autoindex_module' in check_list or 'all' in check_list) and '-autoindex_module' not in check_list %}
+  - header: '#### <autoindex_module>'
+    command: |
+      #!/bin/bash
+
+      # Check if the autoindex_module is loaded
+      if httpd -M 2>&1 | grep -q autoindex_module; then
+        echo "autoindex_module is loaded."
+        echo "Fail."
+      else
+        echo "autoindex_module is not loaded."
+        echo "Success."
+      fi
+
+    footer: >
+      #### </autoindex_module>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 05 - SQ.C.1.1.5 - Ensure the Proxy Modules Are Disabled if not in use.
+#
+{% if ('Proxy_modules' in check_list or 'all' in check_list) and '-Proxy_modules' not in check_list %}
+  - header: '#### <Proxy_modules>'
+    command: |
+      #!/bin/bash
+
+      # Check if any proxy modules are loaded
+      proxy_modules=$(httpd -M 2>&1 | grep proxy_)
+
+      if [ -z "$proxy_modules" ]; then
+          echo "No proxy modules are loaded."
+          echo "Success."
+      else
+          echo "The following proxy modules are loaded:"
+          echo "$proxy_modules"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </Proxy_modules>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 06 - SQ.C.1.1.6 - Ensure the User Directories Module Is Disabled.
+#
+{% if ('mod_userdir' in check_list or 'all' in check_list) and '-mod_userdir' not in check_list %}
+  - header: '#### <mod_userdir>'
+    command: |
+      #!/bin/bash
+
+      # Check if the userdir_module is loaded
+      userdir_module=$(httpd -M 2>&1 | grep -E 'userdir_module')
+
+      if [ -z "$userdir_module" ]; then
+          echo "userdir_module is not loaded."
+          echo "Success."
+      else
+          echo "Error: userdir_module is loaded."
+          echo "$userdir_module"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </mod_userdir>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 07 - SQ.C.1.1.7 - Ensure the Info Module Is Disabled.
+#
+{% if ('mod_info' in check_list or 'all' in check_list) and '-mod_info' not in check_list %}
+  - header: '#### <mod_info>'
+    command: |
+      #!/bin/bash
+
+      # Check if the info_module is loaded
+      info_module=$(httpd -M 2>&1 | grep -E 'info_module')
+
+      if [ -z "$info_module" ]; then
+          echo "info_module is not loaded."
+          echo "Success."
+      else
+          echo "Error: info_module is loaded."
+          echo "$info_module"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </mod_info>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 08 - SQ.C.1.1.8 - Ensure the Basic and Digest Authentication Modules are Disabled
+#
+{% if ('mod_auth_basic' in check_list or 'all' in check_list) and '-mod_auth_basic' not in check_list %}
+  - header: '#### <mod_auth_basic>'
+    command: |
+      #!/bin/bash
+
+      # Check if the auth_basic_module and auth_digest_module are loaded
+      auth_basic_module=$(httpd -M 2>&1 | grep -E 'auth_basic_module')
+      auth_digest_module=$(httpd -M 2>&1 | grep -E 'auth_digest_module')
+
+      if [ -z "$auth_basic_module" ] && [ -z "$auth_digest_module" ]; then
+          echo "auth_basic_module and auth_digest_module are not loaded."
+          echo "Success."
+      else
+          echo "Error: The following authentication modules are loaded:"
+          [ -n "$auth_basic_module" ] && echo "$auth_basic_module"
+          [ -n "$auth_digest_module" ] && echo "$auth_digest_module"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </mod_auth_basic>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 09 - SQ.C.2.1.1 - Ensure the Apache Web Server Runs As a Non-Root User.
+#
+{% if ('non_root_user' in check_list or 'all' in check_list) and '-non_root_user' not in check_list %}
+  - header: '#### <non_root_user>'
+    command: |
+      #!/bin/bash
+
+      # Check if the Apache user is configured in httpd.conf
+      user_config=$(grep -i '^User' /etc/httpd/conf/httpd.conf)
+      group_config=$(grep -i '^Group' /etc/httpd/conf/httpd.conf)
+
+      # Get the UID_MIN value from /etc/login.defs
+      uid_min=$(grep '^UID_MIN' /etc/login.defs | awk '{print $2}')
+
+      # Check the apache user and group existence and their properties
+      apache_user_exists=$(id -u apache 2>/dev/null)
+      apache_group_exists=$(getent group apache)
+
+      if [ -z "$user_config" ] || [ -z "$group_config" ]; then
+          echo "Error: Apache user or group is not configured in httpd.conf."
+          echo "Fail."
+          exit 1
+      fi
+
+      if [ -z "$apache_user_exists" ] || [ -z "$apache_group_exists" ]; then
+          echo "Error: Apache user or group does not exist."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Check if the Apache user UID is less than UID_MIN
+      if [ "$apache_user_exists" -lt "$uid_min" ]; then
+          echo "Apache user UID is correctly set below UID_MIN."
+      else
+          echo "Error: Apache user UID is not set below UID_MIN."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Check if the Apache processes are not running as root
+      if ps aux | grep httpd | grep -vq '^root'; then
+          echo "Apache processes are not running as root."
+          echo "Success."
+      else
+          echo "Error: Apache processes are running as root."
+          echo "Fail."
+          exit 1
+      fi
+
+    footer: >
+      #### </non_root_user>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 10 - SQ.C.2.1.2 - Ensure the Apache User Account Has an Invalid Shell.
+#
+{% if ('apache_user_invalid_shell' in check_list or 'all' in check_list) and '-apache_user_invalid_shell' not in check_list %}
+  - header: '#### <apache_user_invalid_shell>'
+    command: |
+      #!/bin/bash
+
+      # Retrieve the shell for the apache user
+      apache_shell=$(getent passwd apache | awk -F: '{print $7}')
+
+      # Define invalid shells
+      invalid_shells=("/sbin/nologin" "/dev/null")
+
+      # Check if the apache user's shell is invalid
+      if [[ " ${invalid_shells[*]} " == *"$apache_shell"* ]]; then
+          echo "Apache user shell is correctly set to an invalid shell: $apache_shell."
+          echo "Success."
+      else
+          echo "Error: Apache user shell is not set to an invalid shell. Found: $apache_shell"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_user_invalid_shell>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 11 - SQ.C.2.1.3 - Ensure the Apache User Account Is Locked.
+#
+{% if ('apache_user_account_locked' in check_list or 'all' in check_list) and '-apache_user_account_locked' not in check_list %}
+  - header: '#### <apache_user_account_locked>'
+    command: |
+      #!/bin/bash
+
+      # Retrieve the entry for the apache user from /etc/passwd
+      passwd_entry=$(grep ^apache: /etc/passwd)
+
+      # Extract individual components of the entry
+      uid=$(echo "$passwd_entry" | awk -F: '{print $3}')
+      gid=$(echo "$passwd_entry" | awk -F: '{print $4}')
+      home=$(echo "$passwd_entry" | awk -F: '{print $6}')
+      shell=$(echo "$passwd_entry" | awk -F: '{print $7}')
+
+      # Check if UID is in a valid range and shell is invalid
+      if [[ "$uid" -eq 48 && "$gid" -eq 48 && "$shell" =~ ^(/sbin/nologin|/usr/sbin/nologin|/bin/false|/dev/null)$ ]]; then
+          echo "Apache user account is locked with valid settings."
+          echo "Success."
+      else
+          echo "Error: Apache user account does not have the expected settings."
+          echo "Passwd entry: $passwd_entry"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_user_account_locked>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 12 - SQ.C.2.1.4 - Ensure Apache Directories and Files Are Owned By Root.
+#
+{% if ('apache_directory_owner' in check_list or 'all' in check_list) and '-apache_directory_owner' not in check_list %}
+  - header: '#### <apache_directory_owner>'
+    command: |
+      #!/bin/bash
+
+      # Find files and directories under /etc/httpd that are not owned by root
+      non_root_owned=$(find /etc/httpd \! -user root -ls)
+
+      if [ -z "$non_root_owned" ]; then
+          echo "All Apache directories and files are owned by root."
+          echo "Success."
+      else
+          echo "Error: The following directories/files are not owned by root:"
+          echo "$non_root_owned"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_directory_owner>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 13 - SQ.C.2.1.5 - Ensure the Group Is Set Correctly on Apache Directories and Files.
+#
+{% if ('apache_directory_group' in check_list or 'all' in check_list) and '-apache_directory_group' not in check_list %}
+  - header: '#### <apache_directory_group>'
+    command: |
+      #!/bin/bash
+
+      # Define the Apache prefix based on the operating system distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Find files and directories that do not belong to the root group
+      non_root_group=$(find $APACHE_PREFIX -path $APACHE_PREFIX/htdocs -prune -o \! -group root -ls)
+
+      if [ -z "$non_root_group" ]; then
+          echo "All Apache directories and files belong to the root group."
+          echo "Success."
+      else
+          echo "Error: The following directories/files do not belong to the root group:"
+          echo "$non_root_group"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_directory_group>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 14 - SQ.C.2.1.6 - Ensure Other Write Access on Apache Directories and Files Is Restricted.
+#
+{% if ('apache_directory_permissions' in check_list or 'all' in check_list) and '-apache_directory_permissions' not in check_list %}
+  - header: '#### <apache_directory_permissions>'
+    command: |
+      #!/bin/bash
+
+      # Find any files or directories within the Apache directory structure that have 'other' write permissions
+      write_access=$(find -L /etc/httpd \! -type l -perm /o=w -print 2>/dev/null)
+
+      if [ -z "$write_access" ]; then
+          echo "All Apache directories and files have 'other' write access correctly restricted."
+          echo "Success."
+      else
+          echo "Error: The following directories/files have 'other' write access:"
+          echo "$write_access"
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_directory_permissions>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 15 - SQ.C.2.1.7 - Ensure the Core Dump Directory Is Secured.
+#
+{% if ('dump_directory_secured' in check_list or 'all' in check_list) and '-dump_directory_secured' not in check_list %}
+  - header: '#### <dump_directory_secured>'
+    command: |
+      #!/bin/bash
+
+      # Check if the CoreDumpDirectory directive is present and configured correctly in the Apache configuration files
+      core_dump_dir=$(grep -E '^CoreDumpDirectory' /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf 2>/dev/null)
+
+      if [ -z "$core_dump_dir" ]; then
+          echo "CoreDumpDirectory directive is not found or not configured."
+          echo "Success."
+      else
+          echo "Error: CoreDumpDirectory directive is present. Ensure it is secured properly."
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </dump_directory_secured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 16 - SQ.C.2.1.8 - Ensure the Lock File Is Secured.
+#
+{% if ('lock_file_secured' in check_list or 'all' in check_list) and '-lock_file_secured' not in check_list %}
+  - header: '#### <lock_file_secured>'
+    command: |
+      #!/bin/bash
+
+      # Check if the Mutex directive is set with fcntl, flock, or file in the Apache configuration files
+      mutex_config=$(grep -E '^\s*Mutex\s+(fcntl|flock|file)' /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf 2>/dev/null)
+
+      if [ -z "$mutex_config" ]; then
+          echo "Mutex directive is not set with fcntl, flock, or file. Lock file is considered secured."
+          echo "Success."
+      else
+          echo "Error: Mutex directive is set with fcntl, flock, or file. Lock file may not be secured."
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </lock_file_secured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 17 - SQ.C.2.1.9 - Ensure the Pid File Is Secured.
+#
+{% if ('pid_file_secured' in check_list or 'all' in check_list) and '-pid_file_secured' not in check_list %}
+  - header: '#### <pid_file_secured>'
+    command: |
+      #!/bin/bash
+
+      # Set the expected PidFile location
+      expected_pidfile="/run/httpd.pid"
+
+      # Check if the PidFile is correctly configured in httpd.conf
+      configured_pidfile=$(grep -i "^\s*PidFile\s" /etc/httpd/conf/httpd.conf | awk '{print $2}')
+
+      if [ -z "$configured_pidfile" ]; then
+          echo "Error: PidFile directive not found in /etc/httpd/conf/httpd.conf."
+          echo "Fail."
+          exit 1
+      elif [ "$configured_pidfile" != "$expected_pidfile" ]; then
+          echo "Error: PidFile is incorrectly set as $configured_pidfile. It should be $expected_pidfile."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Verify that the PidFile exists and has correct permissions
+      if [ -f "$expected_pidfile" ]; then
+          pidfile_owner_group=$(stat -c "%U:%G" "$expected_pidfile")
+          pidfile_permissions=$(stat -c "%a" "$expected_pidfile")
+
+          if [ "$pidfile_owner_group" != "root:root" ]; then
+              echo "Error: PidFile $expected_pidfile ownership is not root:root."
+              echo "Fail."
+              exit 1
+          fi
+
+          if [ "$pidfile_permissions" != "644" ]; then
+              echo "Error: PidFile $expected_pidfile permissions are not 644."
+              echo "Fail."
+              exit 1
+          fi
+
+          echo "PidFile $expected_pidfile is correctly configured and secured."
+          echo "Success."
+      else
+          echo "Error: PidFile $expected_pidfile does not exist."
+          echo "Fail."
+          exit 1
+      fi
+
+    footer: >
+      #### </pid_file_secured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 18 - SQ.C.2.1.10 - Ensure the ScoreBoard File Is Secured.
+#
+{% if ('scoreboard_file_secured' in check_list or 'all' in check_list) and '-scoreboard_file_secured' not in check_list %}
+  - header: '#### <scoreboard_file_secured>'
+    command: |
+      #!/bin/bash
+
+      # Step 1: Check if ScoreBoardFile is specified in any Apache configuration files
+      scoreboard_file=$(grep -i '^\s*ScoreBoardFile\s\+' /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf 2>/dev/null | awk '{print $2}')
+      if [ -z "$scoreboard_file" ]; then
+          echo "ScoreBoardFile directive not found in configuration files. Compliant."
+          echo "Success."
+          exit 0
+      fi
+
+      # Step 2: Verify that the directory for the ScoreBoardFile is not within DocumentRoot
+      scoreboard_dir=$(dirname "$scoreboard_file")
+      document_root=$(grep -i '^\s*DocumentRoot\s\+' /etc/httpd/conf/httpd.conf /etc/apache2/apache2.conf 2>/dev/null | awk '{print $2}')
+      if [[ "$scoreboard_dir" == "$document_root"* ]]; then
+          echo "Error: ScoreBoardFile directory is within the DocumentRoot."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Step 3: Verify ownership and permissions of the ScoreBoardFile directory
+      dir_owner_group=$(stat -c "%U:%G" "$scoreboard_dir")
+      dir_permissions=$(stat -c "%a" "$scoreboard_dir")
+      if [ "$dir_owner_group" != "root:root" ]; then
+          echo "Error: ScoreBoardFile directory $scoreboard_dir ownership is not root:root."
+          echo "Fail."
+          exit 1
+      fi
+      if [ "$dir_permissions" -gt 755 ]; then
+          echo "Error: ScoreBoardFile directory $scoreboard_dir permissions are too permissive."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Step 4: Check if the ScoreBoardFile directory is on a locally mounted file system
+      if mount | grep -q "on $scoreboard_dir type nfs"; then
+          echo "Error: ScoreBoardFile directory $scoreboard_dir is on an NFS-mounted file system."
+          echo "Fail."
+          exit 1
+      fi
+
+      echo "ScoreBoardFile $scoreboard_file is correctly configured and secured."
+      echo "Success."
+
+    footer: >
+      #### </scoreboard_file_secured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 19 - SQ.C.2.1.11 - Ensure Group Write Access for the Apache Directories and Files Is Properly Restricted.
+#
+{% if ('grp_w_access_apache_dir_files' in check_list or 'all' in check_list) and '-grp_w_access_apache_dir_files' not in check_list %}
+  - header: '#### <grp_w_access_apache_dir_files>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Find files or directories with group write access (excluding symbolic links)
+      group_writable_items=$(find -L $APACHE_PREFIX \! -type l -perm /g=w -ls 2>/dev/null)
+
+      # Check if any group writable files or directories are found
+      if [ -n "$group_writable_items" ]; then
+          echo "Error: The following files or directories have group write access:"
+          echo "$group_writable_items"
+          echo "Fail."
+      else
+          echo "All files and directories are properly restricted from group write access."
+          echo "Success."
+      fi
+    footer: >
+      #### </grp_w_access_apache_dir_files>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 20 - SQ.C.2.1.12 - Ensure Group Write Access for the Document Root Directories and Files Is Properly Restricted.
+#
+{% if ('grp_w_access_docroot_dir_files' in check_list or 'all' in check_list) and '-grp_w_access_docroot_dir_files' not in check_list %}
+  - header: '#### <grp_w_access_docroot_dir_files>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Determine the Document Root
+      DOC_ROOT=$(grep -i '^DocumentRoot' $APACHE_PREFIX/conf/httpd.conf | awk '{print $2}' | tr -d '"')
+
+      # Find files or directories within the Document Root with group write access (excluding symbolic links)
+      group_writable_items=$(find -L $DOC_ROOT \! -type l -perm /g=w -ls 2>/dev/null)
+
+      # Check if any group writable files or directories are found
+      if [ -n "$group_writable_items" ]; then
+          echo "Error: The following files or directories within the Document Root have group write access:"
+          echo "$group_writable_items"
+          echo "Fail."
+      else
+          echo "All files and directories within the Document Root are properly restricted from group write access."
+          echo "Success."
+      fi
+
+    footer: >
+      #### </grp_w_access_docroot_dir_files>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 21 - SQ.C.3.1.1 - Ensure Access to OS Root Directory Is Denied By Default.
+#
+{% if ('root_denied_default' in check_list or 'all' in check_list) and '-root_denied_default' not in check_list %}
+  - header: '#### <root_denied_default>'
+    command: |
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi) && \
+      root_directory_config=$(sed -n '/<Directory \/>/,/<\/Directory>/p' $APACHE_PREFIX/conf/*) && \
+      if echo "$root_directory_config" | grep -q 'Require all denied'; then
+        echo "Success: Access to the OS root directory is properly denied."
+        echo "Success."
+      else
+        echo "Error: Access to the OS root directory is not properly denied."
+        echo "Fail."
+      fi
+
+    footer: >
+      #### </root_denied_default>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 22 - SQ.C.3.1.2 - Ensure OverRide Is Disabled for the OS Root Directory.
+#
+{% if ('override_disabled_root_directory' in check_list or 'all' in check_list) and '-override_disabled_root_directory' not in check_list %}
+  - header: '#### <override_disabled_root_directory>'
+    command: |
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi) && \
+      root_directory_config=$(sed -n '/<Directory \/>/,/<\/Directory>/p' $APACHE_PREFIX/conf/*) && \
+      if echo "$root_directory_config" | grep -q 'AllowOverride none'; then
+        echo "Success: OverRide Is Disabled for the OS Root Directory."
+        echo "Success."
+      else
+        echo "Error: OverRide for the OS Root Directory is not properly Disabled."
+        echo "Fail."
+      fi
+
+    footer: >
+      #### </override_disabled_root_directory>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 23 - SQ.C.3.1.3 - Ensure OverRide Is Disabled for All Directories.
+#
+{% if ('override_disabled_all_directories' in check_list or 'all' in check_list) and '-override_disabled_all_directories' not in check_list %}
+  - header: '#### <override_disabled_all_directories>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Search for AllowOverride and AllowOverrideList directives (excluding commented lines)
+      overrides=$(grep -i '^\s*AllowOverride' $APACHE_PREFIX/conf/* | grep -vi '^\s*#')
+      override_lists=$(grep -i '^\s*AllowOverrideList' $APACHE_PREFIX/conf/* | grep -vi '^\s*#')
+
+      # Initialize the status as Success
+      status="Success."
+
+      # Check if any AllowOverride directives are found and not set to none
+      if [ -n "$overrides" ]; then
+          if echo "$overrides" | grep -qvi 'AllowOverride\s\+none'; then
+              echo "Error: AllowOverride is not set to None in all configurations."
+              status="Fail."
+          fi
+      fi
+
+      # Check if any AllowOverrideList directives are found and not set to none
+      if [ -n "$override_lists" ]; then
+          if echo "$override_lists" | grep -qvi 'AllowOverrideList\s\+none'; then
+              echo "Error: AllowOverrideList is not set to None in all configurations."
+              status="Fail."
+          fi
+      fi
+
+      # Determine the final result based on the checks
+      if [ "$status" = "Success" ]; then
+          if [ -z "$overrides" ] && [ -z "$override_lists" ]; then
+              echo "AllowOverride and/or AllowOverrideList not found in any configuration."
+          else
+              echo "AllowOverride and/or AllowOverrideList found but correctly set as none."
+          fi
+      fi
+
+      echo "$status"
+    footer: >
+      #### </override_disabled_all_directories>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 24 - SQ.C.4.1.1 - Ensure Options for the OS Root Directory Are Restricted.
+#
+{% if ('options_restricted_root_directory' in check_list or 'all' in check_list) and '-options_restricted_root_directory' not in check_list %}
+  - header: '#### <options_restricted_root_directory>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Extract the Directory block for the OS root directory
+      directory_block=$(sed -n '/<Directory \/>/,/<\/Directory>/p' $APACHE_PREFIX/conf/* | grep -vi '^\s*#')
+
+      # Check if the Options directive is set to 'None'
+      if echo "$directory_block" | grep -qi 'Options\s\+None'; then
+          echo "Root directory from httpd.conf found:"
+          echo "$directory_block"
+          echo "Options is set as none"
+          echo "Success."
+      else
+          echo "Root directory from httpd.conf found:"
+          echo "$directory_block"
+          echo "Error: Options directive for the OS root directory is not set to None."
+          echo "Fail."
+      fi
+    footer: >
+      #### </options_restricted_root_directory>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 25 - SQ.C.4.1.2 - Ensure Options for the Web Root Directory Are Restricted.
+#
+{% if ('options_none_webroot_dir' in check_list or 'all' in check_list) and '-options_none_webroot_dir' not in check_list %}
+  - header: '#### <options_none_webroot_dir>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Define the web root directories to check
+      web_root_dirs=(
+        "/var/www/html"
+        "/srv/http"
+        "/srv/www/htdocs"
+        "/var/www/localhost/htdocs"
+        "/usr/local/apache2/htdocs"
+      )
+
+      # Flag to track success or failure
+      success=true
+
+      for dir in "${web_root_dirs[@]}"; do
+        # Escape the slashes for grep
+        escaped_dir=$(echo "$dir" | sed 's/\//\\\//g')
+
+        # Extract the Directory block for the web root directory using grep and awk
+        directory_block=$(grep -A 100 -m 1 "<Directory '$escaped_dir'>" $APACHE_PREFIX/conf/* | awk '/<Directory /,/<\/Directory>/')
+
+        # Check if the Directory block exists
+        if [ -z "$directory_block" ]; then
+          continue
+        fi
+
+        echo "Web root directory block found for $dir:"
+        echo "$directory_block"
+
+        # Check if the Options directive is set to 'None' or 'Multiviews'
+        if echo "$directory_block" | grep -qi 'Options\s\+\(None\|Multiviews\)'; then
+          echo "Options is set as None or Multiviews"
+        else
+          echo "Error: Options directive for $dir is not set to None or Multiviews."
+          success=false
+        fi
+        echo
+      done
+
+      # Final success/failure message
+      if $success; then
+        echo "Success."
+      else
+        echo "Fail."
+      fi
+    footer: >
+      #### </options_none_webroot_dir>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 26 - SQ.C.4.1.3 - Ensure Options for Other Directories Are Minimized.
+#
+{% if ('options_must_not_have_include' in check_list or 'all' in check_list) and '-options_must_not_have_include' not in check_list %}
+  - header: '#### <options_must_not_have_include>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Find all <Directory> blocks and check if any Options directive contains 'Includes'
+      directory_blocks=$(sed '/^\s*#/d' $APACHE_PREFIX/conf/*.conf | sed -n '/<Directory /,/<\/Directory>/p')
+
+      # Initialize a flag to track success or failure
+      success=true
+
+      echo "Checking <Directory> blocks for Options directives containing Includes:"
+
+      # Print all <Directory> blocks scanned
+      echo "$directory_blocks"
+
+      # Iterate over each line in the directory blocks
+      while IFS= read -r line; do
+        # Check if the line contains an Options directive with 'Includes'
+        if echo "$line" | grep -qi 'Options.*Includes'; then
+          success=false
+          break
+        fi
+      done <<< "$directory_blocks"
+
+      # Final success/failure message
+      if $success; then
+        echo "No Options Includes found in <Directory> blocks."
+        echo "Success."
+      else
+        echo "Options Includes found in <Directory> blocks."
+        echo "Fail."
+      fi
+    footer: >
+      #### </options_must_not_have_include>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 27 - SQ.C.4.1.4 - Ensure Default HTML Content Is Removed.
+#
+{% if ('default_html_removed' in check_list or 'all' in check_list) and '-default_html_removed' not in check_list %}
+  - header: '#### <default_html_removed>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      echo "Verifying that the document root directory and the configuration files do not provide for default \`index.html\` or welcome page:"
+
+      # Initialize a flag to track success or failure
+      success=true
+
+      # Verify default index.html or welcome page
+      default_html=$(grep -Erl 'DirectoryIndex\s+(index\.html|default\.html|welcome\.html)' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$default_html" ]; then
+        echo "Configuration found at:"
+        echo "$default_html"
+        success=false
+      else
+        echo "No configuration found."
+      fi
+
+      # Verify Apache User Manual content is not installed
+      manual_alias=$(grep -Erl 'Alias\s+/manual' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$manual_alias" ]; then
+        echo "Manual location found at:"
+        echo "$manual_alias"
+        success=false
+      fi
+
+      # Verify Server Status handler is not configured
+      server_status=$(grep -Erl '<Location\s*/server-status>' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$server_status" ]; then
+        echo "Server-status handler found at:"
+        echo "$server_status"
+        success=false
+      fi
+
+      # Verify Server Information handler is not configured
+      server_info=$(grep -Erl '<Location\s*/server-info>' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$server_info" ]; then
+        echo "Server-info handler found at:"
+        echo "$server_info"
+        success=false
+      fi
+
+      # Verify any other handlers like perl-status are not enabled
+      other_handlers=$(grep -Erl '<Location\s*/perl-status|<Location\s*/status|<Location\s*/server-status|<Location\s*/status>' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$other_handlers" ]; then
+        echo "Other handlers found at:"
+        echo "$other_handlers"
+        success=false
+      fi
+
+      # Final success/failure message
+      if $success; then
+        echo "No files found."
+        echo "Success."
+      else
+        echo "Fail."
+      fi
+    footer: >
+      #### </default_html_removed>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 28 - SQ.C.4.1.5 - Ensure the Default CGI Content printenv Script Is Removed.
+#
+{% if ('printenv_content_removed' in check_list or 'all' in check_list) and '-printenv_content_removed' not in check_list %}
+  - header: '#### <printenv_content_removed>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      echo "Checking for CGI-related directives and the presence of the printenv script:"
+
+      # Initialize a flag to track success or failure
+      success=true
+
+      # Locate CGI-related directives in Apache configuration files and show the specific lines
+      cgi_directives=$(grep -Enr '^\s*(Script|ScriptAlias|ScriptAliasMatch|ScriptInterpreterSource)' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$cgi_directives" ]; then
+        echo "Found CGI-related directives in:"
+        echo "$cgi_directives"
+        success=false
+      else
+        echo "No CGI-related directives found."
+      fi
+
+      # Check for the presence of the printenv script
+      printenv_files=$(find $APACHE_PREFIX -type f -name 'printenv' -print 2>/dev/null)
+      if [ -n "$printenv_files" ]; then
+        echo "Found printenv script in:"
+        echo "$printenv_files"
+        success=false
+      else
+        echo "No printenv script found."
+      fi
+
+      # Final success/failure message
+      if $success; then
+        echo "All checks passed."
+        echo "Success."
+      else
+        echo "Fail."
+      fi
+    footer: >
+      #### </printenv_content_removed>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 29 - SQ.C.4.1.6 - Ensure the Default CGI Content test-cgi Script Is Removed.
+#
+{% if ('test_cgi_content_removed' in check_list or 'all' in check_list) and '-test_cgi_content_removed' not in check_list %}
+  - header: '#### <test_cgi_content_removed>'
+    command: |
+      #!/bin/bash
+
+      # Determine the Apache configuration prefix based on the distribution
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      echo "Checking for CGI-related directives and the presence of the test-cgi script:"
+
+      # Initialize a flag to track success or failure
+      success=true
+
+      # Locate CGI-related directives in Apache configuration files and show the specific lines
+      cgi_directives=$(grep -Enr '^\s*(Script|ScriptAlias|ScriptAliasMatch|ScriptInterpreterSource)' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$cgi_directives" ]; then
+        echo "Found CGI-related directives in:"
+        echo "$cgi_directives"
+        success=false
+      else
+        echo "No CGI-related directives found."
+      fi
+
+      # Check for the presence of the test-cgi script
+      test_cgi_files=$(find $APACHE_PREFIX -type f -name 'test-cgi' -print 2>/dev/null)
+      if [ -n "$test_cgi_files" ]; then
+        echo "Found test-cgi script in:"
+        echo "$test_cgi_files"
+        success=false
+      else
+        echo "No test-cgi script found."
+      fi
+
+      # Final success/failure message
+      if $success; then
+        echo "All checks passed."
+        echo "Success."
+      else
+        echo "Fail."
+      fi
+    footer: >
+      #### </test_cgi_content_removed>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 30 - SQ.C.4.1.7 - Ensure HTTP Request Methods Are Restricted
+#
+{% if ('http_request_methods_restricted' in check_list or 'all' in check_list) and '-http_request_methods_restricted' not in check_list %}
+  - header: '#### <http_request_methods_restricted>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Search for Directory blocks in configuration files
+      grep -Erl '^\s*<Directory' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null | \
+      xargs -I{} sh -c '
+      FILE="{}";
+      echo "Checking $FILE";
+
+      # Extract the Directory block content
+      SECTION=$(awk "/<Directory/{flag=1; next} /<\/Directory>/{flag=0} flag" "$FILE" | sed -e "s/^[ \t]*//" -e "/^$/d");
+
+      # Check for different conditions within the Directory block
+      if echo "$SECTION" | grep -Eq "^Order\s+deny,allow\s*$"; then
+          echo "Found Order deny,allow in $FILE";
+          if echo "$SECTION" | grep -Eq "<LimitExcept>"; then
+              if echo "$SECTION" | grep -Eq "GET|POST|OPTIONS"; then
+                  echo "Methods are limited to GET, POST, OPTIONS in $FILE";
+                  echo "Success.";
+              else
+                  echo "NOT OK in $FILE - LimitExcept contains other methods";
+                  echo "Fail.";
+              fi
+          else
+              echo "NOT OK in $FILE - No LimitExcept directive found";
+              echo "Fail.";
+          fi;
+      elif echo "$SECTION" | grep -Eq "^Require\s+all\s+denied\s*$" && ! echo "$SECTION" | grep -Eq "^Allow\s|^Deny\s"; then
+          echo "OK in $FILE - Using Require method";
+          echo "Success.";
+      elif grep -q "LoadModule allow_methods_module modules/mod_allowmethods.so" "$FILE"; then
+          if echo "$SECTION" | grep -Eq "^AllowMethods\s+(GET|POST|OPTIONS)\s*$"; then
+              echo "OK in $FILE - Using AllowMethods module";
+              echo "Success.";
+          else
+              echo "NOT OK in $FILE - AllowMethods contains other methods";
+              echo "Fail.";
+          fi
+      else
+          echo "NOT OK in $FILE - Incorrect configuration";
+          echo "Fail.";
+      fi;
+      '
+    footer: >
+      #### </http_request_methods_restricted>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 31 - SQ.C.4.1.8 - Ensure the HTTP TRACE Method Is Disabled
+#
+{% if ('http_trace_disabled' in check_list or 'all' in check_list) and '-http_trace_disabled' not in check_list %}
+  - header: '#### <http_trace_disabled>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Search for TraceEnable directive with the value off
+      results=$(grep -Er '^\s*TraceEnable\s+off\s*$' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+
+      if [ -z "$results" ]; then
+          echo "Checking $APACHE_PREFIX/conf/httpd.conf"
+          echo "NOT OK: No TraceEnable directive with value off found"
+          echo "Fail."
+      else
+          count=$(echo "$results" | awk -F: '{print $1}' | sort | uniq -c | awk '$1 > 1 {print $1}')
+
+          if [ -n "$count" ]; then
+              echo "Checking $APACHE_PREFIX/conf/httpd.conf"
+              echo "NOT OK: More than one TraceEnable directive with the value off found"
+              echo "Fail."
+          else
+              echo "Checking $APACHE_PREFIX/conf/httpd.conf"
+              echo "OK: Single TraceEnable directive with value off"
+              echo "Success."
+          fi
+      fi
+    footer: >
+      #### </http_trace_disabled>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 32 - SQ.C.4.1.9 - Ensure Old HTTP Protocol Versions Are Disallowed
+#
+{% if ('old_http_protocol_versions_disabled' in check_list or 'all' in check_list) and '-old_http_protocol_versions_disabled' not in check_list %}
+  - header: '#### <old_http_protocol_versions_disabled>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+      echo "Searching ..."
+
+      # Check for LoadModule directive
+      loadmodule_result=$(grep -Erl '^LoadModule\s+rewrite_module\s+modules/mod_rewrite.so' $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$loadmodule_result" ]; then
+          echo "OK: Found LoadModule directive in $loadmodule_result"
+          grep -E "^LoadModule\s+rewrite_module\s+modules/mod_rewrite.so" "$loadmodule_result"
+      else
+          echo "Fail: No LoadModule directive found."
+          exit 1
+      fi
+
+      # Check for RewriteEngine, RewriteCond, and RewriteRule directives
+      config_result=$(grep -Erl "RewriteEngine\s+On" $APACHE_PREFIX/conf/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/sites-available/* 2>/dev/null)
+      if [ -n "$config_result" ]; then
+          echo "OK: Found configuration to disallow other protocol versions in $config_result"
+          grep -E "RewriteEngine\s+On" "$config_result"
+          grep -E "RewriteCond" "$config_result"
+          grep -E "RewriteRule" "$config_result"
+
+          # Check for RewriteOptions Inherit
+          if grep -Eq "RewriteOptions\s+Inherit" "$config_result"; then
+              echo "RewriteOptions Inherit at all necessary directories"
+          else
+              echo "Warning: RewriteOptions Inherit directive is missing in $config_result"
+          fi
+
+          # Check for missing RewriteEngine On and RewriteOptions Inherit in <Directory> sections
+          missing_sections=$(sed -n "/<Directory/,/<\/Directory>/p" "$config_result" | awk "/<Directory/ {section=\$0} /<\/Directory>/ {if (!seen[section] && (!rewrite || !inherit)) {print section}; rewrite=inherit=0} /RewriteEngine\s+On/ {rewrite=1} /RewriteOptions\s+Inherit/ {inherit=1}")
+
+          if [ -n "$missing_sections" ]; then
+              echo "Missing RewriteEngine On and RewriteOptions Inherit at:"
+              echo "$missing_sections"
+              echo "Fail."
+          else
+              echo "RewriteEngine On at all necessary directories"
+              echo "Success."
+          fi
+      else
+          echo "Fail: No configuration found to disallow other protocol versions."
+          exit 1
+      fi
+    footer: >
+      #### </old_http_protocol_versions_disabled>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 33 - SQ.C.4.1.10 - Ensure Access to .ht* Files Is Restricted
+#
+{% if ('access_ht_files_restricted' in check_list or 'all' in check_list) and '-access_ht_files_restricted' not in check_list %}
+  - header: '#### <access_ht_files_restricted>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Extract the FilesMatch block for .ht* files
+      files_match_block=$(sed -n '/<FilesMatch "\^\\.ht">/,/<\/FilesMatch>/p' $APACHE_PREFIX/conf/*)
+
+      # Check if the block is found
+      if [ -n "$files_match_block" ]; then
+          echo "$files_match_block"
+          # Check if Require all denied is set within the block
+          if echo "$files_match_block" | grep -q "Require all denied"; then
+              echo "Success."
+          else
+              echo "Require all allowed"
+              echo "Fail."
+          fi
+      else
+          echo "<FilesMatch \"^\\.ht\">"
+          echo "Require all allowed"
+          echo "</FilesMatch>"
+          echo "Fail."
+      fi
+    footer: >
+      #### </access_ht_files_restricted>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 34 - SQ.C.4.1.11 - Ensure Access to .git Files Is Restricted
+#
+{% if ('access_git_files_restricted' in check_list or 'all' in check_list) and '-access_git_files_restricted' not in check_list %}
+  - header: '#### <access_git_files_restricted>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Extract the DirectoryMatch block for .git files
+      directory_match_block=$(grep -B 2 '</DirectoryMatch>' $APACHE_PREFIX/conf/* | awk '
+      BEGIN { found = 0 }
+      /<\/DirectoryMatch>/ {
+          if (found) {
+              print lines[NR-2]
+              print lines[NR-1]
+              print $0
+          }
+          found = 0
+      }
+      /git/ { found = 1 }
+      { lines[NR] = $0 }')
+
+      # Check if the block is found
+      if [ -n "$directory_match_block" ]; then
+          echo "$directory_match_block"
+          # Check if Require all denied is set within the block
+          if echo "$directory_match_block" | grep -q "Require all denied"; then
+              echo "Success."
+          else
+              echo "Require all allowed"
+              echo "Fail."
+          fi
+      else
+          echo "<DirectoryMatch \".*\\.git\">"
+          echo "Require all allowed"
+          echo "</DirectoryMatch>"
+          echo "Fail."
+      fi
+    footer: >
+      #### </access_git_files_restricted>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 35 - SQ.C.4.1.12 - Ensure Access to .svn Files Is Restricted
+#
+{% if ('access_svn_files_restricted' in check_list or 'all' in check_list) and '-access_svn_files_restricted' not in check_list %}
+  - header: '#### <access_svn_files_restricted>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Extract the DirectoryMatch block for .svn files
+      directory_match_block=$(grep -B 2 '</DirectoryMatch>' $APACHE_PREFIX/conf/* | awk '
+      BEGIN { found = 0 }
+      /<\/DirectoryMatch>/ {
+          if (found) {
+              print lines[NR-2]
+              print lines[NR-1]
+              print $0
+          }
+          found = 0
+      }
+      /svn/ { found = 1 }
+      { lines[NR] = $0 }')
+
+      # Check if the block is found
+      if [ -n "$directory_match_block" ]; then
+          echo "$directory_match_block"
+          # Check if Require all denied is set within the block
+          if echo "$directory_match_block" | grep -q "Require all denied"; then
+              echo "Success."
+          else
+              echo "Require all allowed"
+              echo "Fail."
+          fi
+      else
+          echo "<DirectoryMatch \".*\\.svn\">"
+          echo "Require all allowed"
+          echo "</DirectoryMatch>"
+          echo "Fail."
+      fi
+    footer: >
+      #### </access_svn_files_restricted>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 36 - SQ.C.5.1.1 - Ensure the Error Log Filename and Severity Level Are Configured Correctly
+#
+{% if ('log_file_sev_level_configured' in check_list or 'all' in check_list) and '-log_file_sev_level_configured' not in check_list %}
+  - header: '#### <log_file_sev_level_configured>'
+    command: |
+      #!/bin/bash
+
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      log_level_found=false
+      error_log_found=false
+
+      echo "Checking for 'LogLevel notice core:info':"
+      if grep -Rq "LogLevel notice core:info" $APACHE_PREFIX/conf*; then
+          echo "OK: LogLevel notice core:info found."
+          log_level_found=true
+      else
+          echo "NOT OK: LogLevel notice core:info not found."
+      fi
+
+      echo "Checking for 'ErrorLog \"logs/error_log\"':"
+      if grep -Rq 'ErrorLog "logs/error_log"' $APACHE_PREFIX/conf*; then
+          echo "OK: ErrorLog \"logs/error_log\" found."
+          error_log_found=true
+      else
+          echo "NOT OK: ErrorLog \"logs/error_log\" not found."
+      fi
+
+      if [ "$log_level_found" = true ] && [ "$error_log_found" = true ]; then
+          echo "Success."
+      else
+          echo "Fail."
+      fi
+    footer: >
+      #### </log_file_sev_level_configured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 37 - SQ.C.5.1.2 - Ensure the Server Access Log Is Configured Correctly
+#
+{% if ('serv_accesslog_file_configured' in check_list or 'all' in check_list) and '-serv_accesslog_file_configured' not in check_list %}
+  - header: '#### <serv_accesslog_file_configured>'
+    command: |
+      # Determine the Apache configuration directory based on the OS
+      APACHE_PREFIX=$(if [ -f /etc/debian_version ]; then echo "/etc/apache2"; else echo "/etc/httpd"; fi)
+
+      # Array to store checked files to avoid duplicate processing
+      checked_files=()
+
+      # Flag to indicate if any errors were found
+      error_found=0
+
+      # Function to check if a file has already been processed
+      file_already_checked() {
+        local file=$1
+        for checked in "${checked_files[@]}"; do
+          if [[ "$checked" == "$file" ]]; then
+            return 0
+          fi
+        done
+        return 1
+      }
+
+      # Function to find and print non-commented LogFormat and CustomLog directives
+      find_and_print_logformat_customlog() {
+        local file=$1
+
+        # Skip processing if the file has already been checked
+        if file_already_checked "$file"; then
+          return
+        fi
+
+        # Mark the file as checked
+        checked_files+=("$file")
+
+        # Search for non-commented LogFormat and CustomLog directives
+        logformat_lines=$(grep -E '^[[:space:]]*LogFormat' "$file" 2>/dev/null | grep -vE '^[[:space:]]*#')
+        customlog_lines=$(grep -E '^[[:space:]]*CustomLog' "$file" 2>/dev/null | grep -vE '^[[:space:]]*#')
+
+        if [ -n "$logformat_lines" ]; then
+          echo "Found non-commented LogFormat in $file:"
+          echo "    $logformat_lines"
+        fi
+
+        if [ -n "$customlog_lines" ]; then
+          echo "Found non-commented CustomLog in $file:"
+          echo "    $customlog_lines"
+        else
+          echo "ERROR: CustomLog not found or is commented in $file"
+          error_found=1
+        fi
+      }
+
+      # Step 1: Check the main Apache configuration file
+      echo "Checking main Apache configuration..."
+      main_conf_file="$APACHE_PREFIX/conf/httpd.conf"
+      find_and_print_logformat_customlog "$main_conf_file"
+
+      # Step 2: Check the VirtualHosts files
+      echo "Checking VirtualHosts..."
+      virtualhost_files=$(grep -Ril "<VirtualHost" $APACHE_PREFIX/conf* $APACHE_PREFIX/sites-available/* $APACHE_PREFIX/sites-enabled/* $APACHE_PREFIX/conf.d/* 2>/dev/null)
+
+      for vhost_file in $virtualhost_files; do
+        find_and_print_logformat_customlog "$vhost_file"
+      done
+
+      # Indicate that the script has finished checking
+      if [ $error_found -eq 0 ]; then
+        echo "Success."
+      else
+        echo "Fail."
+      fi
+
+    footer: >
+      #### </serv_accesslog_file_configured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 38 - SQ.C.5.1.3 - Ensure Log Storage and Rotation Is Configured Correctly
+#
+{% if ('log_file_rotation_configured' in check_list or 'all' in check_list) and '-log_file_rotation_configured' not in check_list %}
+  - header: '#### <log_file_rotation_configured>'
+    command: |
+      #!/bin/bash
+
+      # Define the Apache configuration directory based on the OS family
+      if grep -q 'Debian' /etc/os-release; then
+        apache_prefix="/etc/apache2"
+      else
+        apache_prefix="/etc/httpd"
+      fi
+
+      # Typical directories for VirtualHosts
+      SITES_AVAILABLE="$apache_prefix/sites-available"
+      SITES_ENABLED="$apache_prefix/sites-enabled"
+      CONF_D="$apache_prefix/conf.d"
+
+      # Function to check the existence of directories
+      check_directory() {
+        local dir=$1
+        if [ -d "$dir" ]; then
+          echo "Directory $dir exists."
+          return 0
+        else
+          echo "Directory $dir does NOT exist."
+          return 1
+        fi
+      }
+
+      # Flag to track any errors or warnings
+      error_found=0
+
+      # Step 1: Check if the typical VirtualHost directories exist
+      echo "Checking for VirtualHost directories..."
+      check_directory "$SITES_AVAILABLE"
+      available_exists=$?
+
+      check_directory "$SITES_ENABLED"
+      enabled_exists=$?
+
+      check_directory "$CONF_D"
+      conf_d_exists=$?
+
+      # Step 2: Check for non-commented VirtualHosts in the directories if they exist
+      if [ $available_exists -eq 0 ] || [ $enabled_exists -eq 0 ] || [ $conf_d_exists -eq 0 ]; then
+        echo "Checking for non-commented VirtualHosts..."
+
+        virtualhosts=$(grep -R "^[[:space:]]*<VirtualHost" "$SITES_AVAILABLE" "$SITES_ENABLED" "$CONF_D" 2>/dev/null)
+
+        if [ -z "$virtualhosts" ]; then
+          echo "No non-commented VirtualHosts found."
+          error_found=1
+        else
+          echo "Non-commented VirtualHosts found:"
+          echo "$virtualhosts"
+
+          # Step 3: Check if each VirtualHost has a CustomLog directive
+          echo "Checking if VirtualHosts have CustomLog directives..."
+          for vhost_file in $(echo "$virtualhosts" | awk -F':' '{print $1}' | sort | uniq); do
+            if grep -q "^[[:space:]]*CustomLog" "$vhost_file"; then
+              echo "OK: VirtualHost in $vhost_file has a CustomLog directive."
+            else
+              echo "WARNING: VirtualHost in $vhost_file does NOT have a CustomLog directive."
+              error_found=1
+            fi
+          done
+        fi
+      else
+        echo "No VirtualHost directories found."
+        error_found=1
+      fi
+
+      # Step 4: Always check the log rotation period and retention
+      echo "Checking log rotation period and retention in /etc/logrotate.conf and /etc/logrotate.d/httpd..."
+      rotation_period=$(grep -E 'rotate|weekly' /etc/logrotate.conf /etc/logrotate.d/httpd 2>/dev/null)
+
+      if echo "$rotation_period" | grep -q 'weekly'; then
+        if echo "$rotation_period" | grep -q 'rotate 13'; then
+          echo "Log rotation is configured to rotate weekly and retain at least 13 weeks."
+        else
+          echo "ERROR: Log rotation is weekly, but does not retain 13 weeks."
+          error_found=1
+        fi
+      else
+        echo "ERROR: Log rotation is NOT set to weekly."
+        error_found=1
+      fi
+
+      # Final Success Check
+      if [ $error_found -eq 0 ]; then
+        echo "Success."
+      fi
+
+    footer: >
+      #### </log_file_rotation_configured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 39 - SQ.C.5.1.4 - Ensure Applicable Patches Are Applied.
+#
+{% if ('apache_security_patches_status' in check_list or 'all' in check_list) and '-apache_security_patches_status' not in check_list %}
+  - header: '#### <apache_security_patches_status>'
+    command: |
+      #!/bin/bash
+
+      # Package name
+      PACKAGE="httpd"
+
+      # Check if the package is installed
+      if ! rpm -q $PACKAGE &> /dev/null; then
+          echo "Package $PACKAGE is not installed."
+          exit 1
+      fi
+
+      # Get the installation or update date of the package
+      install_date=$(rpm -q --queryformat '%{INSTALLTIME:date}\n' $PACKAGE)
+      install_epoch=$(date -d "$install_date" +%s)
+
+      # Get the current date
+      current_epoch=$(date +%s)
+
+      # Calculate the difference in days
+      days_difference=$(( (current_epoch - install_epoch) / 86400 ))
+
+      # Check if the difference is greater than 35 days
+      if [ $days_difference -gt 35 ]; then
+          echo "Warning: security patches more than 1 month old and are not installed!"
+      else
+          echo "Success. Security patches for $PACKAGE are up to date."
+      fi
+
+    footer: >
+      #### </apache_security_patches_status>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 40 - SQ.C.6.1.1 - Ensure mod_ssl and/or mod_nss Is Installed.
+#
+{% if ('apache_ssl_nss_modules_installed' in check_list or 'all' in check_list) and '-apache_ssl_nss_modules_installed' not in check_list %}
+  - header: '#### <apache_ssl_nss_modules_installed>'
+    command: |
+      #!/bin/bash
+
+      # Verificar se os módulos ssl_module ou nss_module estão carregados
+      module_info=$(httpd -M 2>&1 | egrep 'ssl_module|nss_module')
+
+      if echo "$module_info" | grep -q 'ssl_module'; then
+          echo "ssl_module is loaded as a shared module."
+          echo "Success."
+      elif echo "$module_info" | grep -q 'nss_module'; then
+          echo "nss_module is loaded as a shared module."
+          echo "Success."
+      else
+          echo "Error: Neither ssl_module nor nss_module is loaded."
+          echo "Fail."
+      fi
+
+    footer: >
+      #### </apache_ssl_nss_modules_installed>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 41 - SQ.C.6.1.2 - Ensure a Valid Trusted Certificate Is Installed.
+#
+{% if ('apache_trusted_ssl_cert_installed' in check_list or 'all' in check_list) and '-apache_trusted_ssl_cert_installed' not in check_list %}
+  - header: '#### <apache_trusted_ssl_cert_installed>'
+    command: |
+      #!/bin/bash
+
+      # Define the path to the ssl.conf file
+      SSL_CONF="/etc/httpd/conf.d/ssl.conf"
+      STATUS="Success."
+
+      # Check if the ssl.conf file exists
+      if [ -f "$SSL_CONF" ]; then
+          echo "File $SSL_CONF found!"
+      else
+          echo "Error: SSL configuration file $SSL_CONF is missing!"
+          STATUS="FAIL"
+          echo "$STATUS"
+          exit 1
+      fi
+
+      # Check for the presence of SSLCertificateFile, SSLCertificateKeyFile, and SSLCertificateChainFile
+      CERT_FILE=$(grep -i 'SSLCertificateFile' "$SSL_CONF")
+      KEY_FILE=$(grep -i 'SSLCertificateKeyFile' "$SSL_CONF")
+      CHAIN_FILE=$(grep -i 'SSLCertificateChainFile' "$SSL_CONF")
+
+      # Validate the presence of the required directives
+      if [ -n "$CERT_FILE" ]; then
+          echo "$CERT_FILE"
+      else
+          echo "Error: SSLCertificateFile directive not found in $SSL_CONF"
+          STATUS="FAIL"
+      fi
+
+      if [ -n "$KEY_FILE" ]; then
+          echo "$KEY_FILE"
+      else
+          echo "Error: SSLCertificateKeyFile directive not found in $SSL_CONF"
+          STATUS="FAIL"
+      fi
+
+      if [ -n "$CHAIN_FILE" ]; then
+          echo "$CHAIN_FILE"
+      else
+          echo "Error: SSLCertificateChainFile directive not found in $SSL_CONF"
+          STATUS="FAIL"
+      fi
+
+      # Print the final status
+      echo "$STATUS"
+    footer: >
+      #### </apache_trusted_ssl_cert_installed>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 42 - SQ.C.6.1.3 - Ensure the Server's Private Key Is Protected
+#
+{% if ('private_key_protected' in check_list or 'all' in check_list) and '-private_key_protected' not in check_list %}
+  - header: '#### <private_key_protected>'
+    command: |
+      #!/bin/bash
+
+      # Define the path to the Apache SSL configuration file
+      SSL_CONF="/etc/httpd/conf.d/ssl.conf"
+      STATUS="Success."
+
+      # Check if the SSL configuration file exists
+      if [ ! -f "$SSL_CONF" ]; then
+          echo "Error: SSL configuration file $SSL_CONF is missing!"
+          STATUS="FAIL"
+          echo "$STATUS"
+          exit 1
+      fi
+
+      # Function to check for PRIVATE KEY in SSLCertificateFile
+      check_certificate_for_private_key() {
+          local cert_file=$1
+          if grep -q "PRIVATE KEY" "$cert_file"; then
+              echo "Private key found in certificate file $cert_file."
+          else
+              echo "Error: No private key found in certificate file $cert_file."
+              STATUS="FAIL"
+          fi
+      }
+
+      # Function to check ownership and permissions of SSLCertificateKeyFile
+      check_key_file_permissions() {
+          local key_file=$1
+          local owner_group
+          local permissions
+
+          if [ ! -f "$key_file" ]; then
+              echo "Error: SSLCertificateKeyFile $key_file does not exist."
+              STATUS="FAIL"
+              return
+          fi
+
+          owner_group=$(stat -c "%U:%G" "$key_file")
+          permissions=$(stat -c "%a" "$key_file")
+
+          if [ "$owner_group" != "root:root" ]; then
+              echo "Error: SSLCertificateKeyFile $key_file ownership is not root:root."
+              STATUS="FAIL"
+          fi
+
+          if [ "$permissions" != "400" ]; then
+              echo "Error: SSLCertificateKeyFile $key_file permissions are not 0400."
+              STATUS="FAIL"
+          fi
+
+          if [ "$owner_group" == "root:root" ] && [ "$permissions" == "400" ]; then
+              echo "SSLCertificateKeyFile $key_file has correct ownership and permissions."
+          fi
+      }
+
+      # Extract and check SSLCertificateFile and SSLCertificateKeyFile directives
+      cert_files=$(grep -i 'SSLCertificateFile' "$SSL_CONF" | awk '{print $2}')
+      key_files=$(grep -i 'SSLCertificateKeyFile' "$SSL_CONF" | awk '{print $2}')
+
+      # Check each certificate file for PRIVATE KEY
+      for cert_file in $cert_files; do
+          if [ -f "$cert_file" ]; then
+              check_certificate_for_private_key "$cert_file"
+          else
+              echo "Error: SSLCertificateFile $cert_file does not exist."
+              STATUS="FAIL"
+          fi
+      done
+
+      # Check each key file for correct ownership and permissions
+      for key_file in $key_files; do
+          check_key_file_permissions "$key_file"
+      done
+
+      # Print the final status
+      echo "$STATUS"
+    footer: >
+      #### </private_key_protected>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 43 - SQ.C.6.1.4 - Ensure the TLSv1.0 and TLSv1.1 Protocols are Disabled
+#
+{% if ('tls10_tls11_protocols_disabled' in check_list or 'all' in check_list) and '-tls10_tls11_protocols_disabled' not in check_list %}
+  - header: '#### <tls10_tls11_protocols_disabled>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Set minimum version numbers for TLSv1.2 and TLSv1.3 support
+      min_version_tls12="2.2.23"
+      min_version_tls13="2.4.36"
+
+      # Function to compare versions
+      version_greater_equal() {
+          [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+      }
+
+      # Determine TLS version support based on Apache version
+      if version_greater_equal "$apache_version" "$min_version_tls13"; then
+          echo "This Apache version supports TLSv1.3."
+          supported_tls_versions="TLSv1.2 TLSv1.3"
+      elif version_greater_equal "$apache_version" "$min_version_tls12"; then
+          echo "This Apache version supports TLSv1.2."
+          supported_tls_versions="TLSv1.2"
+      else
+          echo "This Apache version does not support TLSv1.2 or TLSv1.3."
+          exit 1
+      fi
+
+      # Check the SSLProtocol directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache SSL configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      ssl_protocol=$(grep -oP '(?<=^|\s)SSLProtocol\s+.*' "$apache_conf_file" | awk '{print $2, $3}')
+
+      if [ "$ssl_protocol" = "$supported_tls_versions" ]; then
+          echo "SSLProtocol directive correctly configured: $ssl_protocol"
+          echo "Success."
+      else
+          echo "Error: SSLProtocol directive is not correctly configured."
+          echo "Expected: SSLProtocol $supported_tls_versions"
+          echo "Found: $ssl_protocol"
+          exit 1
+      fi
+    footer: >
+      #### </tls10_tls11_protocols_disabled>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 44 - SQ.C.6.1.5 - Ensure Weak SSL/TLS Ciphers Are Disabled
+#
+{% if ('weak_ssl_tls_ciphers_disabled' in check_list or 'all' in check_list) and '-weak_ssl_tls_ciphers_disabled' not in check_list %}
+  - header: '#### <weak_ssl_tls_ciphers_disabled>'
+    command: |
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+      echo "Apache version: $apache_version"
+
+      # Set minimum version numbers for TLSv1.3 support
+      min_version_tls13="2.4.36"
+
+      # Function to compare versions
+      version_greater_equal() {
+          [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+      }
+
+      # Determine TLS version support based on Apache version
+      if version_greater_equal "$apache_version" "$min_version_tls13"; then
+          echo "This Apache version supports TLSv1.3."
+      else
+          echo "This Apache version does not support TLSv1.3."
+          exit 1
+      fi
+
+      # Check the SSL configuration file
+      apache_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache SSL configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      # Check SSLHonorCipherOrder directive
+      ssl_honor_cipher_order=$(grep -oP '(?<=^|\s)SSLHonorCipherOrder\s+On' "$apache_conf_file")
+      if [ "$ssl_honor_cipher_order" ]; then
+          echo "SSLHonorCipherOrder is On and correctly configured"
+      else
+          echo "Error: SSLHonorCipherOrder is not correctly configured."
+          exit 1
+      fi
+
+      # Check SSLCipherSuite directive
+      ssl_cipher_suite=$(grep -oP '(?<=^|\s)SSLCipherSuite\s+ALL:!EXP:!NULL:!LOW:!SSLv2:!RC4:!aNULL' "$apache_conf_file")
+      if [ "$ssl_cipher_suite" ]; then
+          echo "SSLCipherSuite has all minimum recommended parameters - ALL:!EXP:!NULL:!LOW:!SSLv2:!RC4:!aNULL"
+      else
+          echo "Error: SSLCipherSuite is not correctly configured."
+          exit 1
+      fi
+
+      # If all checks pass
+      echo "Success."
+    footer: >
+      #### </weak_ssl_tls_ciphers_disabled>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 45 - SQ.C.6.1.6 - Ensure Insecure SSL Renegotiation Is Not Enabled
+#
+{% if ('sslinsecurerenegotiation_off' in check_list or 'all' in check_list) and '-sslinsecurerenegotiation_off' not in check_list %}
+  - header: '#### <sslinsecurerenegotiation_off>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Set minimum version numbers for TLSv1.2 and TLSv1.3 support
+      min_version_tls12="2.2.23"
+      min_version_tls13="2.4.36"
+
+      # Function to compare versions
+      version_greater_equal() {
+          [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+      }
+
+      # Determine TLS version support based on Apache version
+      if version_greater_equal "$apache_version" "$min_version_tls13"; then
+          echo "This Apache version supports TLSv1.3."
+      elif version_greater_equal "$apache_version" "$min_version_tls12"; then
+          echo "This Apache version supports TLSv1.2."
+      else
+          echo "This Apache version does not support TLSv1.2 or TLSv1.3."
+          exit 1
+      fi
+
+      # Check the SSLInsecureRenegotiation directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache SSL configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      ssl_insecure_renegotiation=$(grep -i "^\s*SSLInsecureRenegotiation\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$ssl_insecure_renegotiation" ]; then
+          echo "SSLInsecureRenegotiation is not found, although the directive is not present we need this explicitly present and set as off."
+          echo "Fail."
+          exit 1
+      elif [ "$ssl_insecure_renegotiation" = "off" ]; then
+          echo "SSLInsecureRenegotiation is off and correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "SSLInsecureRenegotiation is incorrectly set, it should be set as off."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </sslinsecurerenegotiation_off>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 46 - SQ.C.6.1.7 - Ensure SSL Compression Is Disabled
+#
+{% if ('sslcompression_off' in check_list or 'all' in check_list) and '-sslcompression_off' not in check_list %}
+  - header: '#### <sslcompression_off>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the SSLCompression directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache SSL configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      ssl_compression=$(grep -i "^\s*SSLCompression\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$ssl_compression" ]; then
+          echo "SSLCompression is not found, although the directive is not present we need this explicitly present and set as off."
+          echo "Fail."
+          exit 1
+      elif [ "$ssl_compression" = "off" ]; then
+          echo "SSLCompression is off and correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "SSLCompression is incorrectly set, it should be set as off."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </sslcompression_off>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 47 - SQ.C.6.1.8 - Ensure Medium Strength SSL/TLS Ciphers Are Disabled
+#
+{% if ('medium_ssl_tls_ciphers_configured' in check_list or 'all' in check_list) and '-medium_ssl_tls_ciphers_configured' not in check_list %}
+  - header: '#### <medium_ssl_tls_ciphers_configured>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+      echo "Apache version: $apache_version"
+
+      # Set minimum version numbers for TLSv1.3 support
+      min_version_tls13="2.4.36"
+
+      # Function to compare versions
+      version_greater_equal() {
+          [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+      }
+
+      # Determine TLS version support based on Apache version
+      if version_greater_equal "$apache_version" "$min_version_tls13"; then
+          echo "This Apache version supports TLSv1.3."
+      else
+          echo "This Apache version does not support TLSv1.3."
+          exit 1
+      fi
+
+      # Check the SSL configuration file
+      apache_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache SSL configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      # Check SSLHonorCipherOrder directive
+      ssl_honor_cipher_order=$(grep -oP '(?<=^|\s)SSLHonorCipherOrder\s+On' "$apache_conf_file")
+      if [ "$ssl_honor_cipher_order" ]; then
+          echo "SSLHonorCipherOrder is On and correctly configured"
+      else
+          echo "Error: SSLHonorCipherOrder is not correctly configured."
+          exit 1
+      fi
+
+      # Check SSLCipherSuite directive for recommended configuration
+      ssl_cipher_suite=$(grep -oP '(?<=^|\s)SSLCipherSuite\s+ALL:!EXP:!NULL:!LOW:!SSLv2:!RC4:!aNULL:!3DES:!IDEA' "$apache_conf_file")
+      if [ "$ssl_cipher_suite" ]; then
+          echo "SSLCipherSuite has all medium recommended parameters - ALL:!EXP:!NULL:!LOW:!SSLv2:!RC4:!aNULL:!3DES:!IDEA"
+      else
+          echo "Error: SSLCipherSuite is not correctly configured."
+          exit 1
+      fi
+
+      # If all checks pass
+      echo "Success."
+    footer: >
+      #### </medium_ssl_tls_ciphers_configured>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 48 - SQ.C.6.1.9 - Ensure All Web Content is Accessed via HTTPS
+#
+{% if ('web_content_https' in check_list or 'all' in check_list) and '-web_content_https' not in check_list %}
+  - header: '#### <web_content_https>'
+    command: |
+      #!/bin/bash
+
+      # Function to check for non-commented Redirect directive
+      check_redirect() {
+          apache_conf_file="$1"
+          if [ ! -f "$apache_conf_file" ]; then
+              return 1
+          fi
+
+          # Search for non-commented Redirect permanent directive
+          redirect_found=$(grep -r '^[^#]*Redirect permanent' "$apache_conf_file")
+
+          if [ -n "$redirect_found" ]; then
+              echo "Non-commented Redirect directive found in $apache_conf_file:"
+              echo "$redirect_found"
+              return 0
+          else
+              return 1
+          fi
+      }
+
+      # Check for HTTP to HTTPS redirect
+      if check_redirect "/etc/httpd/conf/httpd.conf"; then
+          echo "HTTP to HTTPS redirect is correctly configured."
+      else
+          echo "Error: Non-commented Redirect directive not found in the configuration. HTTP traffic is not being redirected to HTTPS."
+          echo "Fail."
+          exit 1
+      fi
+
+      # Check if SSL/TLS is enabled and configured
+      ssl_conf_file="/etc/httpd/conf.d/ssl.conf"
+      if [ -f "$ssl_conf_file" ]; then
+          echo "SSL configuration file $ssl_conf_file found!"
+          echo "SSL/TLS is enabled."
+      else
+          echo "Error: SSL configuration file $ssl_conf_file is missing!"
+          echo "Fail."
+          exit 1
+      fi
+
+      # If all checks pass
+      echo "Success."
+    footer: >
+      #### </web_content_https>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 49 - SQ.C.7.1.1 - Ensure ServerTokens is Set to 'Prod' or 'ProductOnly'
+#
+{% if ('servertokens_prod_set' in check_list or 'all' in check_list) and '-servertokens_prod_set' not in check_list %}
+  - header: '#### <servertokens_prod_set>'
+    command: |
+      #!/bin/bash
+
+      # Define the path to the main Apache configuration file
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+
+      # Check if the Apache configuration file exists
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          echo "Fail."
+          exit 1
+      fi
+
+      # Search for the ServerTokens directive, ignoring commented lines
+      servertokens_value=$(grep -oP '^\s*[^#]*\bServerTokens\s+\K(Prod|ProductOnly)' "$apache_conf_file")
+
+      # Check if ServerTokens is present and has the correct value
+      if [ -z "$servertokens_value" ]; then
+          echo "Error: ServerTokens directive not found or not correctly set to 'Prod' or 'ProductOnly'."
+          echo "Fail."
+          exit 1
+      else
+          echo "ServerTokens is set correctly to '$servertokens_value'."
+          echo "Success."
+      fi
+    footer: >
+      #### </servertokens_prod_set>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 50 - SQ.C.7.1.2 - Ensure ServerSignature Is Not Enabled
+#
+{% if ('server_signature_off' in check_list or 'all' in check_list) and '-server_signature_off' not in check_list %}
+  - header: '#### <server_signature_off>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the ServerSignature directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      server_signature=$(grep -i "^\s*ServerSignature\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$server_signature" ]; then
+          echo "ServerSignature is not found, although the directive is not present we need this explicitly present and set as off."
+          echo "Fail."
+          exit 1
+      elif [ "$server_signature" = "Off" ]; then
+          echo "ServerSignature is off and correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "ServerSignature is incorrectly set, it should be set as Off."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </server_signature_off>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 51 - SQ.C.8.1.1 - Ensure the TimeOut Is Set to 10 or Less
+#
+{% if ('timeout_10_seconds_or_less' in check_list or 'all' in check_list) and '-timeout_10_seconds_or_less' not in check_list %}
+  - header: '#### <timeout_10_seconds_or_less>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the Timeout directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          echo "Fail."
+          exit 1
+      fi
+
+      timeout_value=$(grep -i "^\s*Timeout\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$timeout_value" ]; then
+          echo "Timeout directive is not found, although the directive is not present we need this explicitly present and set to 10 seconds or less."
+          echo "Fail."
+          exit 1
+      elif [ "$timeout_value" -le 10 ]; then
+          echo "Timeout is set to $timeout_value seconds and is correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "Timeout is set to $timeout_value seconds, which is greater than 10 seconds. It should be set to 10 seconds or less."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </timeout_10_seconds_or_less>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 52 - SQ.C.8.1.2 - Ensure KeepAlive Is Enabled
+#
+{% if ('keepalive_on' in check_list or 'all' in check_list) and '-keepalive_on' not in check_list %}
+  - header: '#### <keepalive_on>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the KeepAlive directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          echo "Fail."
+          exit 1
+      fi
+
+      keepalive_value=$(grep -i "^\s*KeepAlive\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$keepalive_value" ]; then
+          echo "KeepAlive directive is not found, although the directive is not present we need this explicitly present and set as On."
+          echo "Fail."
+          exit 1
+      elif [ "$keepalive_value" = "On" ]; then
+          echo "KeepAlive is set to On and is correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "KeepAlive is incorrectly set, it should be set as On."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </keepalive_on>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 53 - SQ.C.8.1.3 - Ensure MaxKeepAliveRequests is Set to a Value of 100 or Greater
+#
+{% if ('max_keepalive_requests_set' in check_list or 'all' in check_list) and '-max_keepalive_requests_set' not in check_list %}
+  - header: '#### <max_keepalive_requests_set>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the MaxKeepAliveRequests directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      max_keepalive_requests=$(grep -i "^\s*MaxKeepAliveRequests\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$max_keepalive_requests" ]; then
+          echo "MaxKeepAliveRequests directive is not found, although the directive is not present we need this explicitly present and set to 100 or greater."
+          echo "Fail."
+          exit 1
+      elif [ "$max_keepalive_requests" -ge 100 ]; then
+          echo "MaxKeepAliveRequests is set to $max_keepalive_requests and is correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "MaxKeepAliveRequests is set to $max_keepalive_requests, which is less than 100. It should be set to 100 or greater."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </max_keepalive_requests_set>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 54 - SQ.C.8.1.4 - Ensure KeepAliveTimeout is Set to a Value of 15 or Less
+#
+{% if ('keep_alive_timeout_set' in check_list or 'all' in check_list) and '-keep_alive_timeout_set' not in check_list %}
+  - header: '#### <keep_alive_timeout_set>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+
+      echo "Apache version: $apache_version"
+
+      # Check the KeepAliveTimeout directive in the Apache configuration
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          exit 1
+      fi
+
+      keep_alive_timeout=$(grep -i "^\s*KeepAliveTimeout\s\+" "$apache_conf_file" | awk '{print $2}')
+
+      if [ -z "$keep_alive_timeout" ]; then
+          echo "KeepAliveTimeout directive is not found, although the directive is not present we need this explicitly present and set to 15 or less."
+          echo "Fail."
+          exit 1
+      elif [ "$keep_alive_timeout" -le 15 ]; then
+          echo "KeepAliveTimeout is set to $keep_alive_timeout and is correctly configured."
+          echo "Success."
+          exit 0
+      else
+          echo "KeepAliveTimeout is set to $keep_alive_timeout, which is greater than 15. It should be set to 15 or less."
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </keep_alive_timeout_set>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 55 - SQ.C.8.1.5 - Ensure the Timeout Limits for Request Headers is Set to 40 or Less
+#
+{% if ('request_timeout_limits' in check_list or 'all' in check_list) and '-request_timeout_limits' not in check_list %}
+  - header: '#### <request_timeout_limits>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+      echo "Apache version: $apache_version"
+
+      # Check the Apache configuration file
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          echo "Fail."
+          exit 1
+      fi
+
+      # Check if reqtimeout_module is loaded and not commented out
+      reqtimeout_module=$(grep -i "^\s*LoadModule reqtimeout_module modules/mod_reqtimeout.so" "$apache_conf_file")
+      if [ -z "$reqtimeout_module" ]; then
+          echo "LoadModule reqtimeout_module modules/mod_reqtimeout.so is either not present or commented."
+          echo "Fail."
+          exit 1
+      else
+          echo "LoadModule reqtimeout_module modules/mod_reqtimeout.so is present and compliant."
+      fi
+
+      # Check the RequestReadTimeout directive and ensure it's not commented out
+      request_timeout=$(grep -i "^\s*RequestReadTimeout\s" "$apache_conf_file" | sed 's/RequestReadTimeout\s*//')
+
+      expected_timeout="header=20-40,MinRate=500 body=20,MinRate=500"
+
+      if [ -z "$request_timeout" ]; then
+          echo "RequestReadTimeout is either not present or commented."
+          echo "Fail."
+          exit 1
+      elif [ "$request_timeout" = "$expected_timeout" ]; then
+          echo "RequestReadTimeout is correctly configured: $request_timeout"
+          echo "Success."
+          exit 0
+      else
+          echo "RequestReadTimeout is incorrectly set, it should be set as '$expected_timeout'."
+          echo "Found: $request_timeout"
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </request_timeout_limits>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 56 - SQ.C.8.1.6 - Ensure Timeout Limits for the Request Body is Set to 20 or Less
+#
+{% if ('request_body_timeout_limits' in check_list or 'all' in check_list) and '-request_body_timeout_limits' not in check_list %}
+  - header: '#### <request_body_timeout_limits>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+      echo "Apache version: $apache_version"
+
+      # Check the Apache configuration file
+      apache_conf_file="/etc/httpd/conf/httpd.conf"
+      if [ ! -f "$apache_conf_file" ]; then
+          echo "Error: Apache configuration file $apache_conf_file not found!"
+          echo "Fail."
+          exit 1
+      fi
+
+      # Check if reqtimeout_module is loaded and not commented out
+      reqtimeout_module=$(grep -i "^\s*LoadModule reqtimeout_module modules/mod_reqtimeout.so" "$apache_conf_file")
+      if [ -z "$reqtimeout_module" ]; then
+          echo "LoadModule reqtimeout_module modules/mod_reqtimeout.so is either not present or commented."
+          echo "Fail."
+          exit 1
+      else
+          echo "LoadModule reqtimeout_module modules/mod_reqtimeout.so is present and compliant."
+      fi
+
+      # Check the RequestReadTimeout directive and ensure it's not commented out
+      request_timeout=$(grep -i "^\s*RequestReadTimeout\s" "$apache_conf_file" | sed 's/RequestReadTimeout\s*//')
+
+      # Expected timeout settings for the body
+      expected_body_timeout="body=20,MinRate=500"
+
+      # Extract the body timeout from the directive
+      body_timeout=$(echo "$request_timeout" | grep -oP 'body=[0-9]+')
+
+      if [ -z "$request_timeout" ]; then
+          echo "RequestReadTimeout is either not present or commented."
+          echo "Fail."
+          exit 1
+      elif [ -z "$body_timeout" ]; then
+          echo "RequestReadTimeout directive is missing the 'body' parameter."
+          echo "Fail."
+          exit 1
+      elif [ "${body_timeout#*=}" -le 20 ]; then
+          echo "RequestReadTimeout body timeout is correctly configured: $body_timeout"
+          echo "Success."
+          exit 0
+      else
+          echo "RequestReadTimeout body timeout is incorrectly set, it should be 20 seconds or less."
+          echo "Found: $body_timeout"
+          echo "Fail."
+          exit 1
+      fi
+    footer: >
+      #### </request_body_timeout_limits>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 57 - Topology gather box serial number.
+# Need to gather serial number of the underlying linux box to use as unique identifier / serial number for topology purposes
+#
+{% if ('system_serial_number' in check_list or 'all' in check_list) and '-system_serial_number' not in check_list %}
+  - header: '#### <system_serial_number>'
+    command: 'dmidecode -s system-serial-number'
+    become: true
+    footer: >
+      #### </system_serial_number>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 58 - Gathering Apache version.
+# Need to gather apache version for topology purposes
+#
+{% if ('gather_apache_version' in check_list or 'all' in check_list) and '-gather_apache_version' not in check_list %}
+  - header: '#### <gather_apache_version>'
+    command: |
+      #!/bin/bash
+
+      # Check the Apache version
+      apache_version=$(httpd -v | grep "Server version" | awk '{print $3}' | cut -d'/' -f2)
+      echo "Apache version: $apache_version"
+    become: true
+    footer: >
+      #### </gather_apache_version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+# Check 59 - Gathering lscpu version.
+# Need to gather apache version for topology purposes
+#
+{% if ('lscpu' in check_list or 'all' in check_list) and '-lscpu' not in check_list %}
+  - header: '#### <lscpu>'
+    command: '/usr/bin/lscpu || /bin/lscpu || echo "ERR=lscpu Failed to run!"'
+    become: true
+    footer: >
+      #### </lscpu>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

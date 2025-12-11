@@ -1,0 +1,3337 @@
+# ---------------------- #
+# ---- NEW POLICIES ---- #
+# ---------------------- #
+
+id:redhat_os_linux_8.1.8000
+checkname:BOI.1.1.1.8 - Filesystem Configuration - Ensure mounting of usb-storage kernel is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^usb-storage\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8001
+checkname:BOI.1.1.2.2.1 - Filesystem Configuration - Ensure separate partition exists for /dev/smh
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\s\/dev\/smh\s
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8002
+checkname:BOI.1.1.2.4.2 - Filesystem Configuration - Ensure nodev option set on /var partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8003
+checkname:BOI.1.1.2.4.3 - Filesystem Configuration - Ensure nosuid option set on /var partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8004
+checkname:BOI.1.1.2.6.2 - Filesystem Configuration - Ensure nodev option set on /var/log partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8005
+checkname:BOI.1.1.2.6.3 - Filesystem Configuration - Ensure nosuid option set on /var/log partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8006
+checkname:BOI.1.1.2.6.4 - Filesystem Configuration - Ensure noexec option set on /var/log partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\s+
+stanzastop: $
+stanzacriteria: include:noexec
+
+id:redhat_os_linux_8.1.8007
+checkname:BOI.1.1.2.7.2 - Filesystem Configuration - Ensure nodev option set on /var/log/audit partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\/audit\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8008
+checkname:BOI.1.1.2.7.3 - Filesystem Configuration - Ensure nosuid option set on /var/log/audit partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\/audit\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8009
+checkname:BOI.1.1.2.7.4 - Filesystem Configuration - Ensure noexec option set on /var/log/audit partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/log\/audit\s+
+stanzastop: $
+stanzacriteria: include:noexec
+
+id:redhat_os_linux_8.1.8010
+checkname:BOI.1.2.3 - Ensure repo_gpgcheck is globally activated
+severity: critical
+stanzaempty: Failed
+type: match
+segment: gpgcheck
+stanzastart:^gpgcheck
+stanzastop: $
+stanzacriteria: include:gpgcheck=1
+
+id:redhat_os_linux_8.1.8011
+checkname:BOI.1.4.2 - Ensure ptrace_scope is restricted
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: sysctl
+stanzastart:^kernel\.yama\.ptrace_scope
+stanzastop: $
+match: ^kernel\.yama\.ptrace_scope\s*=\s*(\d+)
+criteria: equal:1
+
+id:redhat_os_linux_8.1.8012
+checkname:BOI.1.4.3 - Ensure core dump backtraces are disabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_osfiles
+stanzastart:^\/etc\/systemd\/journald\.conf.+ProcessSizeMax
+stanzastop: $
+match: ProcessSizeMax\s*=\s*(\d+)
+criteria: equal:0
+
+id:redhat_os_linux_8.1.8013
+checkname:BOI.1.4.4 - Ensure core dump storage is disabled
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: coredump_conf
+stanzastart:^Storage
+stanzastop:$
+# Check coredump.conf if set its ok, otherwise double-check file in directory
+stanzacriteria:include:^Storage=none
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:coredump_conf_dir
+        stanzastart:^-.*disable-storage\.conf
+        stanzastop:$
+        stanzacriteria: include:.*
+    }
+}
+
+
+id:redhat_os_linux_8.1.8014
+checkname:BOI.2.1.3 - Ensure chrony is not run as the root user
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_daemon
+stanzastart:^\/etc\/sysconfig\/chronyd:OPTIONS
+stanzastop: $
+stanzacriteria: include:OPTIONS=\"\-u chrony\"
+
+id:redhat_os_linux_8.1.8015
+checkname:BOI.2.2.5 - Ensure dnsmasq services are not in use
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl_is_enabled
+stanzastart:^dnsmasq\.service:
+stanzastop: $
+stanzacriteria: include:disabled:=1
+
+id:redhat_os_linux_8.1.8016
+checkname:BOI.2.3.1 - Ensure ftp client is not installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:ftp
+
+id:redhat_os_linux_8.1.8017
+checkname:BOI.2.3.5 - Ensure tftp client is not installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:tftp
+
+id:redhat_os_linux_8.1.8018
+checkname:BOI.3.1.1 - Ensure IPv6 status is identified
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: sysctl
+stanzastart:^net\.ipv6\.conf\.lo\.disable_ipv6\s*=
+stanzastop: $
+match: ^net\.ipv6\.conf\.lo\.disable_ipv6\s*=\s*(\d+)
+criteria: equal:0
+
+id:redhat_os_linux_8.1.8019
+checkname:BOI.3.1.3 - Ensure bluetooth services are not in use
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:bluez
+
+id:redhat_os_linux_8.1.8020
+checkname:BOI.3.4.1.2 - Ensure a single firewall configuration utility is in use
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: systemctl_is_enabled
+stanzastart:^firewalld\.service
+stanzastop:$
+# Check firewalld.service is enabled, otherwise check if nftables.service is enabled
+stanzacriteria:exclude:disabled
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:systemctl_is_enabled
+        stanzastart:^nftables\.service
+        stanzastop:$
+        stanzacriteria: exclude:disabled
+    }
+}
+
+id:redhat_os_linux_8.1.8021
+checkname:BOI.4.2.2 - Ensure permissions on SSH private host key files are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/ssh\/ssh_host_\w+_key(?!\.pub)
+stanzastop: $
+stanzacriteria: include:^\/etc\/ssh\/ssh_host_\w+_key(?!\.pub):\s*6[0,4]0\s+root\s+(root|ssh_keys)
+
+id:redhat_os_linux_8.1.8022
+checkname:BOI.4.2.3 - Ensure permissions on SSH public host key files are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/ssh\/ssh_host_\w+_key\.pub
+stanzastop: $
+stanzacriteria: include:^\/etc\/ssh\/ssh_host_\w+_key\.pub:\s*6[0,4][0,4]\s+root\s+root
+
+id:redhat_os_linux_8.1.8023
+checkname:BOI.4.2.11 - Ensure sshd KexAlgorithms is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sshd_t
+stanzastart:^kexalgorithms
+stanzastop: $
+stanzacriteria: exclude: (diffie-hellman-group1-sha1|diffie-hellman-group14-sha1|diffie-hellman-group-exchange-sha1)
+
+id:redhat_os_linux_8.1.8024
+checkname:BOI.4.2.16 - Ensure IPv6 status is identified
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: sshd_t
+stanzastart:^maxsessions
+stanzastop: $
+match: ^maxsessions\s+(\d+)
+criteria: max:10
+
+id:redhat_os_linux_8.1.8025
+checkname:BOI.4.2.17 - Ensure sshd MaxStartups is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sshd_t
+stanzastart:^maxstartups\s+
+stanzastop: $
+stanzacriteria: include:^maxstartups\s+10:30:100
+
+id:redhat_os_linux_8.1.8026
+checkname:BOI.4.2.21 - Ensure sshd UsePAM is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sshd_t
+stanzastart:^usepam\s+
+stanzastop: $
+stanzacriteria: include:^usepam\s+yes$
+
+id:redhat_os_linux_8.1.8027
+checkname:BOI.4.2.22 - Ensure sshd crypto_policy is not set
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sshd_t
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^crypto_policy
+
+id:redhat_os_linux_8.1.8028
+checkname:BOI.4.3.1 - Ensure sudo is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^sudo
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8028
+checkname:BOI.4.3.2 - Ensure sudo commands use pty
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/sudoers:Defaults\s+use_pty
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8028
+checkname:BOI.4.3.3 - Ensure sudo log file exists
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/sudoers:Defaults\s+logfile=
+stanzastop: $
+stanzacriteria: include:logfile=".*"
+
+id:redhat_os_linux_8.1.8029
+checkname:BOI.4.3.4 - Ensure users must provide password for escalation
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/sudoers:(?!ca_recon|ca_break)
+stanzastop: $
+stanzacriteria: exclude:=NOPASSWD
+
+
+id:redhat_os_linux_8.1.8030
+checkname:BOI.4.3.5 - Ensure users must provide password for escalation
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/sudoers:(?!ca_recon|ca_break)
+stanzastop: $
+stanzacriteria: exclude:\!authenicate
+
+id:redhat_os_linux_8.1.8031
+checkname:BOI.4.3.6 - Ensure sudo authentication timeout is configured correctly
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: commands_sudo_V
+stanzastart:^sudo_V:Authentication\stimestamp\stimeout
+stanzastop: $
+match: timeout:\s+(\d+)
+criteria: max:15
+
+id:redhat_os_linux_8.1.8032
+checkname:BOI.4.3.7 - Ensure access to the su command is restricted
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+CA_LOGON {
+   id:ca_logon
+   checkname:BOI.4.3.7.1 - Ensure access to the su command is restricted - ca_logon
+   severity: critical
+    stanzaempty: Failed
+    type: match
+    segment: configfiles_sys
+    stanzastart:^\/etc\/group:wheel:x:10:
+    stanzastop: $
+    stanzacriteria: include:ca_logon
+   }
+PAM_WHEEL {
+   id:pam_wheel
+   checkname:BOI.4.3.7.2 - Ensure access to the su command is restricted - pam_wheel
+   severity: critical
+    stanzaempty: Failed
+    type: match
+    segment: configfiles_sys
+    stanzastart:^\/etc\/pam\.d\/su:auth\s+required\s+pam_wheel\.so\s+use_uid
+    stanzastop: $
+    stanzacriteria: include:group=wheel
+   }
+}
+
+id:redhat_os_linux_8.1.8033
+checkname:BOI.4.4.1.1 - Ensure latest version of pam is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: pam_latest_version
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:^pam
+
+id:redhat_os_linux_8.1.8034
+checkname:BOI.4.4.1.2 - Ensure latest version of authselect is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: authselect_latest_version
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:^authselect
+
+id:redhat_os_linux_8.1.8035
+checkname:BOI.4.4.2.2 - Ensure pam_faillock module is enabled
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+DENY {
+   id:deny
+   checkname:BOI.4.4.2.2.1 - Ensure pam_faillock module is enabled - DENY
+   severity: critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_faillock\.so
+   stanzastop: $
+   match: ^deny=(\d+)
+   criteria: max:5
+   }
+UNLOCK_TIME {
+   id:unlock_time
+   checkname:BOI.4.4.2.2.2 - Ensure access to the su command is restricted - UNLOCK_TIME
+   severity: critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_faillock\.so
+   stanzastop: $
+   match: ^unlock_time=(\d+)
+   criteria: min:1800
+   }
+}
+
+id:redhat_os_linux_8.1.8035
+checkname:BOI.4.4.2.1 - Ensure active authselect profile includes pam modules
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+PWQUALITY {
+   id:pwquality
+   checkname:BOI.4.4.2.1.1 - Ensure active authselect profile includes pam modules - PWQUALITY
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_pwquality\.so
+   stanzastop: $
+   stanzacriteria: include:.*
+   }
+PWHISTORY {
+   id:pwhistory
+   checkname:BOI.4.4.2.1.2 - Ensure active authselect profile includes pam modules - PWHISTORY
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_pwhistory\.so
+   stanzastop: $
+   stanzacriteria: include:.*
+   }
+FAILLOCK {
+   id:faillock
+   checkname:BOI.4.4.2.1.3 - Ensure active authselect profile includes pam modules - FAILLOCK
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_faillock\.so
+   stanzastop: $
+   stanzacriteria: include:.*
+   }
+UNIX {
+   id:unix
+   checkname:BOI.4.4.2.1.4 - Ensure active authselect profile includes pam modules - UNIX
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_auth
+   stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_unix\.so
+   stanzastop: $
+   stanzacriteria: include:.*
+   }
+}
+
+id:redhat_os_linux_8.1.8036
+checkname:BOI.4.4.2.3 - Ensure pam_pwquality module is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_pwquality\.so
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8037
+checkname:BOI.4.4.2.4 - Ensure pam_pwhistory module is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_pwhistory\.so
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8038
+checkname:BOI.4.4.2.5 - Ensure pam_unix module is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_unix\.so
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8039
+checkname:BOI.4.4.3.1.2 - Ensure password unlock time is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/et\/security\/faillock\.conf.*unlock_time
+stanzastop: $
+match: unlock_time\s*=\s*(\d+)
+criteria: equal:1800
+
+id:redhat_os_linux_8.1.8040
+checkname:BOI.4.4.3.2.1 - Ensure password number of changed characters is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*difok
+stanzastop: $
+match: difok\s*=\s*(\d+)
+criteria: equal:2
+
+id:redhat_os_linux_8.1.8041
+checkname:BOI.4.4.3.2.2 - Ensure password length is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*minlen
+stanzastop: $
+match: minlen\s*=\s*(\d+)
+criteria: equal:8
+
+id:redhat_os_linux_8.1.8042
+checkname:BOI.4.4.3.2.4 - Ensure password same consecutive characters is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*maxrepeat
+stanzastop: $
+match: maxrepeat\s*=\s*(\d+)
+criteria: equal:3
+
+id:redhat_os_linux_8.1.8043
+checkname:BOI.4.4.3.2.5 - Ensure password maximum sequential characters is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*maxsequence
+stanzastop: $
+match: maxsequence\s*=\s*(\d+)
+criteria: equal:3
+
+id:redhat_os_linux_8.1.8044
+checkname:BOI.4.4.3.2.6 - Ensure password dictionary check is enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*dictcheck
+stanzastop: $
+match: dictcheck\s*=\s*(\d+)
+criteria: min:1
+
+id:redhat_os_linux_8.1.8045
+checkname:BOI.4.4.3.2.7 - Ensure password quality is enforced for the root user
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwquality\.conf.*enforce_for_root
+stanzastop: $
+match: enforce_for_root\s*=\s*(\d+)
+criteria: equal:1
+
+id:redhat_os_linux_8.1.8046
+checkname:BOI.4.4.3.3.2 - Ensure password history is enforced for the root user
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/pwhistory\.conf.*enforce_for_root
+stanzastop: $
+match: enforce_for_root\s*=\s*(\d+)
+criteria: equal:1
+
+id:redhat_os_linux_8.1.8047
+checkname:BOI.4.4.3.3.3 - Ensure pam_pwhistory includes use_authtok
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_pwhistory\.so.*use_authtok
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8048
+checkname:BOI.4.4.3.4.1 - Ensure pam_unix does not include nullok
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_unix\.so
+stanzastop: $
+stanzacriteria: exclude:nullok
+
+id:redhat_os_linux_8.1.8049
+checkname:BOI.4.4.3.4.2 - Ensure pam_unix does not include remember
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_unix\.so
+stanzastop: $
+stanzacriteria: exclude:remember
+
+id:redhat_os_linux_8.1.8050
+checkname:BOI.4.4.3.4.4 - Ensure pam_unix includes use_authtok
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/pam\.d\/(password|system)-auth.*pam_unix\.so.*use_authtok
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8051
+checkname:BOI.4.5.1.1 - Ensure strong password hashing algorithm is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/libuser\.conf:\s*crypt_style
+stanzastop: $
+stanzacriteria: include:crypt_style\s*=\s*sha512
+
+id:redhat_os_linux_8.1.8052
+checkname:BOI.4.5.2.2 - Ensure root user umask is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/root\/\.(bash_profile|bashrc)
+stanzastop: $
+stanzacriteria: exclude: umask
+
+id:redhat_os_linux_8.1.8053
+checkname:BOI.4.5.2.4 - Ensure root password is set
+severity: critical
+stanzaempty: Failed
+type: match
+segment: passwd_root_set
+stanzastart:^root
+stanzastop: $
+stanzacriteria: include:Password\sset
+
+id:redhat_os_linux_8.1.8054
+checkname:BOI.4.5.3.1 - Ensure nologin is not listed in /etc/shells
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_shell
+stanzastart:^\/etc\/shells
+stanzastop: $
+stanzacriteria: exclude: nologin
+
+id:redhat_os_linux_8.1.8055
+checkname:BOI.4.5.3.2 - Ensure default user shell timeout is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: umask_tmout
+stanzastart:^.*(Timeout|TMOUT)
+stanzastop: $
+stanzacriteria: include: \bOK\b
+
+id:redhat_os_linux_8.1.8056
+checkname:BOI.5.1.1.3 - Ensure journald is configured to send logs to rsyslog
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/systemd\/journald\.conf.*ForwardToSyslog
+stanzastop: $
+stanzacriteria: include:ForwardToSyslog\s*=\s*yes
+
+id:redhat_os_linux_8.1.8057
+checkname:BOI.5.1.2.2 - Ensure journald service is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:^\s*systemd-journald\.service
+stanzastop: $
+stanzacriteria: include: active\s+running
+
+id:redhat_os_linux_8.1.8058
+checkname:BOI.5.1.2.3 - Ensure journald is configured to compress large log files
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/systemd\/journald\.conf.*Compress
+stanzastop: $
+stanzacriteria: include:Compress\s*=\s*yes
+
+id:redhat_os_linux_8.1.8059
+checkname:BOI.5.1.2.4 - Ensure journald is configured to write logfiles to persistent disk
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/systemd\/journald\.conf.*Storage
+stanzastop: $
+stanzacriteria: include:Storage\s*=\s*persistent
+
+id:redhat_os_linux_8.1.8060
+checkname:BOI.5.1.2.5 - Ensure journald is configured to send logs to rsyslog
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/systemd\/journald\.conf.*ForwardToSyslog
+stanzastop: $
+stanzacriteria: include:ForwardToSyslog\s*=\s*yes
+
+id:redhat_os_linux_8.1.8061
+checkname:BOI.5.1.2.1.1 - Ensure systemd-journal-remote is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl_is_enabled
+stanzastart:^systemd-journal-remote
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8062
+checkname:BOI.5.1.2.1.2 - Ensure systemd-journal-remote is configured
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+URL {
+   id:url
+   checkname:BOI.5.1.2.1.2.1 - Ensure systemd-journal-remote is configured - URL
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: journal_upload_conf
+   stanzastart:^URL=
+   stanzastop: $
+   stanzacriteria: include:=((25[0-5]|(2[0-4]|1[0-9]|[1-9])[0-9])(\.(?!$)|$)){4}$
+   }
+ServerKeyFile {
+   id:serverkeyfile
+   checkname:BOI.5.1.2.1.2.2 - Ensure systemd-journal-remote is configured - ServerKeyFile
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: journal_upload_conf
+   stanzastart:^ServerKeyFile=
+   stanzastop: $
+   stanzacriteria: include:=\/etc\/ssl\/private\/journal-upload\.pem
+   }
+ServerCertificateFile {
+   id:servercertificatefile
+   checkname:BOI.5.1.2.1.2.3 - Ensure systemd-journal-remote is configured - ServerCertificateFile
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: journal_upload_conf
+   stanzastart:^ServerCertificateFile=
+   stanzastop: $
+   stanzacriteria: include:=\/etc\/ssl\/certs\/journal-upload\.pem
+   }
+TrustedCertificateFile {
+   id:trustedcertificatefile
+   checkname:BOI.5.1.2.1.2.4 - Ensure systemd-journal-remote is configured - TrustedCertificateFile
+   severity: critical
+   stanzaempty: Failed
+   type: match
+   segment: journal_upload_conf
+   stanzastart:^TrustedCertificateFile=
+   stanzastop: $
+   stanzacriteria: include:=\/etc\/ssl\/ca\/trusted\.pem
+   }
+}
+
+id:redhat_os_linux_8.1.8063
+checkname:BOI.5.1.2.1.3 - Ensure systemd-journal-remote is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:^\s*systemd-journal-upload\.service
+stanzastop: $
+stanzacriteria: include: active\s+running
+
+id:redhat_os_linux_8.1.8064
+checkname:BOI.5.1.2.1.4 - Ensure systemd-journal-remote is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl_is_active
+stanzastart:^\s*systemd-journal-remote\.socket
+stanzastop: $
+stanzacriteria: include: \bmasked\b
+
+id:redhat_os_linux_8.1.8065
+checkname:BOI.5.2.1.1 - Ensure audit is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^audit-(?!libs)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8066
+checkname:BOI.5.2.1.3 - Ensure audit_backlog_limit is sufficient
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: commands_grubby
+stanzastart:^grubby:args=
+stanzastop: $
+match: audit_backlog_limit=(\d+)
+criteria: min: 8192
+
+id:redhat_os_linux_8.1.8067
+checkname:BOI.5.2.3.2 - Ensure actions as another user are always logged
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-a\salways,exit\s(?=.*-F\sarch=b(32|64).*)(?=.*-F\sauid!=(unset|-1|4294967295).*)(?=.*-C\s(euid!=uid|uid!=euid).*)(?=.*-S\sexecve)
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8068
+checkname:BOI.5.2.3.3 - Ensure events that modify the sudo log file are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-w\s\/var\/log\/sudo\.log\s-p\swa\s-k
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8069
+checkname:BOI.5.2.3.3 - Ensure events that modify the sudo log file are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:^-w\s\/var\/log\/sudo\.log\s-p\swa\s-k
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8070
+checkname:BOI.5.2.3.15 - Ensure successful and unsuccessful attempts to use the chcon command are recorded
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-a\salways,exit\s(?=.*-F\sauid!=(unset|-1|4294967295).*)(?=.*-F\sauid>=\d+.*)(?=.*-C\s(euid!=uid|uid!=euid).*)(?=.*-F\sperm=x.*)(?=.*-F\spath=\/usr\/bin\/chcon.*)
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8071
+checkname:BOI.5.2.3.16 - Ensure successful and unsuccessful attempts to use the setfacl command are recorded
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-a\salways,exit\s(?=.*-F\sauid!=(unset|-1|4294967295).*)(?=.*-F\sauid>=\d+.*)(?=.*-C\s(euid!=uid|uid!=euid).*)(?=.*-F\sperm=x.*)(?=.*-F\spath=\/usr\/bin\/setfacl.*)
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8072
+checkname:BOI.5.2.3.17 - Ensure successful and unsuccessful attempts to use the chacl command are recorded
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-a\salways,exit\s(?=.*-F\sauid!=(unset|-1|4294967295).*)(?=.*-F\sauid>=\d+.*)(?=.*-C\s(euid!=uid|uid!=euid).*)(?=.*-F\sperm=x.*)(?=.*-F\spath=\/usr\/bin\/chacl.*)
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8073
+checkname:BOI.5.2.3.18 - Ensure successful and unsuccessful attempts to use the usermod command are recorded
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-a\salways,exit\s(?=.*-F\sauid!=(unset|-1|4294967295).*)(?=.*-F\sauid>=\d+.*)(?=.*-C\s(euid!=uid|uid!=euid).*)(?=.*-F\sperm=x.*)(?=.*-F\spath=\/usr\/bin\/usermod.*)
+stanzastop: $
+stanzacriteria: include: .*
+
+id:redhat_os_linux_8.1.8074
+checkname:BOI.5.2.3.21 - Ensure the running and on disk configuration is the same
+severity: critical
+stanzaempty: Failed
+type: match
+segment: augenrules_check
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include: No\schange
+
+id:redhat_os_linux_8.1.8075
+checkname:BOI.5.2.4.1 - Ensure the audit log directory is 0750 or more restrictive
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_log_directory_perm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8076
+checkname:BOI.5.2.4.2 - Ensure audit log files are mode 0640 or less permissive
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_log_files_perm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8077
+checkname:BOI.5.2.4.3 - Ensure only authorized users own audit log files
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_log_files_ownership
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8078
+checkname:BOI.5.2.4.4 - Ensure only authorized groups are assigned ownership of audit log files
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_log_files_group_ownership
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8079
+checkname:BOI.5.2.4.5 - Ensure audit configuration files are 640 or more restrictive
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_conf_files_perm
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8080
+checkname:BOI.5.2.4.6 - Ensure audit configuration files are owned by root
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_conf_files_ownership
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8081
+checkname:BOI.5.2.4.7 - Ensure audit configuration files belong to group root
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_conf_files_group_ownership
+stanzastart:^
+stanzastop: $
+stanzacriteria: exclude:^\S+
+
+id:redhat_os_linux_8.1.8082
+checkname:BOI.5.2.4.8 - Ensure audit tools are 755 or more restrictive
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_tools_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria: include:^\S+\s+[467][045][045]
+
+id:redhat_os_linux_8.1.8083
+checkname:BOI.5.2.4.9 - Ensure audit tools are owned by root
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_tools_ownership
+stanzastart:^
+stanzastop:$
+stanzacriteria: include:^\S+\s+root
+
+id:redhat_os_linux_8.1.8084
+checkname:BOI.5.2.4.10 - Ensure audit tools belong to group root
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_tools_group_ownership
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^\S+\s+\d+\s+root\s+root
+
+id:redhat_os_linux_8.1.8085
+checkname:BOI.5.3.3 - Ensure cryptographic mechanisms are used to protect the integrity of audit tools
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd_tools_crypto_mechanism
+stanzastart:^\/sbin\/(auditctl|auditd|ausearch|aureport|autrace|augenrules)\s
+stanzastop: $
+stanzacriteria: include:\sp\+i\+n\+u\+g\+s\+b\+acl\+xattrs\+sha512
+
+id:redhat_os_linux_8.1.8086
+checkname:BOI.6.1.3 - Ensure permissions on /etc/opasswd are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/security\/(opasswd|opasswd\.old)
+stanzastop: $
+stanzacriteria: include:(opasswd|opasswd\.old)(:\s[046]00\s)|(.*File_does_not_exist.*)
+
+id:redhat_os_linux_8.1.8087
+checkname:BOI.6.1.10 - Ensure permissions on /etc/shells are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/shells
+stanzastop: $
+stanzacriteria: include:shells:\s[046][04][04]\s
+
+id:redhat_os_linux_8.1.8088
+checkname:BOI.6.1.13 - Ensure SUID and SGID files are reviewed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:There\sare\sno\s(SUID|SGID)\sfiles\sexist\son\sthe\ssystem
+
+id:redhat_os_linux_8.1.8089
+checkname:BOI.6.2.1 - Ensure accounts in /etc/passwd use shadowed passwords
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:is\snot\sset\sto\sshadowed\spasswords
+
+id:redhat_os_linux_8.1.8090
+checkname:BOI.1.6.1 - Ensure system wide crypto policy is not set to legacy
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/crypto-policies\/config:
+stanzastop: $
+stanzacriteria: exclude:LEGACY
+
+id:redhat_os_linux_8.1.8091
+checkname:BOI.1.6.2 - Ensure system wide crypto policy disables sha1 hash and signature support
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/crypto-policies\/state\/CURRENT\.pol:.*(hash|sign).*=
+stanzastop: $
+stanzacriteria: exclude:-sha1\b
+
+id:redhat_os_linux_8.1.8092
+checkname:BOI.1.6.3 - Ensure system wide crypto policy disables cbc for ssh
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/crypto-policies\/state\/CURRENT\.pol:.*ciphers.*=
+stanzastop: $
+stanzacriteria: exclude:-CBC\b
+
+id:redhat_os_linux_8.1.8093
+checkname:BOI.1.6.4 - Ensure system wide crypto policy disables macs less than 128 bits
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_auth
+stanzastart:^\/etc\/crypto-policies\/state\/CURRENT\.pol:.*mac.*=
+stanzastop: $
+stanzacriteria: exclude:-64\b
+
+id:redhat_os_linux_8.1.8094
+checkname:BOI.1.8.1 - Ensure GNOME Display Manager is removed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^gdm
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8095
+checkname:BOI.1.8.3 - Enable disable-user-list option
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: rpm
+stanzastart:^gdm
+stanzastop:$
+# Check GNOME is installed
+stanzacriteria: exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:commands_gnome_settings
+        stanzastart:^gnome_settings:org\.gnome\.login-screen\sdisable-user-list
+        stanzastop:$
+        stanzacriteria: include:disable-user-list\strue
+    }
+}
+
+id:redhat_os_linux_8.1.8096
+checkname:BOI.1.8.4 - Ensure GDM screen locks when the user is idle - idle-delay
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: rpm
+stanzastart:^gdm
+stanzastop:$
+# Check GNOME is installed
+stanzacriteria: exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:commands_gnome_settings
+        stanzastart:^gnome_settings:org\.gnome\.desktop\.session\sidle-delay
+        stanzastop:$
+        stanzacriteria: include:idle-delay\suint32\s300$
+    }
+}
+
+id:redhat_os_linux_8.1.8097
+checkname:BOI.1.8.4 - Ensure GDM screen locks when the user is idle - lock-delay
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: rpm
+stanzastart:^gdm
+stanzastop:$
+# Check GNOME is installed
+stanzacriteria: exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:commands_gnome_settings
+        stanzastart:^gnome_settings:org\.gnome\.desktop\.session\slock-delay
+        stanzastop:$
+        stanzacriteria: include:lock-delay\suint32\s5$
+    }
+}
+
+id:redhat_os_linux_8.1.8098
+checkname:BOI.1.8.6 - Ensure GDM automatic mounting of removable media is disabled
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: rpm
+stanzastart:^gdm
+stanzastop:$
+# Check GNOME is installed
+stanzacriteria: exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:commands_gnome_settings
+        stanzastart:^gnome_settings:org\.gnome\.desktop\.media-handling\sautomount
+        stanzastop:$
+        stanzacriteria: include:(automount|automount-open)\false
+    }
+}
+
+id:redhat_os_linux_8.1.8099
+checkname:BOI.1.8.8 - Ensure GDM autorun-never is enabled
+severity: critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: rpm
+stanzastart:^gdm
+stanzastop:$
+# Check GNOME is installed
+stanzacriteria: exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:commands_gnome_settings
+        stanzastart:^gnome_settings:org\.gnome\.desktop\.media-handling\sautorun-never
+        stanzastop:$
+        stanzacriteria: include:autorun-never\strue
+    }
+}
+
+id:redhat_os_linux_8.1.8100
+checkname:BOI.1.8.10 - Ensure XDMCP is not enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_gnome
+stanzastart:^\/etc\/gdm\/custom\.conf
+stanzastop: $
+stanzacriteria: exclude:Enable=true
+
+id:redhat_os_linux_8.1.8101
+checkname:BOI.1.8.5 - Ensure GDM screen locks cannot be overridden
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_gnome
+stanzastart:^\/etc\/dconf\/db\/.*screensaver\/lock-enabled
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8102
+checkname:BOI.1.8.7 - Ensure GDM disabling automatic mounting of removable media is not overridden
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_gnome
+stanzastart:^\/etc\/dconf\/db\/.*media-handling\/automount
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8103
+checkname:BOI.1.8.9 - Ensure GDM autorun-never is not overridden
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_gnome
+stanzastart:^\/etc\/dconf\/db\/.*media-handling\/autorun-never
+stanzastop: $
+stanzacriteria: include:.*
+
+# ------------------------------- #
+# ---- REUSED POLICIES RHEL7 ---- #
+# ------------------------------- #
+
+id:redhat_os_linux_8.1.8104
+checkname:BOI.1.1.1.1 - Filesystem Configuration - Ensure mounting of cramfs filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^cramfs\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\scramfs\s\/bin\/true
+
+id:redhat_os_linux_8.1.8105
+checkname:BOI.1.1.1.2 - Filesystem Configuration - Ensure mounting of freevxfs filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^freevxfs\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\sfreevxfs\s\/bin\/true
+
+id:redhat_os_linux_8.1.8106
+checkname:BOI.1.1.1.3 - Filesystem Configuration - Ensure mounting of hfs filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^hfs\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\shfs\s\/bin\/true
+
+id:redhat_os_linux_8.1.8107
+checkname:BOI.1.1.1.4 - Filesystem Configuration - Ensure mounting of hfsplus filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^hfsplus\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\shfsplus\s\/bin\/true
+
+id:redhat_os_linux_8.1.8108
+checkname:BOI.1.1.1.5 - Filesystem Configuration - Ensure mounting of jffs2 filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^jffs2\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\sjffs2\s\/bin\/true
+
+id:redhat_os_linux_8.1.8109
+checkname:BOI.1.1.1.6 - Filesystem Configuration - Ensure mounting of squashfs filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^squashfs\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\ssquashfs\s\/bin\/true
+
+id:redhat_os_linux_8.1.8110
+checkname:BOI.1.1.1.7 - Filesystem Configuration - Ensure mounting of udf filesystems is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: modprobe
+stanzastart:^udf\sNot\sloaded
+stanzastop: $
+stanzacriteria: include:install\sudf\s\/bin\/true
+
+id:redhat_os_linux_8.1.8111
+checkname:BOI.1.1.2.1.1 - Filesystem Configuration - Ensure separate partition exists for /tmp
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\s\/tmp\s
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8112
+checkname:BOI.1.1.2.1.2 - Filesystem Configuration - Ensure nodev option set on /tmp partition
+severity: critical
+stanzaempty: Failed
+type: match
+segment: mount
+stanzastart:^\/dev\/mapper\/rhel-tmp
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8113
+checkname:BOI.1.1.2.1.3 - Filesystem Configuration - Ensure nosuid option set on /tmp partition
+severity: critical
+stanzaempty: Failed
+type: match
+segment: mount
+stanzastart:^\/dev\/mapper\/rhel-tmp
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8114
+checkname:BOI.1.1.2.1.4 - Filesystem Configuration - Ensure noexec option set on /tmp partition
+severity: critical
+stanzaempty: Failed
+type: match
+segment: mount
+stanzastart:^\/dev\/mapper\/rhel-tmp
+stanzastop: $
+stanzacriteria: include:noexec
+
+id:redhat_os_linux_8.1.8115
+checkname:BOI.1.1.2.2.2 - Filesystem Configuration - Ensure nodev option set on /dev/shm partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/dev\/shm\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8116
+checkname:BOI.1.1.2.2.3 - Filesystem Configuration - Ensure nosuid option set on /dev/shm partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/dev\/shm\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8117
+checkname:BOI.1.1.2.2.4 - Filesystem Configuration - Ensure noexec option set on /dev/shm partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/dev\/shm\s+
+stanzastop: $
+stanzacriteria: include:noexec
+
+id:redhat_os_linux_8.1.8118
+checkname:BOI.1.1.2.3.1 - Filesystem Configuration - Ensure separate partition exists for /home
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\/home\s
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8118
+checkname:BOI.1.1.2.3.2 - Filesystem Configuration - Ensure nodev option set on /home partition
+severity: critical
+stanzaempty: Failed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/home\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8119
+checkname:BOI.1.1.2.3.3 - Filesystem Configuration - Ensure nosuid option set on /home partition
+severity: critical
+stanzaempty: Failed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/home\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8120
+checkname:BOI.1.1.2.4.1 - Filesystem Configuration - Ensure separate partition exists for /var
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\/var\s+
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8121
+checkname:BOI.1.1.2.5.1 - Filesystem Configuration - Ensure separate partition exists for /var/tmp
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\/var\/tmp\s+
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8122
+checkname:BOI.1.1.2.5.2 - Filesystem Configuration - Ensure nodev option set on /var/tmp partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/tmp\s+
+stanzastop: $
+stanzacriteria: include:nodev
+
+id:redhat_os_linux_8.1.8123
+checkname:BOI.1.1.2.5.3 - Filesystem Configuration - Ensure nosuid option set on /var/tmp partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/tmp\s+
+stanzastop: $
+stanzacriteria: include:nosuid
+
+id:redhat_os_linux_8.1.8124
+checkname:BOI.1.1.2.5.4 - Filesystem Configuration - Ensure noexec option set on /var/tmp partition
+severity: critical
+stanzaempty: Passed
+type: match
+segment: mount
+stanzastart:^[^\n]*\/var\/tmp\s+
+stanzastop: $
+stanzacriteria: include:noexec
+
+id:redhat_os_linux_8.1.8125
+checkname:BOI.1.1.2.6.1 - Filesystem Configuration - Ensure separate partition exists for /var/log
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\/var\/log\s
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8126
+checkname:BOI.1.1.2.7.1 - Filesystem Configuration - Ensure separate partition exists for /var/log/audit
+severity: critical
+stanzaempty: Failed
+type: count
+segment: mount
+stanzastart:^[^\n]*\/var\/log\/audit\s
+stanzastop: $
+stanzacriteria: equal:1
+
+id:redhat_os_linux_8.1.8127
+checkname:BOI.1.2.1 - Ensure GPG keys are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^.*gpgkey
+stanzastop: $
+stanzacriteria: include:gpgkey\s*=.*(GPG|gpg).*
+
+id:redhat_os_linux_8.1.8128
+checkname:BOI.1.2.2 - Ensure gpgcheck is globally activated
+severity: critical
+stanzaempty: Failed
+type: match
+segment: gpgcheck
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:gpgcheck=1
+
+id:redhat_os_linux_8.1.8129
+checkname:BOI.1.2.5 - Software - Ensure updates, patches, and additional security software are installed
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: yum_check_update
+stanzastart:^\d+
+stanzastop: $
+match: ^(\d+)
+# 0 → No updates available; 100 → Updates are available; 1 → An error occurred
+criteria: equal:0
+
+id:redhat_os_linux_8.1.8130
+checkname:BOI.1.3.2 - Ensure permissions on bootloader config are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/boot\/grub2\/grub\.cfg
+stanzastop: $
+stanzacriteria: include:^\/boot\/grub2\/grub\.cfg:\s*770\s+root\s+root\s+
+
+id:redhat_os_linux_8.1.8131
+checkname:BOI.1.4.1 - Ensure address space layout randomization (ASLR) is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^kernel.randomize_va_space =
+stanzastop: $
+stanzacriteria: include:\s2$
+
+id:redhat_os_linux_8.1.8132
+checkname:BOI.1.7.1 - Business Use Notice - /etc/motd configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: aix_Business_Use_Notice_text
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8133
+checkname:BOI.1.7.5 - Ensure permissions on /etc/issue are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/issue:
+stanzastop: $
+stanzacriteria: include:644\sroot\sroot
+
+id:redhat_os_linux_8.1.8134
+checkname:BOI.1.7.6 - Ensure permissions on /etc/issue.net are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/issue\.net:
+stanzastop: $
+stanzacriteria: include:644\sroot\sroot
+
+id:redhat_os_linux_8.1.8135
+checkname:BOI.1.7.2 - Business Use Notice - /etc/issue configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/issue:
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8136
+checkname:BOI.1.7.3 - Business Use Notice - /etc/issue.net configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: configfiles_osfiles
+stanzastart:^\/etc\/issue\.net:
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8137
+checkname:BOI.1.7.4 - Ensure permissions on /etc/issue are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/motd:
+stanzastop: $
+stanzacriteria: include:644\sroot\sroot
+
+id:redhat_os_linux_8.1.8138
+checkname:BOI.1.8.2 - Ensure GDM login banner is configured
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+BannerMessageEnable {
+   id:BannerMessageEnable
+   checkname:BOI.1.8.2.1 - Ensure GDM login banner is configured - banner-message-enable
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_gnome
+   stanzastart: ^\/etc\/dconf\/db/.*\/01-banner-message:banner-message-enable=
+   stanzastop: $
+   stanzacriteria: include:banner-message-enable=true
+   }
+BannerMessageText {
+   id:BannerMessageText
+   checkname:BOI.1.8.2.2 - Ensure GDM login banner is configured - banner-message-text
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: configfiles_gnome
+   stanzastart: ^\/etc\/dconf\/db/.*\/01-banner-message:banner-message-text=
+   stanzastop: $
+   stanzacriteria: include:banner-message-text=[Aa]uthorized\suses\sonly
+   }
+}
+
+id:redhat_os_linux_8.1.8139
+checkname:BOI.2.1.1 - Ensure time synchronization is in use
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:chronyd.service
+stanzastop: $
+stanzacriteria: include:loaded\s+active\s+running
+
+id:redhat_os_linux_8.1.8140
+checkname:BOI.2.1.2 - Ensure chrony is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:chronyd.service
+stanzastop: $
+stanzacriteria: include:loaded\s+active\s+running
+
+id:redhat_os_linux_8.1.8141
+checkname:BOI.2.2.1 - Filesystem Configuration - Disable Automounting
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*autofs
+stanzastop: $
+stanzacriteria: include:(?:active|running)
+
+id:redhat_os_linux_8.1.8142
+checkname:BOI.2.2.2 - Ensure Avahi Server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*avahi-daemon
+stanzastop: $
+stanzacriteria: exclude:(?:active|running)
+
+id:redhat_os_linux_8.1.8143
+checkname:BOI.2.2.3 - Ensure DHCP Server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^dhcp-server
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8144
+checkname:BOI.2.2.4 - Ensure DNS Server (named) is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*named
+stanzastop: $
+stanzacriteria: exclude:(?:active|running)
+
+id:redhat_os_linux_8.1.8145
+checkname:BOI.2.2.6 - Ensure Samba is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*samba
+stanzastop: $
+stanzacriteria: exclude:(?:active|running)
+
+id:redhat_os_linux_8.1.8146
+checkname:BOI.2.2.7 - Ensure FTP Server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^vsftpd
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8147
+checkname:BOI.2.2.8 - Ensure IMAP and POP3 server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*dovecot
+stanzastop: $
+stanzacriteria: exclude:(?:active|running)
+
+id:redhat_os_linux_8.1.8148
+checkname:BOI.2.2.9  - NFS server must not be installed or disabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: nfs_server
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^(?:disabled|OK\sserver\sexception|Failed\sto\sget\sunit\sfile\sstate\sfor\snfs-server.service)
+
+id:redhat_os_linux_8.1.8149
+checkname:BOI.2.2.10 - Ensure NIS Server is not installed
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^ypbind
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8150
+checkname:BOI.2.2.11 - Ensure CUPS is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^cups.x
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8151
+checkname:BOI.2.2.12 - Ensure RPC is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:rpcbind.service
+stanzastop: $
+stanzacriteria: exclude:(?:\sactive|running)
+
+id:redhat_os_linux_8.1.8152
+checkname:BOI.2.2.13 - Ensure rsync service is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*rsyncd
+stanzastop: $
+stanzacriteria: exclude:(?:active|running)
+
+id:redhat_os_linux_8.1.8153
+checkname:BOI.2.2.14 - SNMP Service not installed or inactive and disabled.
+severity: critical
+stanzaempty: Failed
+conditional: ifelse::match
+segment:rpm
+stanzastart:^net-snmp
+stanzastop:$
+# SNMP should be either not-installed or installed and inactive+disabled (or not loaded at all)
+stanzacriteria:exclude:.*
+Conditions {
+    if_passed {
+        type:alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type:match
+        segment:snmpd_state
+        stanzastart:^\s*\S+
+        stanzastop:$
+        stanzacriteria: include:inactive\sdisabled|not\sfound
+    }
+}
+
+id:redhat_os_linux_8.1.8154
+checkname:BOI.2.2.15 - Ensure telnet server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^telnet-server
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8155
+checkname:BOI.2.2.16 - Ensure tftp server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: tftp
+stanzastart:^disabled
+stanzastop: $
+stanzacriteria: include:^disabled
+
+id:redhat_os_linux_8.1.8156
+checkname:BOI.2.2.17 - Ensure HTTP Proxy Server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^squid
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8157
+checkname:BOI.2.2.18 - Ensure HTTP server is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: httpd_server
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:(?:disabled|No\ssuch\sfile|OK\sserver\sexception)
+
+id:redhat_os_linux_8.1.8158
+checkname:BOI.2.2.19 - Ensure xinetd is not enabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^[^\n]*xinetd
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8159
+checkname:BOI.2.2.20 - Ensure X Window System is not installed
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^xorg-x11
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8160
+checkname:BOI.2.2.21 - Ensure mail transfer agent is configured for local-only mode
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^postfix
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8161
+checkname:BOI.2.3.2 - Ensure LDAP client is not installed
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^openldap-clients
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8162
+checkname:BOI.2.3.3 - Ensure NIS Client is not installed
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^ypbind
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8163
+checkname:BOI.2.3.4 - Ensure telnet client is not installed
+severity: critical
+stanzaempty: Passed
+type: match
+segment: rpm
+stanzastart:^telnet
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8164
+checkname:BOI.3.1.2 - Ensure wireless interfaces are disabled
+severity: critical
+stanzaempty: Passed
+type: match
+segment: wifi_check
+stanzastart:^Wireless\sis\snot\senabled
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8165
+checkname:BOI.3.2.1 - Ensure dccp kernel module is not available
+severity: critical
+stanzaempty: Passed
+type: match
+segment: modprobe
+stanzastart:^dccp
+stanzastop: $
+stanzacriteria: include:Not\sloaded
+
+id:redhat_os_linux_8.1.8166
+checkname:BOI.3.2.2 - Ensure tipc kernel module is not available
+severity: critical
+stanzaempty: Passed
+type: match
+segment: modprobe
+stanzastart:^tipc
+stanzastop: $
+stanzacriteria: include:Not\sloaded
+
+id:redhat_os_linux_8.1.8167
+checkname:BOI.3.2.3 - Ensure rds kernel module is not available
+severity: critical
+stanzaempty: Passed
+type: match
+segment: modprobe
+stanzastart:^rds
+stanzastop: $
+stanzacriteria: include:Not\sloaded
+
+id:redhat_os_linux_8.1.8168
+checkname:BOI.3.2.4 - Ensure sctp kernel module is not available
+severity: critical
+stanzaempty: Passed
+type: match
+segment: modprobe
+stanzastart:^sctp
+stanzastop: $
+stanzacriteria: include:Not\sloaded
+
+id:redhat_os_linux_8.1.8169
+checkname:BOI.3.3.1 - Ensure IP forwarding is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.ip_forward\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8170
+checkname:BOI.3.3.2 - Ensure packet redirect sending is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:(?=[\s\S\n]*^net.ipv4.conf.all.send_redirects = 0)(?=[\s\S\n]*net.ipv4.conf.default.send_redirects = 0)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8171
+checkname:BOI.3.3.3 - Ensure bogus ICMP responses are ignored
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.icmp_ignore_bogus_error_responses\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8172
+checkname:BOI.3.3.4 - Ensure broadcast ICMP requests are ignored
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.icmp_echo_ignore_broadcasts\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8173
+checkname:BOI.3.3.5 - Ensure ICMP redirects are not accepted -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.all.accept_redirects\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8174
+checkname:BOI.3.3.5 - Ensure ICMP redirects are not accepted -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.default.accept_redirects\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8175
+checkname:BOI.3.3.6 - Ensure secure ICMP redirects are not accepted -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.all.secure_redirects\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8176
+checkname:BOI.3.3.6 - Ensure secure ICMP redirects are not accepted -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.default.secure_redirects\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8177
+checkname:BOI.3.3.7 - Ensure Reverse Path Filtering is enabled -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.all.rp_filter\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8178
+checkname:BOI.3.3.7 - Ensure Reverse Path Filtering is enabled -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.default.rp_filter\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8179
+checkname:BOI.3.3.8 - Ensure source routed packets are not accepted -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.all.accept_source_route\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8180
+checkname:BOI.3.3.8 - Ensure source routed packets are not accepted -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.default.accept_source_route\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8181
+checkname:BOI.3.3.9 - Ensure suspicious packets are logged -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.all.log_martians\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8182
+checkname:BOI.3.3.9 - Ensure suspicious packets are logged -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.conf.default.log_martians\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8183
+checkname:BOI.3.3.10 - Ensure TCP SYN Cookies is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv4.tcp_syncookies\s=
+stanzastop: $
+stanzacriteria: include:1
+
+id:redhat_os_linux_8.1.8184
+checkname:BOI.3.3.11 - Ensure IPv6 router advertisements are not accepted -all
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv6.conf.all.accept_ra\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8185
+checkname:BOI.3.3.11 - Ensure IPv6 router advertisements are not accepted -default
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysctl
+stanzastart:^net.ipv6.conf.default.accept_ra\s=
+stanzastop: $
+stanzacriteria: include:0
+
+id:redhat_os_linux_8.1.8186
+checkname:BOI.4.1.1.1 - Ensure cron daemon is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*crond.service
+stanzastop: $
+stanzacriteria: include:active\s+running
+
+id:redhat_os_linux_8.1.8187
+checkname:BOI.4.1.1.2 - Ensure permissions on /etc/crontab are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/crontab:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8188
+checkname:BOI.4.1.1.3 - Ensure permissions on /etc/cron.hourly are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/cron\.hourly:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8189
+checkname:BOI.4.1.1.4 - Ensure permissions on /etc/cron.daily are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/cron\.daily:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8190
+checkname:BOI.4.1.1.5 - Ensure permissions on /etc/cron.weekly are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/cron\.weekly:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8191
+checkname:BOI.4.1.1.6 - Ensure permissions on /etc/cron.monthly are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/cron\.monthly:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8192
+checkname:BOI.4.1.1.7 - Ensure permissions on /etc/cron.d are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/cron\.d:
+stanzastop: $
+stanzacriteria: include:770\sroot\sroot
+
+id:redhat_os_linux_8.1.8193
+checkname:BOI.4.1.1.8 - Ensure crontab is restricted to authorized users
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+CronDenyNotExists {
+   id:CronDenyNotExists
+   checkname:BOI.4.1.1.8.1 - Ensure crontab is restricted to authorized users - cron.deny not exists
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: permissions
+   stanzastart: ^\/etc\/cron\.deny
+   stanzastop: $
+   stanzacriteria: include:File_does_not_exist
+   }
+CronAllowPerm {
+   id:CronAllowPerm
+   checkname:BOI.4.1.1.8.2 - Ensure crontab is restricted to authorized users - cron.allow permission
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: permissions
+   stanzastart: ^\/etc\/cron\.allow:
+   stanzastop: $
+   stanzacriteria: include:600\s+root\s+root\s+
+   }
+}
+
+id:redhat_os_linux_8.1.8194
+checkname:BOI.4.1.2.1 - Ensure at is restricted to authorized users
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+AtDenyNotExists {
+   id:AtDenyNotExists
+   checkname:BOI.4.1.2.1.1 - Ensure at is restricted to authorized users - at.deny not exists
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: permissions
+   stanzastart: ^\/etc\/at\.deny
+   stanzastop: $
+   stanzacriteria: include:File_does_not_exist
+   }
+AtAllowPerm {
+   id:AtAllowPerm
+   checkname:BOI.4.1.2.1.2 - Ensure at is restricted to authorized users - at.allow permission
+   severity:Critical
+   stanzaempty: Failed
+   type: match
+   segment: permissions
+   stanzastart: ^\/etc\/at\.allow:
+   stanzastop: $
+   stanzacriteria: include:600\s+root\s+root\s+
+   }
+}
+
+id:redhat_os_linux_8.1.8195
+checkname:BOI.4.2.1 - SSHD Config - Ensure permissions on /etc/ssh/sshd_config are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sshd_config_permission
+stanzastart:^
+stanzastop: $
+stanzacriteria: include:^-rw-------(\.|)\s+\d+\s+root\s+root\s+
+
+id:redhat_os_linux_8.1.8196
+checkname:BOI.4.2.4 - SSHD Config - Ensure sshd access is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^(AllowUsers|AllowGroups|DenyUsers|DenyGroups)\s+
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8197
+checkname:BOI.4.2.5 - SSHD Config - Ensure SSH warning banner is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^Banner\s+
+stanzastop: $
+stanzacriteria: include:^Banner\s+\/etc\/motd
+
+id:redhat_os_linux_8.1.8198
+checkname:BOI.4.2.6 - SSHD Config - Ensure only approved ciphers are used
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^Ciphers\s+
+stanzastop: $
+stanzacriteria: include:^Ciphers\s+(?=.*aes256-ctr.*)(?=.*aes192-ctr.*)(?=.*aes128-ctr.*)
+
+id:redhat_os_linux_8.1.8199
+checkname:BOI.4.2.7 - SSHD Config - Ensure SSH Idle Timeout Interval is configured
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+Interval {
+   id:ClientAliveInterval
+   checkname:BOI.4.2.7.1 - SSHD Config - ClientAliveInterval is set to 900
+   severity:Critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: cat_sshd_config
+   stanzastart: ^ClientAliveInterval\s+
+   stanzastop: $
+   match: ^ClientAliveInterval\s+(\d+)
+   criteria: equal:900
+   }
+CountMax {
+   id:ClientAliveCountMax
+   checkname:BOI.4.2.7.2 - SSHD Config - ClientAliveCountMax is set to 0
+   severity:Critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: cat_sshd_config
+   stanzastart: ^ClientAliveCountMax
+   stanzastop: $
+   match: ^ClientAliveCountMax\s+(\d+)
+   criteria: equal:0
+   }
+}
+
+id:redhat_os_linux_8.1.8200
+checkname:BOI.4.2.8 - Ensure sshd DisableForwarding is enabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: sshd_t_c
+stanzastart:^x11forwarding
+stanzastop:$
+stanzacriteria: include:^x11forwarding\s*\:?\s+no
+
+id:redhat_os_linux_8.1.8201
+checkname:BOI.4.2.9 - SSHD Config - Ensure SSH HostbasedAuthentication is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^HostbasedAuthentication\s+
+stanzastop: $
+stanzacriteria: include:^HostbasedAuthentication\s+no
+
+id:redhat_os_linux_8.1.8202
+checkname:BOI.4.2.10 - SSHD Config - Ensure SSH IgnoreRhosts is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^IgnoreRhosts\s+
+stanzastop: $
+stanzacriteria: include:^IgnoreRhosts\s+yes
+
+id:redhat_os_linux_8.1.8203
+checkname:BOI.4.2.12 - SSHD Config - Ensure SSH LoginGraceTime is set to two minutes
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^LoginGraceTime\s+
+stanzastop: $
+stanzacriteria: include:^LoginGraceTime\s+(120|2m)
+
+id:redhat_os_linux_8.1.8204
+checkname:BOI.4.2.13 - SSHD Config - Ensure SSH LogLevel is set to INFO
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^LogLevel\s+
+stanzastop: $
+stanzacriteria: include:^LogLevel\s+INFO
+
+id:redhat_os_linux_8.1.8205
+checkname:BOI.4.2.14 - SSHD Config - Ensure only approved MAC algorithms are used
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^MACs\s+
+stanzastop: $
+stanzacriteria: include:^MACs\s+(?=.*hmac-sha2-512-etm@openssh\.com.*)(?=.*hmac-sha2-256-etm@openssh\.com.*)(?=.*umac-128-etm@openssh\.com.*)(?=.*hmac-sha2-512.*)(?=.*hmac-sha2-256.*)(?=.*curve25519-sha256@libssh\.org.*)(?=.*diffie-hellman-group-exchange-sha256.*)
+
+id:redhat_os_linux_8.1.8206
+checkname:BOI.4.2.15 - SSHD Config - Ensure SSH MaxAuthTries is set to 5 or less
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: cat_sshd_config
+stanzastart:^MaxAuthTries\s+
+stanzastop: $
+match: ^MaxAuthTries\s+(\d+)
+criteria: range:0-5
+
+id:redhat_os_linux_8.1.8207
+checkname:BOI.4.2.18 - SSHD Config - Ensure SSH PermitEmptyPasswords is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^PermitEmptyPasswords\s+
+stanzastop: $
+stanzacriteria: include:^PermitEmptyPasswords\s+no
+
+id:redhat_os_linux_8.1.8208
+checkname:BOI.4.2.19 - SSHD Config - Ensure SSH root login is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^PermitRootLogin\s+
+stanzastop: $
+stanzacriteria: include:^PermitRootLogin\s+no
+
+id:redhat_os_linux_8.1.8209
+checkname:BOI.4.2.20 - SSHD Config - Ensure SSH PermitUserEnvironment is disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: cat_sshd_config
+stanzastart:^PermitUserEnvironment\s+
+stanzastop: $
+stanzacriteria: include:^PermitUserEnvironment\s+no
+
+id:redhat_os_linux_8.1.8210
+checkname:BOI.4.4.3.1.1 - Ensure password failed attempts lockout is configured
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment: configfiles_auth
+stanzastart:^\/etc\/security\/faillock.conf:\s*deny
+stanzastop: $
+match: ^deny=(\d+)
+criteria: equal:5
+
+id:redhat_os_linux_8.1.8211
+checkname:BOI.4.4.3.1.3 - Ensure password failed attempts lockout includes root account
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+EvenDenyRoot {
+    id:EvenDenyRoot
+    checkname:BOI.4.4.3.1.3.1 - Ensure password failed attempts lockout includes root account - even_deny_root
+    severity: critical
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*even_deny_root
+    stanzastop: $
+    match: ^even_deny_root=(\d+)
+    criteria: equal:1
+   }
+RootUnlockTime {
+    id:RootUnlockTime
+    checkname:BOI.4.4.3.1.3.2 - Ensure password failed attempts lockout includes root account - root_unlock_time
+    severity: critical
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*root_unlock_time
+    stanzastop: $
+    match: ^root_unlock_time=(\d+)
+    criteria: min:60
+   }
+}
+
+id:redhat_os_linux_8.1.8211
+checkname:BOI.4.4.3.2.3 - Ensure password complexity is configured
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+MinLen {
+    id:MinLen
+    checkname:BOI.4.4.3.2.3.1 - Ensure password complexity is configured - minlen
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/pwquality\.conf:\s*minlen
+    stanzastop: $
+    match: ^minlen=(\d+)
+    criteria: equal:8
+   }
+DCRedit {
+    id:DCRedit
+    checkname:BOI.4.4.3.2.3.2 - Ensure password complexity is configured - dcredit
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*dcredit
+    stanzastop: $
+    match: ^dcredit=(\d+)
+    criteria: equal:1
+   }
+UCRedit {
+    id:UCRedit
+    checkname:BOI.4.4.3.2.3.3 - Ensure password complexity is configured - ucredit
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*ucredit
+    stanzastop: $
+    match: ^ucredit=(\d+)
+    criteria: equal:1
+   }
+LCRedit {
+    id:LCRedit
+    checkname:BOI.4.4.3.2.3.4 - Ensure password complexity is configured - lcredit
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*lcredit
+    stanzastop: $
+    match: ^lcredit=(\d+)
+    criteria: equal:1
+   }
+OCRedit {
+    id:OCRedit
+    checkname:BOI.4.4.3.2.3.5 - Ensure password complexity is configured - ocredit
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*ocredit
+    stanzastop: $
+    match: ^ocredit=(\d+)
+    criteria: equal:1
+   }
+RejectUsername {
+    id:RejectUsername
+    checkname:BOI.4.4.3.2.3.6 - Ensure password complexity is configured - reject_username
+    severity: critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment: configfiles_auth
+    stanzastart:^\/etc\/security\/faillock.conf:\s*reject_username
+    stanzastop: $
+    match: ^reject_username=(\d+)
+    criteria: equal:1
+   }
+}
+
+id:redhat_os_linux_8.1.8212
+checkname:BOI.4.4.3.3.1 - Ensure password history remember is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: pass_check
+stanzastart:^\/etc\/pam\.d\/system-auth:password\s+requisite\s+pam_pwhistory\.so\s+try_first_pass\s+local_users_only\s+enforce-for-root\s+retry=3
+stanzastop: $
+stanzacriteria: include:remember=1\s
+
+id:redhat_os_linux_8.1.8213
+checkname:BOI.4.4.3.4.3 - Ensure password hashing algorithm is SHA-512
+severity: critical
+stanzaempty: Failed
+type: match
+segment: pass_check
+stanzastart:^\/etc\/pam.d\/\S+:password\s+(sufficient|required)\s+pam_unix.so
+stanzastop: $
+stanzacriteria: include: (shadow[^\n].*sha512|sha512[^\n].*shadow)
+
+id:redhat_os_linux_8.1.8214
+checkname:BOI.4.5.2.3 - Ensure system accounts are secured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: sysacount_secure
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:nologin$
+
+id:redhat_os_linux_8.1.8215
+checkname:BOI.4.5.3.3 - Ensure default user umask is 077 or more restrictive
+severity: critical
+stanzaempty: Failed
+type: match
+segment: umask_tmout
+stanzastart:^BASHRC\sUmask
+stanzastop: $
+stanzacriteria: include:OK
+
+id:redhat_os_linux_8.1.8216
+checkname:BOI.5.1.1.1 - Ensure rsyslog is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rsyslog
+stanzastart:^\w+
+stanzastop:$
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8217
+checkname:BOI.5.1.1.2 - Ensure rsyslog Service is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:^[^\n]*rsyslog.service
+stanzastop: $
+stanzacriteria: include:active\s+running
+
+id:redhat_os_linux_8.1.8218
+checkname:BOI.5.1.1.4 - Rsyslog Configuration - Ensure rsyslog default file permissions configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rsyslog_conf_filecreatemode
+stanzastart:^\$FileCreateMode
+stanzastop: $
+stanzacriteria: include:^\$FileCreateMode\s+0640
+
+id:redhat_os_linux_8.1.8219
+checkname:BOI.5.1.1.6 - Ensure rsyslog is configured to send logs to a remote log host
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rsyslog
+stanzastart:target
+stanzastop: $
+stanzacriteria: include:\.boi\.ibmuk
+
+id:redhat_os_linux_8.1.8220
+checkname:BOI.5.1.1.7 - Ensure rsyslog is configured to send logs to a remote log host
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rsyslog
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:^(\$ModLoad|\$InputTCPServerRun)
+
+id:redhat_os_linux_8.1.8221
+checkname:BOI.5.2.1.2 - Ensure auditing for processes that start prior to auditd is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_prior_auditd
+stanzastart:^kernelopts
+stanzastop: $
+stanzacriteria: include:audit=1
+
+id:redhat_os_linux_8.1.8222
+checkname:BOI.5.2.1.4 - Ensure auditd service is enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: systemctl
+stanzastart:\s+auditd.service
+stanzastop: $
+stanzacriteria: include:\s+active\s+running
+
+id:redhat_os_linux_8.1.8223
+checkname:BOI.5.2.2.1 - Ensure audit log storage size is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: auditd.conf
+stanzastart: ^max_log_file\s*=\s*
+stanzastop: $
+match: ^max_log_file\s*=\s*(\d+)
+criteria: range:5-8
+
+id:redhat_os_linux_8.1.8224
+checkname:BOI.5.1.3 - Ensure logrotate is configured
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: logrotate_conf
+stanzastart:^\/etc\/logrotate.*:\s*rotate
+stanzastop: $
+match:rotate\s(\d+)
+criteria: equal:180
+
+id:redhat_os_linux_8.1.8225
+checkname:BOI.5.1.4 - Ensure all logfiles have appropriate access configured
+severity: critical
+stanzaempty: Passed
+type: match
+segment: logfperm
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8226
+checkname:BOI.5.1.1.5 - Ensure logging is configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rsyslog
+stanzastart:((^|, )(\*.emerg\s+:omusrmsg:\*|auth,authpriv.\*\s+\/var\/log\/secure|mail.*\s+-\/var\/log\/mail|mail.info\s+-\/var\/log\/mail.info|mail.warning\s+-\/var\/log\/mail.warn|mail.err \/var\/log\/mail.err|news.crit\s+-\/var\/log\/news\/news.crit|news.err\s+-\/var\/log\/news\/news.err|news.notice\s+-\/var\/log\/news\/news.notice|\*.=warning;\*.=err\s+-\/var\/log\/warn|\*.crit\s+\/var\/log\/warn|\*.\*;mail.none;news.none\s+-\/var\/log\/messages|local0,local1.\*\s+\/var\/log\/localmessages|local2,local3.\*\s+\/var\/log\/localmessages|local2,local3.\*\s+\/var\/log\/localmessages|local4,local5.\*\s+\/var\/log\/localmessages|local6,local7.\*\s+\/var\/log\/localmessages))+$
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8227
+checkname:BOI.5.2.2.2 - Ensure audit logs are not automatically deleted
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd.conf
+stanzastart:^max_log_file_action\s+\=\s+
+stanzastop: $
+stanzacriteria: include:(?im)keep_logs
+
+id:redhat_os_linux_8.1.8228
+checkname:BOI.5.2.2.3 - Ensure system is disabled when audit logs are full
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd.conf
+stanzastart:^space_left_action
+stanzastop: $
+stanzacriteria: include:space_left_action\s+\=\s+(?i)SYSLOG
+
+id:redhat_os_linux_8.1.8229
+checkname:BOI.5.2.2.4 - Ensure system warns when audit logs are low on space
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditd.conf
+stanzastart:^admin_space_left_action
+stanzastop: $
+stanzacriteria: include:admin_space_left_action\s+\=\s+(?i)SUSPEND
+
+id:redhat_os_linux_8.1.8230
+checkname:BOI.5.2.3.1 - Ensure changes to system administration scope (sudoers) is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-w \/etc\/sudoers -p wa -k scope)[\s\S\n]*(^-w \/etc\/sudoers\.d\/ -p wa -k scope)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8231
+checkname:BOI.5.2.3.4 - Ensure events that modify date and time information are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change)[\s\S\n]*(^-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change)[\s\S\n]*(^-a always,exit -F arch=b64 -S clock_settime -k time-change)[\s\S\n]*(^-a always,exit -F arch=b32 -S clock_settime -k time-change)[\s\S\n]*(^-w \/etc\/localtime -p wa -k time-change)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8232
+checkname:BOI.5.2.3.4 - Ensure events that modify date and time information are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-a always,exit -F arch=b64 -S adjtimex,settimeofday -F key=time-change)[\s\S\n]*(^-a always,exit -F arch=b32 -S stime,settimeofday,adjtimex -F key=time-change)[\s\S\n]*(^-a always,exit -F arch=b64 -S clock_settime -F key=time-change)[\s\S\n]*(^-a always,exit -F arch=b32 -S clock_settime -F key=time-change)[\s\S\n]*(^-w \/etc\/localtime -p wa -k time-change)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8233
+checkname:BOI.5.2.3.5 - Ensure events that modify the system's network environment are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-a always,exit -F arch=b64 -S sethostname -S setdomainname -k system-locale)[\s\S\n]*(^-a always,exit -F arch=b32 -S sethostname -S setdomainname -k system-locale)[\s\S\n]*(^-w \/etc\/issue -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/issue.net -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/hosts -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/sysconfig\/network -p wa -k system-locale)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8234
+checkname:BOI.5.2.3.5 - Ensure events that modify the system's network environment are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-a always,exit -F arch=b64 -S sethostname,setdomainname -F key=system-locale)[\s\S\n]*(^-a always,exit -F arch=b32 -S sethostname,setdomainname -F key=system-locale)[\s\S\n]*(^-w \/etc\/issue -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/issue.net -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/hosts -p wa -k system-locale)[\s\S\n]*(^-w \/etc\/sysconfig\/network -p wa -k system-locale)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8235
+checkname:BOI.5.2.3.6 - Ensure use of privileged commands is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: priv_cmd_collect
+stanzastart:^Files
+stanzastop: $
+stanzacriteria: include: identical
+
+id:redhat_os_linux_8.1.8236
+checkname:BOI.5.2.3.7 - Ensure unsuccessful unauthorized file access attempts are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access)[\s\S\n]*(?!\1)(^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access)[\s\S\n]*(?!\1|\2)(^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access)[\s\S\n]*(?!\1|\2|\3)(^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access|^-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=1000 -F auid!=4294967295 -k access)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8237
+checkname:BOI.5.2.3.8 - Ensure events that modify user/group information are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart: (^-w \/etc\/group -p wa -k identity)[\s\S\n]*(^-w \/etc\/passwd -p wa -k identity)[\s\S\n]*(^-w \/etc\/gshadow -p wa -k identity)[\s\S\n]*(^-w \/etc\/shadow -p wa -k identity)[\s\S\n]*(^-w \/etc\/security\/opasswd -p wa -k identity)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8238
+checkname:BOI.5.2.3.8 - Ensure events that modify user/group information are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart: (^-w \/etc\/group -p wa -k identity)[\s\S\n]*(^-w \/etc\/passwd -p wa -k identity)[\s\S\n]*(^-w \/etc\/gshadow -p wa -k identity)[\s\S\n]*(^-w \/etc\/shadow -p wa -k identity)[\s\S\n]*(^-w \/etc\/security\/opasswd -p wa -k identity)
+stanzastop: $
+stanzacriteria: include:identity
+
+id:redhat_os_linux_8.1.8239
+checkname:BOI.5.2.3.9 - Ensure discretionary access control permission modification events are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=1000 -F auid!=4294967295 -k perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=1000 -F auid!=4294967295 -k perm_mod)[\s\S\n]*(^-a always,exit -F arch=b64 -S chown -S fchown -S fchownat -S lchown -F auid>=1000 -F auid!=4294967295 -k perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S chown -S fchown -S fchownat -S lchown -F auid>=1000 -F auid!=4294967295 -k perm_mod)[\s\S\n]*(^-a always,exit -F arch=b64 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=1000 -F auid!=4294967295 -k perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=1000 -F auid!=4294967295 -k perm_mod)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8240
+checkname:BOI.5.2.3.9 - Ensure discretionary access control permission modification events are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=-1 -F key=perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S chmod,fchmod,fchmodat -F auid>=1000 -F auid!=-1 -F key=perm_mod)[\s\S\n]*(^-a always,exit -F arch=b64 -S chown,fchown,lchown,fchownat -F auid>=1000 -F auid!=-1 -F key=perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S lchown,fchown,chown,fchownat -F auid>=1000 -F auid!=-1 -F key=perm_mod)[\s\S\n]*(^-a always,exit -F arch=b64 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=-1 -F key=perm_mod)[\s\S\n]*(^-a always,exit -F arch=b32 -S setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=-1 -F key=perm_mod)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8241
+checkname:BOI.5.2.3.10 - Ensure successful file system mounts are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-a always,exit -F arch=b64 -S mount -F auid>=1000 -F auid!=-1 -F key=mounts)[\s\S\n]*(^-a always,exit -F arch=b32 -S mount -F auid>=1000 -F auid!=-1 -F key=mounts)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8242
+checkname:BOI.5.2.3.11 - Ensure session initiation information is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-w \/var\/run\/utmp -p wa -k session)[\s\S\n]*(^-w \/var\/log\/wtmp -p wa -k logins)[\s\S\n]*(^-w \/var\/log\/btmp -p wa -k logins)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8243
+checkname:BOI.5.2.3.11 - Ensure session initiation information is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-w \/var\/run\/utmp -p wa -k session)[\s\S\n]*(^-w \/var\/log\/wtmp -p wa -k logins)[\s\S\n]*(^-w \/var\/log\/btmp -p wa -k logins)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8244
+checkname:BOI.5.2.3.12 - Ensure login and logout events are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-w \/var\/log\/lastlog -p wa -k logins)[\s\S\n]*(^-w \/var\/run\/faillock\/ -p wa -k logins)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8245
+checkname:BOI.5.2.3.12 - Ensure login and logout events are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-w \/var\/log\/lastlog -p wa -k logins)[\s\S\n]*(^-w \/var\/run\/faillock -p wa -k logins)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8246
+checkname:BOI.5.2.3.13 - Ensure file deletion events by users are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=1000 -F auid!=4294967295 -k delete)[\s\S\n]*(^-a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -F auid>=1000 -F auid!=4294967295 -k delete)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8247
+checkname:BOI.5.2.3.13 - Ensure file deletion events by users are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-a always,exit -F arch=b64 -S rename,unlink,unlinkat,renameat -F auid>=1000 -F auid!=-1 -F key=delete)[\s\S\n]*(^-a always,exit -F arch=b32 -S unlink,rename,unlinkat,renameat -F auid>=1000 -F auid!=-1 -F key=delete)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8248
+checkname:BOI.5.2.3.14 - Ensure events that modify the system's Mandatory Access Controls are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-w \/etc\/selinux\/ -p wa -k MAC-policy)[\s\S\n]*(^-w \/usr\/share\/selinux\/ -p wa -k MAC-policy)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8249
+checkname:BOI.5.2.3.14 - Ensure events that modify the system's Mandatory Access Controls are collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-w \/etc\/selinux -p wa -k MAC-policy)[\s\S\n]*(^-w \/usr\/share\/selinux -p wa -k MAC-policy)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8250
+checkname:BOI.5.2.3.19 - Ensure kernel module loading and unloading is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:(^-w \/sbin\/insmod -p x -k modules)[\s\S\n]*(^-w \/sbin\/rmmod -p x -k modules)[\s\S\n]*(^-w \/sbin\/modprobe -p x -k modules)[\s\S\n]*(^-a always,exit -F arch=b64 -S init_module -S delete_module -k modules)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8251
+checkname:BOI.5.2.3.19 - Ensure kernel module loading and unloading is collected
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:(^-w \/sbin\/insmod -p x -k modules)[\s\S\n]*(^-w \/sbin\/rmmod -p x -k modules)[\s\S\n]*(^-w \/sbin\/modprobe -p x -k modules)[\s\S\n]*(^-a always,exit -F arch=b64 -S init_module,delete_module -F key=modules)
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8252
+checkname:BOI.5.2.3.20 - Ensure the audit configuration is immutable
+severity: critical
+stanzaempty: Failed
+type: match
+segment: audit_rules
+stanzastart:^-e\s2
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8253
+checkname:BOI.5.2.3.20 - Ensure the audit configuration is immutable
+severity: critical
+stanzaempty: Failed
+type: match
+segment: auditctl
+stanzastart:^enabled\s2
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8254
+checkname:BOI.5.3.1 - Software - Ensure AIDE is installed
+severity: critical
+stanzaempty: Failed
+type: match
+segment: rpm
+stanzastart:^aide
+stanzastop: $
+stanzacriteria: include:.*
+
+id:redhat_os_linux_8.1.8255
+checkname:BOI.5.3.2 - Filesystem Configuration - Ensure filesystem integrity is regularly checked
+severity: critical
+stanzaempty: Failed
+type: match
+segment: crontab_aide_scheduled
+stanzastart:^.*aide
+stanzastop: $
+stanzacriteria: include:^.*\/usr\/sbin\/aide\s--check
+
+id:redhat_os_linux_8.1.8256
+checkname:BOI.6.1.1 - Ensure permissions on /etc/passwd are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/passwd:
+stanzastop: $
+stanzacriteria: include:[46][04][04]\sroot\sroot
+
+id:redhat_os_linux_8.1.8257
+checkname:BOI.6.1.2 - Ensure permissions on /etc/passwd- are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/passwd-:
+stanzastop: $
+stanzacriteria: include:[46]00\sroot\sroot
+
+id:redhat_os_linux_8.1.8258
+checkname:BOI.6.1.4 - Ensure permissions on /etc/group are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/group:
+stanzastop: $
+stanzacriteria: include:[46][04][04]\sroot\sroot
+
+id:redhat_os_linux_8.1.8259
+checkname:BOI.6.1.5 - Ensure permissions on /etc/group- are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart:^\/etc\/group-:
+stanzastop: $
+stanzacriteria: include:[46][04][04]\sroot\sroot
+
+id:redhat_os_linux_8.1.8260
+checkname:BOI.6.1.6 - Ensure permissions on /etc/shadow are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/shadow:
+stanzastop: $
+stanzacriteria: include:(000|0)\sroot\sroot
+
+id:redhat_os_linux_8.1.8261
+checkname:BOI.6.1.7 - Ensure permissions on /etc/shadow- are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/shadow\-:
+stanzastop: $
+stanzacriteria: include:(000|0)\sroot\sroot
+
+id:redhat_os_linux_8.1.8262
+checkname:BOI.6.1.8 - Ensure permissions on /etc/gshadow are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/gshadow:
+stanzastop: $
+stanzacriteria: include:(000|0)\sroot\sroot
+
+id:redhat_os_linux_8.1.8263
+checkname:BOI.6.1.9 - Ensure permissions on /etc/gshadow- are configured
+severity: critical
+stanzaempty: Failed
+type: match
+segment: permissions
+stanzastart: ^\/etc\/gshadow\-:
+stanzastop: $
+stanzacriteria: include:(000|0)\sroot\sroot
+
+id:redhat_os_linux_8.1.8264
+checkname:BOI.6.1.11 - Ensure no world writable files exist
+severity: critical
+stanzaempty: Failed
+type: match
+segment: worldwriteable
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:No files found
+
+id:redhat_os_linux_8.1.8265
+checkname:BOI.6.1.11 - Filesystem Configuration - Ensure sticky bit is set on all world-writable directories on local
+severity: critical
+stanzaempty: Failed
+type: match
+segment: worldwriteable
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:No files found
+
+id:redhat_os_linux_8.1.8266
+checkname:BOI.6.1.12 - Ensure no unowned files or directories exist
+severity: critical
+stanzaempty: Failed
+type: match
+segment: worldwriteable
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:No files found
+
+id:redhat_os_linux_8.1.8267
+checkname:BOI.6.2.2 - Ensure password fields are not empty
+severity: critical
+stanzaempty: Passed
+type: match
+segment: etc_shadow_nopasswd
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:does not have a password
+
+id:redhat_os_linux_8.1.8268
+checkname:BOI.6.2.3 - Ensure all groups in /etc/passwd exist in /etc/group
+severity: critical
+stanzaempty: Passed
+type: match
+segment: etcpass_eq_etcgroup
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8269
+checkname:BOI.6.2.4 - Ensure no duplicate UIDs exist
+severity: critical
+stanzaempty: Passed
+type: match
+segment: gu_id_usedonce
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:UID
+
+id:redhat_os_linux_8.1.8270
+checkname:BOI.6.2.5 - Ensure no duplicate GIDs exist
+severity: critical
+stanzaempty: Passed
+type: match
+segment: gu_id_usedonce
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:GID
+
+id:redhat_os_linux_8.1.8271
+checkname:BOI.6.2.6 - Ensure no duplicate user names exist
+severity: critical
+stanzaempty: Passed
+type: match
+segment: nodup_usr_names
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:Duplicate
+
+id:redhat_os_linux_8.1.8272
+checkname:BOI.6.2.7 - Ensure no duplicate group names exist
+severity: critical
+stanzaempty: Passed
+type: count
+segment: noduplicate_groupnm
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: equal:0
+
+id:redhat_os_linux_8.1.8273
+checkname:BOI.6.2.8 - Ensure root PATH Integrity
+severity: critical
+stanzaempty: Passed
+type: match
+segment: root_path_integrity
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8274
+checkname:BOI.6.2.9 - Ensure root is the only UID 0 account
+severity: critical
+stanzaempty: Passed
+type: match
+segment: passwd
+stanzastart:^(?!root\:)(?:[^\:]*\:){2}0
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8275
+checkname:BOI.6.2.10 - Ensure all users' home directories exist
+severity: critical
+stanzaempty: Passed
+type: match
+segment: all_users_home
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8276
+checkname:BOI.6.2.10 - Ensure users' home directories permissions are 750 or more restrictiv
+severity: critical
+stanzaempty: Passed
+type: match
+segment: homedir_perm
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8277
+checkname:BOI.6.2.10 - Ensure users own their home directories
+severity: critical
+stanzaempty: Passed
+type: match
+segment: own_their_home
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8278
+checkname:BOI.6.2.10 - Ensure users' dot files are not group or world writable
+severity: critical
+stanzaempty: Passed
+type: match
+segment: dotf_nogroupoww
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8279
+checkname:BOI.6.2.11 - Ensure no users have .forward files in directories located in local f
+severity: critical
+stanzaempty: Passed
+type: match
+segment: nofile_named
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8280
+checkname:BOI.6.2.11 - Ensure no users have .netrc files in directories located in local fil
+severity: critical
+stanzaempty: passed
+type: match
+segment: nofile_named
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8281
+checkname:BOI.6.2.11 - Ensure users' .netrc Files are not group or world accessible
+severity: critical
+stanzaempty: passed
+type: match
+segment: permissions
+stanzastart: ^\/root\/\.netrc:
+stanzastop: $
+stanzacriteria: include:600\sroot\sroot|File does not exist
+
+id:redhat_os_linux_8.1.8282
+checkname:BOI.6.2.11 - Ensure no users have .rhosts files
+severity: critical
+stanzaempty: passed
+type: match
+segment: nofile_named
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*
+
+id:redhat_os_linux_8.1.8282
+checkname:BOI.4.5.1.5 - Ensure all users last password change date is in the past
+severity: critical
+stanzaempty: passed
+type: match
+segment: userspass_day_inpast
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: exclude:.*

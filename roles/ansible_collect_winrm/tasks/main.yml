@@ -1,0 +1,401 @@
+---
+- name: Data collection prepare block
+  block:
+    - name: Error handling control block
+      block:
+        - name: Creating directory on target
+          ansible.windows.win_file:
+            path: "{{ temp_dir }}"
+            state: directory
+            mode: "0700"
+          register: conn_status
+          ignore_errors: true
+          ignore_unreachable: true
+      always:
+        - name: Generate RC
+          ansible.builtin.include_role:
+            name: returncode
+          vars:
+            rc_variables: "{{ udc_return_codes['compute_conn'] }}"
+          when:
+            - conn_status.unreachable is defined
+            - conn_status.unreachable | bool
+
+        - name: Fail UDC run for the host
+          ansible.builtin.fail:
+            msg: "{{ udc_return_codes['compute_conn']['rc_message'] }}"
+          when:
+            - conn_status.unreachable is defined
+            - conn_status.unreachable | bool
+
+    - name: Creating destination directory on Control Node
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+
+    - name: Collect required facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - '!min'
+          - 'distribution'
+        gather_timeout: 120
+      no_log: true
+
+    - name: Set udc_os_version
+      ansible.builtin.set_fact:
+        udc_os_version: >-
+          {% if '2008' in ansible_facts["distribution"] %}2008{%
+          elif '2012' in ansible_facts["distribution"] %}2012{%
+          elif '2016' in ansible_facts["distribution"] %}2016{%
+          elif '2019' in ansible_facts["distribution"] %}2019{%
+          elif '2022' in ansible_facts["distribution"] %}2022{%
+          else %}unknown{% endif %}
+      when: namebase not in udc_rules_server_skip_osversion
+
+# - name: Add cacf_cfg segment block
+#   block:
+#     - name: Get PowerShell version
+#       ansible.windows.win_shell: |
+#         ($PSVersionTable.PSVersion.Major,$PSVersionTable.PSVersion.Minor,$PSVersionTable.PSVersion.Patch) -Join "."
+#       failed_when: false
+#       changed_when: false
+#       register: ps_version
+
+#     - name: Error handling control block
+#       block:
+#         - name: Fail data collection if Powershell version is below 5.1
+#           ansible.builtin.assert:
+#             that:
+#               - ((ps_version.stdout).split('.')[0:2] | join('.') | float) >= 5.1
+#             fail_msg: "{{ udc_return_codes['minimum_powershell_version']['rc_message'] }}"
+#       rescue:
+#         - name: Generate RC
+#           ansible.builtin.include_role:
+#             name: returncode
+#           vars:
+#             rc_variables: "{{ udc_return_codes['minimum_powershell_version'] }}"
+
+#         - name: Fail UDC run for the host
+#           ansible.builtin.fail:
+#             msg: "{{ udc_return_codes['minimum_powershell_version']['rc_message'] }}"
+
+- name: Data collection prepare block
+  delegate_to: localhost
+  block:
+    - name: Local policies from forks
+      when: not (use_bps_rules_server | default(False) | bool)
+      block:
+        - name: Define acceptable policy patterns
+          ansible.builtin.set_fact:
+            policy_patterns:
+              - '{{ namebase }}.local.{{ account_code }}.{{ udc_local_pol_filter | default("*") }}.pol'
+              - '{{ inventory_hostname }}.{{ namebase }}.local.{{ udc_local_pol_filter | default("*") }}.pol'
+
+        - name: Add the udc_os_version dependent policy matcher when running an OS collector
+          ansible.builtin.set_fact:
+            policy_patterns: >
+              {{ policy_patterns + [namebase + '.local.security.' + udc_os_version + '.' + udc_local_pol_filter | default("*") + '.pol'] }}
+          when: namebase.split("_")[1] == "os"
+
+        - name: Add the udc_os_version independent security policy matcher when running a non-OS collector
+          ansible.builtin.set_fact:
+            policy_patterns: >
+              {{ policy_patterns + [namebase + '.local.security.' + udc_local_pol_filter | default("*") + '.pol'] }}
+          when: namebase.split("_")[1] != "os"
+
+        - name: Find the policy files
+          ansible.builtin.find:
+            paths: '{{ role_path }}/files'
+            patterns: "{{ policy_patterns }}"
+            use_regex: true
+          register: policy_files
+
+    - name: Find the variable templates
+      ansible.builtin.find:
+        paths: '{{ role_path }}/templates'
+        patterns: '{{ namebase }}.local.{{ udc_local_code_filter | default("*") }}.ps1.j2'
+        use_regex: true
+      register: vars_list
+
+    - name: Generate the local PS files from template
+      ansible.builtin.template:
+        src: "{{ role_path }}/templates/{{ item | basename }}"
+        dest: "{{ control_temp_dir }}/{{ item[:-3] | basename }}"
+        mode: "0600"
+      loop: "{{ vars_list.files | map(attribute='path') | list }}"
+      when: vars_list.files[0] is defined
+
+- name: Generate global PS file from template
+  ansible.windows.win_template:
+    src: "{{ role_path }}/templates/{{ namebase }}.global.ps1.j2"
+    dest: "{{ temp_dir }}/{{ namebase }}.ps1"
+
+- name: Insert local PS contents to global PS file
+  community.windows.win_lineinfile:
+    insertbefore: "# END ANSIBLE MANAGED BLOCK"
+    line: |-
+      {{ lookup('file', '{{ control_temp_dir }}/{{ item[:-3] | basename }}') }}
+    path: "{{ temp_dir }}/{{ namebase }}.ps1"
+  loop: "{{ vars_list.files | map(attribute='path') | list | sort }}"
+  when: vars_list.files[0] is defined
+
+- name: Initialize exec_rc
+  ansible.builtin.set_fact:
+    error_on_exec: false
+    fatal_on_exec: false
+
+- name: Unblock script
+  ansible.windows.win_shell: "Get-Item {{ temp_dir }}/{{ namebase }}.ps1 | Unblock-File"
+  failed_when: false
+
+- name: Error handling control block
+  block:
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogPath {{ temp_dir }}/{{ out_file }} \
+        -LogF {{ temp_dir }}/{{ log_file }} -ZipLog {{ zip_log }} -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" \
+        -blueid "{{ blueid }}" -chipid "{{ chipid }}" \
+        -location "{{ location }}" -satteam "{{ satteam }}" -hwswdomain "{{ hwswdomain }}" -satmode {{ satmode }} \
+        -device_name {{ satdevicename | default(inventory_hostname) }}_{{ namebase }} -udcmode "{{ udcmode }}" \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      when: namebase == 'microsoft_os_windows'
+
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogPath {{ temp_dir }}/{{ out_file }} \
+        -LogFile {{ temp_dir }}/{{ log_file }} -AnsibleMode {{ ansible_mode }} -ZipLog {{ zip_log }} \
+        -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" -blueid "{{ blueid }}" -chipid "{{ chipid }}" \
+        -location "{{ location }}" -satteam "{{ satteam }}" \
+        -hwswdomain "{{ hwswdomain }}" -devicename {{ satdevicename | default(inventory_hostname) }}_{{ namebase }} -udcmode "{{ udcmode }}" \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      when: namebase == 'microsoft_mw_activedirectory'
+
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogDir {{ temp_dir }} -sqlinstance {{ sqlinstance }} \
+        -AnsibleMode {{ ansible_mode }} -ZipLog {{ zip_log }} -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" \
+        -blueid "{{ blueid }}" -chipid "{{ chipid }}" -location "{{ location }}" -satteam "{{ satteam }}" -hwswdomain "{{ hwswdomain }}" \
+        -udcmode "{{ udcmode }}" -devicename {{ satdevicename | default(inventory_hostname) }} \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      environment:
+        MSSQLUSER: "{{ ansible_net_username | default(lookup('env', 'ANSIBLE_NET_USERNAME')) }}"
+        MSSQLPASSWORD: "{{ ansible_net_password | default(lookup('env', 'ANSIBLE_NET_PASSWORD')) }}"
+      when: namebase == 'microsoft_db_mssql'
+
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogPath {{ temp_dir }}/{{ out_file }} \
+        -LogFile {{ temp_dir }}/{{ log_file }} -AnsibleMode {{ ansible_mode }} -ZipLog {{ zip_log }} \
+        -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" \
+        -blueid "{{ blueid }}" -chipid "{{ chipid }}" -location "{{ location }}" -satteam "{{ satteam }}" \
+        -hwswdomain "{{ hwswdomain }}" -udcmode "{{ udcmode }}" -devicename {{ satdevicename | default(inventory_hostname) }}_{{ namebase }} \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      environment:
+        USERNAME: "{{ ansible_net_username | default(lookup('env', 'ANSIBLE_NET_USERNAME')) }}"
+        PASSWORD: "{{ ansible_net_password | default(lookup('env', 'ANSIBLE_NET_PASSWORD')) }}"
+      when: namebase == 'microsoft_ap_hyperv'
+
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogPath {{ temp_dir }}/{{ out_file }} \
+        -LogF {{ temp_dir }}/{{ log_file }} -ZipLog {{ zip_log }} -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" \
+        -blueid "{{ blueid }}" -chipid "{{ chipid }}" \
+        -location "{{ location }}" -satteam "{{ satteam }}" -hwswdomain "{{ hwswdomain }}" -satmode {{ satmode }} \
+        -devicename {{ satdevicename | default(inventory_hostname) }}_{{ namebase }} -udcmode "{{ udcmode }}" \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      when: namebase == 'microsoft_mw_iis'
+
+    - name: Run script
+      ansible.windows.win_command: |
+        powershell.exe -ExecutionPolicy ByPass -File {{ temp_dir }}/{{ namebase }}.ps1 -LogPath {{ temp_dir }}/{{ out_file }} \
+        -LogFile {{ temp_dir }}/{{ log_file }} -AnsibleMode {{ ansible_mode }} -ZipLog {{ zip_log }} \
+        -account "{{ account | regex_replace('[^a-zA-Z0-9.+ _-]', '') }}" -blueid "{{ blueid }}" \
+        -chipid "{{ chipid }}" -location "{{ location }}" -satteam "{{ satteam }}" -hwswdomain "{{ hwswdomain }}" \
+        -devicename {{ satdevicename | default(inventory_hostname) }}_{{ namebase }} -udcmode "{{ udcmode }}" \
+        -tpchcversion "{{ udc_tpchc_version }}" -buildversion "{{ udc_build_version }}"
+      when: namebase == 'commvault_db_simpana'
+  rescue:
+    - name: Set fact on fatal error
+      ansible.builtin.set_fact:
+        fatal_on_exec: true
+
+    - name: Generate RC
+      ansible.builtin.include_role:
+        name: returncode
+      vars:
+        rc_variables: "{{ udc_return_codes['powershell_script_error'] }}"
+
+- name: Find the generated out_files
+  ansible.windows.win_find:
+    paths: '{{ temp_dir }}/'
+    patterns: '*.out'
+  register: out_list
+
+- name: Add header segments to the out_file - only for microsoft_os_windows namebase
+  when:
+    - namebase == 'microsoft_os_windows'
+  block:
+    - name: Generate the headers from template to localhost
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ control_temp_dir }}/headers"
+        mode: "0600"
+      delegate_to: localhost
+
+    - name: Add header segments to out_file
+      community.windows.win_lineinfile:
+        path: "{{ item }}"
+        insertbefore: "BOF"
+        line: "{{ lookup('file', '{{ control_temp_dir }}/headers') }}"
+      loop: "{{ out_list.files | map(attribute='path') | list }}"
+
+    - name: Clean up headers
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}/headers"
+        state: absent
+      delegate_to: localhost
+
+- name: Add cacf_cfg segment to the out_files - only for microsoft_db_mssql
+  when:
+    - namebase == 'microsoft_db_mssql'
+  block:
+    - name: Find the generated parent outfile
+      ansible.windows.win_find:
+        paths: '{{ temp_dir }}/'
+        patterns: '^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}.out'
+        use_regex: true
+      register: parent_outfile_list
+
+    - name: Generate the headers from template to localhost (parent version)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ control_temp_dir }}/headers"
+        mode: "0600"
+      vars:
+        only_cacf: true
+        parent_devicetype: "{{ sat_parent | lower }}"
+      delegate_to: localhost
+
+    - name: Add cacf_cfg segments to the parent outfile
+      community.windows.win_lineinfile:
+        path: "{{ item }}"
+        insertbefore: "BOF"
+        line: "{{ lookup('file', '{{ control_temp_dir }}/headers') }}"
+      loop: "{{ parent_outfile_list.files | map(attribute='path') | list }}"
+
+    - name: Generate the headers from template to localhost (child version)
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ control_temp_dir }}/headers"
+        mode: "0600"
+      vars:
+        only_cacf: true
+      delegate_to: localhost
+
+    - name: Add cacf_cfg segments to the child outfiles
+      community.windows.win_lineinfile:
+        path: "{{ item }}"
+        insertbefore: "BOF"
+        line: "{{ lookup('file', '{{ control_temp_dir }}/headers') }}"
+      loop: "{{ out_list.files | map(attribute='path') | list | difference(parent_outfile_list.files | map(attribute='path') | list) }}"
+
+    - name: Clean up headers
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}/headers"
+        state: absent
+      delegate_to: localhost
+
+- name: Add cacf_cfg segment to the out_files - everything except microsoft_os_windows and microsoft_db_mssql
+  when:
+    - namebase != 'microsoft_os_windows'
+    - namebase != 'microsoft_db_mssql'
+  block:
+    - name: Generate the headers from template to localhost
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ control_temp_dir }}/headers"
+        mode: "0600"
+      vars:
+        only_cacf: true
+      delegate_to: localhost
+
+    - name: Add cacf_cfg segments to out_file
+      community.windows.win_lineinfile:
+        path: "{{ item }}"
+        insertbefore: "BOF"
+        line: "{{ lookup('file', '{{ control_temp_dir }}/headers') }}"
+      loop: "{{ out_list.files | map(attribute='path') | list }}"
+
+    - name: Clean up headers
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}/headers"
+        state: absent
+      delegate_to: localhost
+
+- name: Add policies to out_files
+  community.windows.win_lineinfile:
+    path: "{{ item }}"
+    insertbefore: "^#### </policy_cfg>"
+    line: |
+      {% if namebase in (item | win_basename) %}
+      {% for policy in policy_files.files | map(attribute='path') | list %}
+      {{ policy | default('') | basename }}
+      {% endfor %}
+      {% endif %}
+
+  loop: "{{ out_list.files | map(attribute='path') | list }}"
+  when:
+    - namebase != 'microsoft_os_windows'
+    - policy_files.files[0] is defined
+
+- name: Data collection finished block
+  block:
+    - name: Copy policy files to destination on the Control Node
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ control_temp_dir }}/{{ item | basename }}"
+        mode: "0600"
+      delegate_to: localhost
+      loop: "{{ policy_files.files | map(attribute='path') | list }}"
+      when: policy_files.files[0] is defined
+
+    - name: Register the files to be fetched
+      ansible.windows.win_find:
+        paths: "{{ temp_dir }}"
+        patterns:
+          - '*.log'
+          - '*.out'
+      register: bundle_elements
+
+    - name: Fetch files from Endpoint
+      ansible.builtin.fetch:
+        src: "{{ temp_dir }}/{{ item | win_basename }}"
+        dest: "{{ control_temp_dir }}/{{ item | win_basename }}"
+        flat: true
+      loop: "{{ bundle_elements.files | map(attribute='path') | list }}"
+
+    - name: Compress files into Bundle
+      community.general.archive:
+        path:
+          - "{{ control_temp_dir }}/*"
+        exclude_path:
+          - "{{ control_temp_dir }}/*.yml"
+          - "{{ control_temp_dir }}/*.ps1"
+        dest: "{{ control_temp_dir }}/../{{ bundle_file }}"
+        mode: "0600"
+        format: zip
+        remove: true
+      delegate_to: localhost
+  always:
+    - name: Delete created directory from the Endpoint
+      ansible.windows.win_file:
+        path: "{{ temp_dir }}"
+        state: absent
+    - name: Delete created directory from the Control Node
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}"
+        state: absent
+      delegate_to: localhost

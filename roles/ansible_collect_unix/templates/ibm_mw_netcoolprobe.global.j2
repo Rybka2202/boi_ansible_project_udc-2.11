@@ -1,0 +1,116 @@
+---
+settings_global:
+{% if ('model' in check_list or 'all' in check_list) and '-model' not in check_list %}
+  - header: '#### <model>'
+    command: '/usr/bin/echo netcoolpr'
+    become: true
+    footer: >
+      #### </model>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('system_serial_number' in check_list or 'all' in check_list) and '-system_serial_number' not in check_list %}
+  - header: '#### <system_serial_number>'
+    command: '/usr/sbin/dmidecode -s system-serial-number'
+    become: true
+    footer: >
+      #### </system_serial_number>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('netcool_version' in check_list or 'all' in check_list) and '-netcool_version' not in check_list %}
+  - header: '#### <netcool_version>'
+    become: Yes
+    become_user: ncosys
+    command: "{{im_path}} listInstalledPackages -features -long"
+    footer: >
+      #### </netcool_version>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('gsma_probe_version' in check_list or 'all' in check_list) and '-gsma_probe_version' not in check_list %}
+  - header: '#### <gsma_probe_version>'
+    become: Yes
+    become_user: ncosys
+    command: "/opt/IBM/GSMA/GSMA_version.sh|sed -n '/GSMA untared packages installed successfully using the automated upgrade :/,$p'"
+    footer: >
+      #### </gsma_probe_version>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudo_template' in check_list or 'all' in check_list) and '-sudo_template_version' not in check_list %}
+  - header: '#### <sudo_template_version>'
+    become: Yes
+    command: "grep -l ncosys /etc/sudoers.d/* | sed 's!.*/!!g'"
+    footer: >
+      #### </sudo_template_version>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudo_ncosys_login_configured' in check_list or 'all' in check_list) and '-sudo_ncosys_login_configured' not in check_list %}
+  - header: '#### <sudo_ncosys_login_configured>'
+    become: Yes
+    become_user: ncosys
+    command: "ls -Art /home/ncosys/sudo_log| tail -n 1"
+    footer: >
+      #### </sudo_ncosys_login_configured>
+{% endif %}
+
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('check_ncosys_pw_exp' in check_list or 'all' in check_list) and '-check_ncosys_pw_exp' not in check_list %}
+  - header: '#### <check_ncosys_pw_exp>'
+    become: Yes
+    command: |
+       today=$(date +%s)
+       userexpdate=$(chage -l ncosys 2>&1 | egrep 'Password expires|does not exist in' |cut -d: -f2)
+       passexp=$(date -d "$userexpdate" "+%s")
+       exp=`expr \( $passexp - $today \)`
+       expday=`expr \( $exp / 86400 \)`
+       if [ "$expday" -gt 0 ]; then echo "ncosyspwexp $expday"; else echo "ncosyspwexp $userexpdate";fi
+    footer: >
+      #### </check_ncosys_pw_exp>
+{% endif %}
+
+{# ------------------------------------------------------------------------------------------------------------------- #}
+
+#{% if ('check_ncosys_ulimit' in check_list or 'all' in check_list) and '-check_ncosys_ulimit' not in check_list %}
+ # - header: '#### <check_ncosys_ulimit>'
+  #  become: Yes
+  #  command: 'cat /etc/security/limits.conf |grep ncosys'
+  #  footer: >
+  #    #### </check_ncosys_ulimit>
+#{% endif %}
+
+{# ------------------------------------------------------------------------------------------------------------------- #}
+{% if ('check_selinux_permissive' in check_list or 'all' in check_list) and '-check_selinux_permissive' not in check_list %}
+  - header: '#### <check_selinux_permissive>'
+    become: Yes
+    command: '/usr/sbin/getenforce'
+    footer: >
+      #### </check_selinux_permissive>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('linux_nco_autostart' in check_list or 'all' in check_list) and '-linux_nco_autostart' not in check_list %}
+  - header: '#### <linux_nco_autostart>'
+    become: Yes
+    command: 'systemctl is-enabled nco.service 2>&1 | cat -'
+    footer: >
+      #### </linux_nco_autostart>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('linux_nco_running' in check_list or 'all' in check_list) and '-linux_nco_running' not in check_list %}
+  - header: '#### <linux_nco_running>'
+    become: Yes
+    command: 'systemctl is-active nco.service 2>&1 | cat -'
+    footer: >
+      #### </linux_nco_running>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('linux_rhel_version' in check_list or 'all' in check_list) and '-linux_rhel_version' not in check_list %}
+  - header: '#### <linux_rhel_version>'
+    command: 'cat /etc/redhat-release'
+    footer: >
+      #### </linux_rhel_version>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------- #}

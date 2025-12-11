@@ -1,0 +1,6 @@
+- name: Remediate by uninstalling ftp and removing unused dependencies
+  ansible.builtin.dnf:
+    name: ftp
+    state: absent
+    autoremove: true
+  become: true

@@ -1,0 +1,1762 @@
+---
+settings_global:
+{% if ('os_info' in check_list or 'all' in check_list) and '-os_info' not in check_list %}
+  - header: '#### <OS_INFO>'
+    command: |
+      echo \"HOSTNAME"\";"\"OS_DETAILS"\";"\"RELEASE_NUMBER"\";"\"KERNEL"\";"\"SERIAL\"
+      HOSTNAME="$(hostname)"
+      OS_DETAILS="{{ ansible_facts['distribution'] }}"
+      VERSION_ID="{{ ansible_facts['distribution_version'] }}"
+      KERNEL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/bin/oslevel -s){% else %}$(/usr/bin/uname -r){% endif %}{{ '' }}
+      SERIAL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/sbin/prtconf | grep 'Machine Serial Number' | awk '{print $NF}' || echo 'SN unreadable'){%
+                elif ansible_facts['os_family'] == 'RedHat' %}{%
+                    if ansible_facts['architecture'] == 'ppc64le' %}$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'SN unreadable'){%
+                    else %}$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+                elif ansible_facts['os_family'] == 'Solaris' %}$(smbios -i1 | grep 'Serial Number' | awk 'BEGIN { FS = ":" } {print $NF}' | sed 's/^[ \t]*//' | grep -v '^$' || echo 'SN unreadable'){%
+                elif ansible_facts['os_family'] == 'Suse' %}{%
+                    if ansible_facts['architecture'] == 'ppc64le' %}$(/usr/bin/grep serial_number /proc/powerpc/lparcfg | cut -d ',' -f 2 | cut -c 3- || echo 'SN unreadable'){%
+                    else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+                else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{{ '' }}
+      echo \"$HOSTNAME"\";"\"$OS_DETAILS"\";"\"$VERSION_ID"\";"\"$KERNEL"\";"\"$SERIAL\"
+    become: true
+    become_user: "{{ become_user | default('root') }}"
+    footer: >
+      #### </OS_INFO>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('oslevel' in check_list or 'all' in check_list) and '-oslevel' not in check_list %}
+  - header: '#### <oslevel>'
+    command: 'oslevel -s'
+    footer: >
+      #### </oslevel>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('etc_inetd_conf' in check_list or 'all' in check_list) and '-etc_inetd_conf' not in check_list %}
+  - header: '#### <etc_inetd_conf>'
+    command: 'cat /etc/inetd.conf'
+    become: true
+    footer: >
+      #### </etc_inetd_conf>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('etc_rc_tcpip' in check_list or 'all' in check_list) and '-etc_rc_tcpip' not in check_list %}
+  - header: '#### <etc_rc_tcpip>'
+    command: 'cat /etc/rc.tcpip'
+    become: true
+    footer: >
+      #### </etc_rc_tcpip>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('etc_security_user' in check_list or 'all' in check_list) and '-etc_security_user' not in check_list %}
+  - header: '#### <etc_security_user>'
+    command: 'cat /etc/security/user'
+    become: true
+    footer: >
+      #### </etc_security_user>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('etc_passwd' in check_list or 'all' in check_list) and '-etc_passwd' not in check_list %}
+  - header: '#### <etc_passwd>'
+    command: 'cat /etc/passwd'
+    become: true
+    footer: >
+      #### </etc_passwd>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('etc_group' in check_list or 'all' in check_list) and '-etc_group' not in check_list %}
+  - header: '#### <etc_group>'
+    command: 'cat /etc/group'
+    become: true
+    footer: >
+      #### </etc_group>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('sysdumpdev_l' in check_list or 'all' in check_list) and '-sysdumpdev_l' not in check_list %}
+  - header: '#### <sysdumpdev_l>'
+    command: 'sysdumpdev -l'
+    become: true
+    footer: >
+      #### </sysdumpdev_l>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('sysdumpdev_e' in check_list or 'all' in check_list) and '-sysdumpdev_e' not in check_list %}
+  - header: '#### <sysdumpdev_e>'
+    command: 'sysdumpdev -e'
+    become: true
+    footer: >
+      #### </sysdumpdev_e>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('bootlist' in check_list or 'all' in check_list) and '-bootlist' not in check_list %}
+  - header: '#### <bootlist>'
+    command: 'bootlist -o -m normal'
+    become: true
+    footer: >
+      #### </bootlist>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lspv' in check_list or 'all' in check_list) and '-lspv' not in check_list %}
+  - header: '#### <lspv>'
+    command: 'lspv'
+    footer: >
+      #### </lspv>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lparstat' in check_list or 'all' in check_list) and '-lparstat' not in check_list %}
+  - header: '#### <lparstat>'
+    command: 'lparstat -i'
+    footer: >
+      #### </lparstat>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('installp' in check_list or 'all' in check_list) and '-installp' not in check_list %}
+  - header: '#### <installp>'
+    command: '/usr/sbin/installp -s'
+    become: true
+    footer: >
+      #### </installp>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lssrad' in check_list or 'all' in check_list) and '-lssrad' not in check_list %}
+  - header: '#### <lssrad>'
+    command: 'lssrad -av'
+    footer: >
+      #### </lssrad>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('mpstat' in check_list or 'all' in check_list) and '-mpstat' not in check_list %}
+  - header: '#### <mpstat>'
+    command: 'mpstat -d'
+    footer: >
+      #### </mpstat>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsvg' in check_list or 'all' in check_list) and '-lsvg' not in check_list %}
+  - header: '#### <lsvg>'
+    command: 'lsvg -o'
+    footer: >
+      #### </lsvg>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('svmon' in check_list or 'all' in check_list) and '-svmon' not in check_list %}
+  - header: '#### <svmon>'
+    command: 'svmon -G -O unit=MB,pgsz=on,affinity=on'
+    footer: >
+      #### </svmon>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsps' in check_list or 'all' in check_list) and '-lsps' not in check_list %}
+  - header: '#### <lsps>'
+    command: 'lsps -a'
+    footer: >
+      #### </lsps>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsdev' in check_list or 'all' in check_list) and '-lsdev' not in check_list %}
+  - header: '#### <lsdev>'
+    command: 'lsdev'
+    become: true
+    footer: >
+      #### </lsdev>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lspath' in check_list or 'all' in check_list) and '-lspath' not in check_list %}
+  - header: '#### <lspath>'
+    command: 'lspath'
+    become: true
+    footer: >
+      #### </lspath>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsattr-El' in check_list or 'all' in check_list) and '-lsattr-El' not in check_list %}
+  - header: '#### <lsattr-El>'
+    command: 'for vg in `lsvg -o`; do echo $vg":"; lsattr -El $vg; done'
+    footer: >
+      #### </lsattr-El>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsmcode' in check_list or 'all' in check_list) and '-lsmcode' not in check_list %}
+  - header: '#### <lsmcode>'
+    command: 'lsmcode -c'
+    become: true
+    footer: >
+      #### </lsmcode>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('prtconf' in check_list or 'all' in check_list) and '-prtconf' not in check_list %}
+  - header: '#### <prtconf>'
+    command: 'prtconf'
+    footer: >
+      #### </prtconf>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lssrc' in check_list or 'all' in check_list) and '-lssrc' not in check_list %}
+  - header: '#### <lssrc>'
+    command: 'lssrc -s aso'
+    become: true
+    footer: >
+      #### </lssrc>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lppchk-vm3' in check_list or 'all' in check_list) and '-lppchk-vm3' not in check_list %}
+  - header: '#### <lppchk-vm3>'
+    command: '/usr/bin/lppchk -vm3 ||/usr/bin/echo "lppchk command execution error"'
+    become: true
+    footer: >
+      #### </lppchk-vm3>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('uptime' in check_list or 'all' in check_list) and '-uptime' not in check_list %}
+  - header: '#### <uptime>'
+    command: 'uptime'
+    footer: >
+      #### </uptime>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('vmstat-s' in check_list or 'all' in check_list) and '-vmstat-s' not in check_list %}
+  - header: '#### <vmstat-s>'
+    command: 'vmstat -s'
+    footer: >
+      #### </vmstat-s>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('vmstat-v' in check_list or 'all' in check_list) and '-vmstat-v' not in check_list %}
+  - header: '#### <vmstat-v>'
+    command: 'vmstat -v'
+    footer: >
+      #### </vmstat-v>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsrsrc_IBM_MCP' in check_list or 'all' in check_list) and '-lsrsrc_IBM_MCP' not in check_list %}
+  - header: '#### <lsrsrc_IBM_MCP>'
+    command: 'lsrsrc IBM.MCP || true'
+    footer: >
+      #### </lsrsrc_IBM_MCP>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('primary_dump' in check_list or 'all' in check_list) and '-primary_dump' not in check_list %}
+  - header: '#### <primary_dump>'
+    command: |
+      SDPRIMARY=$(/usr/bin/sysdumpdev -l | /usr/bin/grep primary | /usr/bin/awk '{ print substr($2,6) }')
+      if [ -z "$SDPRIMARY" ]; then
+      /usr/bin/echo "Error: Failed to determine primary dump device"
+      fi
+      SDPRIMARYINFO=$(/usr/sbin/lsvg -l rootvg | /usr/bin/grep -w "$SDPRIMARY")
+      if [ -z "$SDPRIMARYINFO" ]; then
+      /usr/bin/echo "Error: Could not retrieve logical volume information for $SDPRIMARY"
+      fi
+      SDPRIMARYLP=$(/usr/bin/echo "$SDPRIMARYINFO" | /usr/bin/awk '{ print $3 }')
+      SDPRIMARYPP=$(/usr/bin/echo "$SDPRIMARYINFO" | /usr/bin/awk '{ print $4 }')
+      SDPRIMARYPV=$(/usr/bin/echo "$SDPRIMARYINFO" | /usr/bin/awk '{ print $5 }')
+      ROOTPPSIZE=$(lsvg rootvg | /usr/bin/grep 'PP SIZE' | /usr/bin/awk '{ print $6 }')
+      if [ -z "$ROOTPPSIZE" ] || /usr/bin/echo "$ROOTPPSIZE" | /usr/bin/grep -qv '^[0-9][0-9]*$'; then
+      /usr/bin/echo "Error: Invalid or missing PP size from rootvg"
+      fi
+      # Calculate dump size
+      /usr/bin/echo "$SDPRIMARYPP" | /usr/bin/grep -q '^[0-9][0-9]*$'
+      if [ $? -eq 0 ]; then
+      PRIMARYDUMPSIZE=$((SDPRIMARYPP * ROOTPPSIZE * 1024 * 1024))
+      /usr/bin/echo '"'$SDPRIMARY'";"'$SDPRIMARYLP'";"'$SDPRIMARYPP'";"'$SDPRIMARYPV'";"'$PRIMARYDUMPSIZE'"'
+      else
+      /usr/bin/echo "Error: Primary Dump PP is not a valid number"
+      fi
+    become: true
+    footer: >
+      #### </primary_dump>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsvg-vg' in check_list or 'all' in check_list) and '-lsvg-vg' not in check_list %}
+  - header: '#### <lsvg-vg>'
+    command: 'for vg in `lsvg -o`; do echo $vg; lsvg $vg; done'
+    footer: >
+      #### </lsvg-vg>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsvg_p' in check_list or 'all' in check_list) and '-lsvg_p' not in check_list %}
+  - header: '#### <lsvg_p>'
+    command: 'for vg in `lsvg -o`; do lsvg -p $vg; done'
+    footer: >
+      #### </lsvg_p>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lvmo_a_v_vg' in check_list or 'all' in check_list) and '-lvmo_a_v_vg' not in check_list %}
+  - header: '#### <lvmo_a_v_vg>'
+    command: 'for vg in `lsvg -o`; do lvmo -a -v $vg; done'
+    become: true
+    footer: >
+      #### </lvmo_a_v_vg>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('uname_n' in check_list or 'all' in check_list) and '-uname_n' not in check_list %}
+  - header: '#### <uname_n>'
+    command: 'uname -n'
+    become: false
+    footer: >
+      #### </uname_n>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lspv_u' in check_list or 'all' in check_list) and '-lspv_u' not in check_list %}
+  - header: '#### <lspv_u>'
+    command: 'lspv -u'
+    become: false
+    footer: >
+      #### </lspv_u>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsmpio_ql_pv' in check_list or 'all' in check_list) and '-lsmpio_ql_pv' not in check_list %}
+  - header: '#### <lsmpio_ql_pv>'
+    command: "for pv in `lspv | awk '{ print $1 }'`; do lsmpio -ql $pv; done"
+    become: true
+    footer: >
+      #### </lsmpio_ql_pv>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('bootlist_extended' in check_list or 'all' in check_list) and '-bootlist_extended' not in check_list %}
+  - header: '#### <bootlist_extended>'
+    command: |
+      ROOTVG_BOOT_DISKS=$(lslv -l hd5 | grep ^hdisk | awk '{print $1}' | sort -u)
+      for HDISK in $ROOTVG_BOOT_DISKS; do bootlist -m normal -o | grep "^$HDISK blv=hd5" || echo "$HDISK missing"; done
+    become: true
+    footer: '#### </bootlist_extended>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsattr_El_entX' in check_list or 'all' in check_list) and '-lsattr_El_entX' not in check_list %}
+  - header: '#### <lsattr_El_entX>'
+    command: >
+      for A in $(lsdev -Cc adapter | grep ^ent | grep -v Virtual | awk '{print $1}'); do lsattr -El "$A" | sed "s/^/$A: /"; done
+    footer: '#### </lsattr_El_entX>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('local_mounted_filesystems' in check_list or 'all' in check_list) and '-local_mounted_filesystems' not in check_list %}
+  - header: '#### <local_mounted_filesystems>'
+    command: >
+      for VG in $(/usr/sbin/lsvg -o); do /usr/sbin/lsvg $VG | /usr/bin/grep -q 'Concurrent' || /usr/sbin/lsvg -l $VG | /usr/bin/grep " jfs2* [0-9 ]* open/" | /usr/bin/awk '{print $7}' | /usr/bin/grep -v "N/A" | xargs /usr/sbin/lsfs -c; done ||/usr/bin/echo "command_execution_error"
+    footer: '#### </local_mounted_filesystems>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsattr_El_fscsi_disk' in check_list or 'all' in check_list) and '-lsattr_El_fscsi_disk' not in check_list %}
+  - header: '#### <lsattr_El_fscsi_disk>'
+    command: >
+      for A in $(lspath | grep fscsi | awk '{print $3}' | sort -u); do lsattr -El "$A" | sed "s/^/$A: /"; done
+    footer: '#### </lsattr_El_fscsi_disk>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('instfix_i' in check_list or 'all' in check_list) and '-instfix_i' not in check_list %}
+  - header: '#### <instfix_i>'
+    command: >
+      instfix -i
+    footer: '#### </instfix_i>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsvg_l_rootvg' in check_list or 'all' in check_list) and '-lsvg_l_rootvg' not in check_list %}
+  - header: '#### <lsvg_l_rootvg>'
+    command: >
+      /usr/sbin/lsvg -l rootvg
+    footer: '#### </lsvg_l_rootvg>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('syslog_conf' in check_list or 'all' in check_list) and '-syslog_conf' not in check_list %}
+  - header: '#### <syslog_conf>'
+    command: >
+      file="/etc/syslog.conf";
+      test -e "$file" && grep -v -E "^\s*$|^\s*#" $file || echo $file does not exist
+    footer: '#### </syslog_conf>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('niminfo' in check_list or 'all' in check_list) and '-niminfo' not in check_list %}
+  - header: '#### <niminfo>'
+    command: >
+      file="/etc/niminfo";
+      test -e "$file" && grep -v -E "^ *#|^ *$" $file || echo $file does not exist
+    footer: '#### </niminfo>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('inetd_conf' in check_list or 'all' in check_list) and '-inetd_conf' not in check_list %}
+  - header: '#### <inetd_conf>'
+    command: >
+      file="/etc/inetd.conf";
+      test -e "$file" && grep -v -E "^ *#|^ *$" $file || echo $file does not exist
+    footer: '#### </inetd_conf>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsattr_El_vscsi_disk' in check_list or 'all' in check_list) and '-lsattr_El_vscsi_disk' not in check_list %}
+  - header: '#### <lsattr_El_vscsi_disk>'
+    command: >
+      for A in $(lspath | grep vscsi[0-9] | awk '{print $3}' | sort -u); do lsattr -El "$A" | sed "s/^/$A: /"; done
+    footer: '#### </lsattr_El_vscsi_disk>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lsdev_Cl_entX' in check_list or 'all' in check_list) and '-lsdev_Cl_entX' not in check_list %}
+  - header: '#### <lsdev_Cl_entX>'
+    command: >
+      ifconfig -a | grep '^en' | cut -f1 -d: | sed 's/en/ent/' | xargs -n1 lsdev -Cl
+    footer: '#### </lsdev_Cl_entX>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lssrc_a' in check_list or 'all' in check_list) and '-lssrc_a' not in check_list %}
+  - header: '#### <lssrc_a>'
+    command: >
+      lssrc -a
+    footer: '#### </lssrc_a>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('lscfg_vp' in check_list or 'all' in check_list) and '-lscfg_vp' not in check_list %}
+  - header: '#### <lscfg_vp>'
+    command: >
+      lscfg -vp
+    footer: '#### </lscfg_vp>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('ps_eo_comm' in check_list or 'all' in check_list) and '-ps_eo_comm' not in check_list %}
+  - header: '#### <ps_eo_comm>'
+    command: >
+      ps -eo comm
+    footer: '#### </ps_eo_comm>'
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('network_packet_check' in check_list or 'all' in check_list) and '-network_packet_check' not in check_list %}
+  - header: '#### <network_packet_check>'
+    command: |
+     echo '"ENT Number";"Transmit Drop Count";"Receive Drop Count";"Transmit Errors";"Receive Errors"'
+     for ent in `lsdev -Cc adapter |grep -i available |grep -i ent|grep -v Client|awk '{print $1}'`
+     do
+     tdrop=`entstat -d $ent |grep -w "Packets Dropped" |grep -v Platform |awk '{print $3}'`
+     rdrop=`entstat -d $ent |grep -w "Packets Dropped" |grep -v Platform |awk '{print $6}'`
+     terror=`entstat -d $ent |grep -w "Transmit Errors" |awk '{print $3}'`
+     rerror=`entstat -d $ent |grep -w "Receive Errors" |awk '{print $6}'`
+     echo '"'$ent'";"'$tdrop'";"'$rdrop'";"'$terror'";"'$rerror'"'
+     done
+
+    footer: >
+      #### </network_packet_check>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('smtctl' in check_list or 'all' in check_list) and '-smtctl' not in check_list %}
+  - header: '#### <smtctl>'
+    command: |
+     echo '"SMT";"SMT Value"'
+     smt=`lparstat -i |grep -i type |awk -F"-" '{print $3}'`
+     echo '"'SMT'";"'$smt'"'
+    footer: >
+      #### </smtctl>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('disk_reserve_policy' in check_list or 'all' in check_list) and '-disk_reserve_policy' not in check_list %}
+  - header: '#### <disk_reserve_policy>'
+    command: |
+     for disk in `lspv |awk {'print $1'}`
+     do
+     echo '"'$disk'";"'`lsattr -El $disk |grep -i reserve_policy |awk '{print $2}'`'"'
+     done
+    footer: >
+      #### </disk_reserve_policy>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('dump_check' in check_list or 'all' in check_list) and '-dump_check' not in check_list %}
+  - header: '#### <dump_check>'
+    command: |
+     /usr/lib/ras/dumpcheck -p
+    become: true
+    footer: >
+      #### </dump_check>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('filesystem_utilization' in check_list or 'all' in check_list) and '-filesystem_utilization' not in check_list %}
+  - header: '#### <filesystem_utilization>'
+    command: 'df -g -T local'
+    become: true
+    footer: >
+      #### </filesystem_utilization>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('network_config' in check_list or 'all' in check_list) and '-network_config' not in check_list %}
+  - header: '#### <network_config>'
+    command: |
+     echo '"interface";"tcp_sendspace";tcp_recvspace";"rfc1323"'
+     for en in `lsdev -Cc if |grep -i en |grep -i Available |awk {'print $1'}`
+     do
+     sendspace=`ifconfig $en |grep -i rfc1323 |awk {'print $2'}`
+     recvspace=`ifconfig $en |grep -i rfc1323 |awk {'print $4'}`
+     rfc1323=`ifconfig $en |grep -i rfc1323 |awk {'print $6'}`
+     echo '"'$en'";"'$recvspace'";"'$sendspace'";"'$rfc1323'"'
+     done
+    footer: >
+      #### </network_config>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('processor_check' in check_list or 'all' in check_list) and '-processor_check' not in check_list %}
+  - header: '#### <processor_check>'
+    command: |
+     host=`hostname`
+     echo '"Processor Implementation Mode";"Processor Status"'
+     proc_type=`prtconf |grep -i "Processor Type" |sed -e 's/[^0-9]//g'`
+     proc_mode=`prtconf |grep -i "Processor Implementation Mode" |sed -e 's/[^0-9]//g'`
+     if [ $proc_type == $proc_mode ]; then
+     echo '"'Power $proc_mode'";"'CORRECT LEVEL'"'
+     else
+     echo '"'Power $proc_mode'";"'LOWER LEVEL'"'
+     fi
+
+    footer: >
+      #### </processor_check>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('rootvg_disk_type' in check_list or 'all' in check_list) and '-rootvg_disk_type' not in check_list %}
+  - header: '#### <rootvg_disk_type>'
+    command: |
+     A=$(for pv in `lspv |grep -w rootvg |awk '{ print $1 }'`;do lsdev -l $pv -F parent;done|sed 's/[0-9]*//g'|uniq)
+     echo '"Adapter Type";"Disk Type:Local/SAN"'
+     if [ $A == scsi ]; then
+     Type='LOCAL DISK'
+     fi
+     if [ $A == sas ]; then
+     Type='LOCAL DISK'
+     fi
+     if [ $A == nvme ]; then
+     Type='LOCAL DISK'
+     fi
+     if [ $A == fscsi ]; then
+     Type='SAN DISK'
+     fi
+     if [ $A == vscsi ]; then
+     a=`echo "cvai" | kdb | grep ^vscsi | awk '{print $5}'|sed -n 1p`
+     b=`echo "cvai" | kdb | grep ^vscsi | awk '{print $5}'|sed -n 2p`
+     if [ -z "$b" ];then
+     Type='LOCAL DISK'
+     else
+     if [ $a == $b ]; then
+     Type='LOCAL DISK'
+     else
+     Type='SAN DISK'
+     fi
+     fi
+     fi
+     echo '"'$A'";"'$Type'"'
+    become: true
+    footer: >
+      #### </rootvg_disk_type>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('sddpcm' in check_list or 'all' in check_list) and '-sddpcm' not in check_list %}
+  - header: '#### <sddpcm>'
+    command: >
+     lslpp -Lc devices.sddpcms.*;echo
+    footer: >
+      #### </sddpcm>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('dyntrk' in check_list or 'all' in check_list) and '-dyntrk' not in check_list %}
+  - header: '#### <dyntrk>'
+    command: |
+     for A in $(lscfg | grep fscsi | awk '{print $2}' | sort -u); do lsattr -El "$A"| grep dyntrk| sed "s/^/$A: /"; done
+
+    footer: >
+      #### </dyntrk>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('udp_config' in check_list or 'all' in check_list) and '-udp_config' not in check_list %}
+  - header: '#### <udp_config>'
+    command: |
+     /usr/sbin/no -a |egrep -i "udp_recvspace|udp_sendspace"
+     exit 0
+    footer: >
+      #### </udp_config>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('paging_utilization' in check_list or 'all' in check_list) and '-paging_utilization' not in check_list %}
+  - header: '#### <paging_utilization>'
+    command: |
+     lsps -s
+    footer: >
+      #### </paging_utilization>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('fcs_performance' in check_list or 'all' in check_list) and '-fcs_performance' not in check_list %}
+  - header: '#### <fcs_performance>'
+    command: |
+     echo '"FCS Adapter";"No DMA Resource Count";"No Adapter Elements Count";"No Command Resource Count"'
+     for fcs in `lsdev -Cc adapter |grep -i fcs |grep -i Available |awk {'print $1'}`
+     do
+     dma=`fcstat -D $fcs 2> /dev/null|grep -i "No DMA Resource Count" |awk {'print $5'}`
+     adapter=`fcstat -D $fcs 2> /dev/null|grep -i "No Adapter Elements Count" |awk {'print $5'}`
+     command=`fcstat -D $fcs 2> /dev/null|grep -i "No Command Resource Count" |awk {'print $5'}`
+     echo '"'$fcs'";"'$dma'";"'$adapter'";"'$command'"'
+     done
+    footer: >
+      #### </fcs_performance>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('nokilluid' in check_list or 'all' in check_list) and '-nokilluid' not in check_list %}
+  - header: '#### <nokilluid>'
+    command: vmo -a | grep -i nokilluid
+    become: true
+    footer: >
+      #### </nokilluid>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('ntp_sync_status' in check_list or 'all' in check_list) and '-ntp_sync_status' not in check_list %}
+  - header: '#### <ntp_sync_status>'
+    command: ntpq -p
+    become: true
+    footer: >
+      #### </ntp_sync_status>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('xntpd_status' in check_list or 'all' in check_list) and '-xntpd_status' not in check_list %}
+  - header: '#### <xntpd_status>'
+    command: lssrc -s xntpd
+    footer: >
+      #### </xntpd_status>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('ethernet_check' in check_list or 'all' in check_list) and '-ethernet_check' not in check_list %}
+  - header: '#### <ethernet_check>'
+    command: |
+     for VEA in $(lsdev -Cc adapter | awk '/^ent/ {print $1}')
+     do
+     entstat -d $VEA 2> /dev/null| egrep -i "CRC Errors|DMA overrun|Hypervisor" |sed "s/^/$VEA: /"
+     lsattr -El $VEA 2> /dev/null| grep -i chksum_offload|sed "s/^/$VEA: /"
+     done
+    become: true
+    footer: >
+      #### </ethernet_check>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('mtu_bypass' in check_list or 'all' in check_list) and '-mtu_bypass' not in check_list %}
+  - header: '#### <mtu_bypass>'
+    command: |
+     for VIF in $(lsdev -Cc if | awk '/^en/ {print $1}')
+     do
+     lsattr -El $VIF -a mtu_bypass | awk '{print $1,$2}' |sed "s/^/$VIF: /"
+     done
+    become: true
+    footer: >
+      #### </mtu_bypass>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('vscsi_npiv_disk_parameter' in check_list or 'all' in check_list) and '-vscsi_npiv_disk_parameter' not in check_list %}
+  - header: '#### <vscsi_npiv_disk_parameter>'
+    command: |
+     for i in `lspv | awk '{print $1}'`
+     do
+     lsdev -l $i -F parent| egrep -i "vscsi|fscsi" >> /dev/null 2>&1
+     [ $? -eq 0 ] && lsattr -El $i| sed "s/^/$i: /"
+     done
+    become: true
+    footer: >
+      #### </vscsi_npiv_disk_parameter>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('npiv_path_check' in check_list or 'all' in check_list) and '-npiv_path_check' not in check_list %}
+  - header: '#### <npiv_path_check>'
+    command: |
+     lsmpio -ar
+    become: true
+    footer: >
+      #### </npiv_path_check>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('npiv_connection_error' in check_list or 'all' in check_list) and '-npiv_connection_error' not in check_list %}
+  - header: '#### <npiv_connection_error>'
+    command: |
+     lsmpio -are
+    become: true
+    footer: >
+      #### </npiv_connection_error>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('maxuproc' in check_list or 'all' in check_list) and '-maxuproc' not in check_list %}
+  - header: '#### <maxuproc>'
+    command: |
+     lsattr -El sys0 -a maxuproc -F value
+    become: true
+    footer: >
+      #### </maxuproc>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.2.1.1' in check_list or 'all' in check_list) and '-E1.C.6.2.1.1' not in check_list %}
+  - header: '#### <E1.C.6.2.1.1>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     rval=`grep NOCHECK /etc/security/passwd;echo $?`
+     echo "\"dis_nocheck_for_allaccounts\";\"$rval"\"
+
+    become: true
+    footer: >
+       #### </E1.C.6.2.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.2.1.2' in check_list or 'all' in check_list) and '-E1.C.6.2.1.2' not in check_list %}
+  - header: '#### <E1.C.6.2.1.2>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     b=`lssec -f /etc/security/login.cfg -s usw -a pwd_algorithm |grep ssha512| wc -l|tr -d ' '`
+     echo "\"set_passwd_algo_ssha512\";\"$b"\"
+
+    become: true
+    footer: >
+       #### </E1.C.6.2.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.2.1.3' in check_list or 'all' in check_list) and '-E1.C.6.2.1.3' not in check_list %}
+  - header: '#### <E1.C.6.2.1.3>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     c=`grep password /etc/security/passwd | awk -F'[{}]' '{for(i=2;i<=NF;i+=2) print $i}' | grep crypt | wc -l | tr -d ' '`
+     echo "\"passwds_not_hashed_crypt\";\"$c"\"
+    become: true
+    footer: >
+       #### </E1.C.6.2.1.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.1.1.1' in check_list or 'all' in check_list) and '-E1.C.6.1.1.1' not in check_list %}
+  - header: '#### <E1.C.6.1.1.1>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     rval=`/usr/bin/egrep -p "password = +$" /etc/security/passwd | grep ":" | awk -F: '{ print $1 }'`
+     echo "\"accounts_withno_passwds_hashed\";\"$rval"\"
+    become: true
+    footer: >
+       #### </E1.C.6.1.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.1.1.2' in check_list or 'all' in check_list) and '-E1.C.6.1.1.2' not in check_list %}
+  - header: '#### <E1.C.6.1.1.2>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     rval=`cut -d: -f 3 /etc/passwd | sort -n | uniq -d`
+     echo "\"unique_UIDs\";\"$rval"\"
+     rval=`cut -d: -f 1 /etc/passwd | sort | uniq -d`
+     echo "\"unique_unames\";\"$rval"\"
+    become: true
+    footer: >
+       #### </E1.C.6.1.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.6.1.1.3' in check_list or 'all' in check_list) and '-E1.C.6.1.1.3' not in check_list %}
+  - header: '#### <E1.C.6.1.1.3>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     rval=`cut -d: -f 1 /etc/group | sort -n | uniq -d`
+     echo "\"unique_gnames\";\"$rval"\"
+     rval=`cut -d: -f 3 /etc/group | sort | uniq -d`
+     echo "\"unique_GIDs\";\"$rval"\"
+    become: true
+    footer: >
+       #### </E1.C.6.1.1.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.5.1.1.8' in check_list or 'all' in check_list) and '-E1.C.5.1.1.8' not in check_list %}
+  - header: '#### <E1.C.5.1.1.8>'
+    command: |
+     echo "\"parameter\";\"value"\"
+     rval=`lsuser -a home root`
+     echo "\"root_user_dedicated_home_dir\";\"$rval"\"
+    become: true
+    footer: >
+       #### </E1.C.5.1.1.8>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.5.1.1.10' in check_list or 'all' in check_list) and '-E1.C.5.1.1.10' not in check_list %}
+  - header: '#### <E1.C.5.1.1.10>'
+    command: |
+      echo "\"parameter\";\"value"\"
+
+      user_names_dir=""
+      name="" ids="" homes="" locks="" rest="" locked="" home="" homeowner=""
+      lsuser -R files -a id home account_locked ALL | while read name ids homes locks rest ;
+      do
+      uid=$(echo ${ids} | cut -f2 -d =)
+      if [ "$uid" -ge 200 ] ; then
+        [ -n "$homes" ] && home=$(echo ${homes} | cut -f2 -d =)
+        [ -n "$locks" ] && locked=$(echo ${locks} | cut -f2 -d =)
+        if [ "$locked" == "true" ]; then
+          continue
+        elif [ ! -d "$home" ]; then
+          user_names_dir="${user_names_dir} ${name} ${home}"
+        fi
+      fi
+      done
+      echo "\"Home_dir_must_exist_user_name\";\"$user_names_dir"\"
+
+    become: true
+    footer: >
+       #### </E1.C.5.1.1.10>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('E1.C.5.1.1.11' in check_list or 'all' in check_list) and '-E1.C.5.1.1.11' not in check_list %}
+  - header: '#### <E1.C.5.1.1.11>'
+    command: |
+     echo "\"parameter\";\"user name\";\"home directory not owned by user or root\""
+     lsuser -R files -a id home account_locked ALL | while read name ids homes locks rest; do
+     uid=$(echo "$ids" | cut -d= -f2)
+     if [ "$uid" -ge 200 ]; then
+      [ -n "$homes" ] && home=$(echo "$homes" | cut -d= -f2)
+      [ -n "$locks" ] && locked=$(echo "$locks" | cut -d= -f2)
+     if [ "$locked" == "true" ]; then
+      continue
+     elif [ ! -d "$home" ]; then
+      echo "\"Home dir must exist user_name\";\"$name;$home\""
+     else
+      [ -n "$home" ] && homeowner=$(ls -ld "$home" | awk '{print $3}')
+      if [ "$homeowner" != "$name" ] && [ "$homeowner" != "root" ]; then
+        echo "\"Home_dir_must_be_owned_by_user_name_or_root\";\"$name\";\"$home\""
+      fi
+     fi
+     fi
+     done
+    become: true
+    footer: >
+       #### </E1.C.5.1.1.11>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('number_of_disk_path' in check_list or 'all' in check_list) and '-number_of_disk_path' not in check_list %}
+  - header: '#### <number_of_disk_path>'
+    command: |
+     for i in `lspv | awk '{print $1}'`
+     do
+     lsdev -l $i -F parent|grep -i vscsi >> /dev/null 2>&1
+     [ $? -eq 0 ] && lspath |grep -iw $i |wc -l | sed "s/^/$i:vscsi /"
+     lsdev -l $i -F parent|grep -i fscsi  >> /dev/null 2>&1
+     [ $? -eq 0 ] && lspath |grep -iw $i |wc -l | sed "s/^/$i:NPIV /"
+     done
+     exit 0
+    become: True
+    footer: >
+      #### </number_of_disk_path>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.3.1.1' in check_list or 'all' in check_list) and '-E1.C.3.1.1' not in check_list %}
+  - header: '#### <E1.C.3.1.1>'
+    command: |
+     /usr/sbin/lsuser -a rlogin su sugroups root
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.3.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.3.1.2' in check_list or 'all' in check_list) and '-E1.C.3.1.2' not in check_list %}
+  - header: '#### <E1.C.3.1.2>'
+    command: |
+     /usr/bin/lssec -f /etc/security/limits -s default -a core -a core_hard
+     /usr/sbin/lsattr -El sys0 -a fullcore
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.3.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.1.1.1' in check_list or 'all' in check_list) and '-E1.C.4.1.1.1' not in check_list %}
+  - header: '#### <E1.C.4.1.1.1>'
+    command: |
+     a=`if ! /usr/sbin/lsitab writesrv | /usr/bin/grep -q .; then echo "not present"; else echo "present"; fi`
+     b=`/usr/bin/lssrc -s writesrv | /usr/bin/grep -v Subsystem |/usr/bin/awk {'print $3'}`
+     echo '"'"writesrv in inittab"'"'";"'"'"writesrv subsystem status"'"'
+     echo '"'$a'"'";"'"'$b'"'
+    become: true
+    footer: >
+      #### </E1.C.4.1.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.3.1.3' in check_list or 'all' in check_list) and '-E1.C.3.1.3' not in check_list %}
+  - header: '#### <E1.C.3.1.3>'
+    command: |
+     /usr/bin/grep "^PATH=" /etc/environment |/usr/bin/awk '/((:[ \t]*:)|(:[ \t]*$)|(^[ \t]*:)|(^.:)|(:.$)|(:.:))/'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.3.1.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.6.3.1.1_to_E1.C.6.3.1.9_&_E1.C.3.1.4' in check_list or 'all' in check_list) and '-E1.C.6.3.1.1_to_E1.C.6.3.1.9_&_E1.C.3.1.4' not in check_list %}
+  - header: '#### <E1.C.6.3.1.1_to_E1.C.6.3.1.9_&_E1.C.3.1.4>'
+    command: |
+     /usr/sbin/lsuser -a account_locked login rlogin ALL || /usr/bin/echo "command_execution_error"
+    become: true
+    footer: >
+      #### </E1.C.6.3.1.1_to_E1.C.6.3.1.9_&_E1.C.3.1.4>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.3.1.5' in check_list or 'all' in check_list) and '-E1.C.3.1.5' not in check_list %}
+  - header: '#### <E1.C.3.1.5>'
+    command: |
+     #This is modified command than tech spec document, removed su -
+     /usr/bin/cat ~root/.profile |/usr/bin/grep PATH= |/usr/bin/awk '/((:[ \t]*:)|(:[ \t]*$)|(^[ \t]*:)|(^.:)|(:.$)|(:.:))/'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.3.1.5>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.1.1.3_to_E1.C.4.1.1.6' in check_list or 'all' in check_list) and '-E1.C.4.1.1.3_to_E1.C.4.1.1.6b' not in check_list %}
+  - header: '#### <E1.C.4.1.1.3_to_E1.C.4.1.1.6>'
+    command: |
+     /usr/sbin/lsitab -a
+    become: true
+    footer: >
+      #### </E1.C.4.1.1.3_to_E1.C.4.1.1.6>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.1.1.7' in check_list or 'all' in check_list) and '-E1.C.4.1.1.7' not in check_list %}
+  - header: '#### <E1.C.4.1.1.7>'
+    command: |
+     (/usr/bin/lslpp -L cas.agent >/dev/null 2>&1 && print "cas.agent is installed") || print "cas.agent is not installed"
+    become: true
+    footer: >
+      #### </E1.C.4.1.1.7>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.1.2.1_to_E1.C.4.1.2.15' in check_list or 'all' in check_list) and '-E1.C.4.1.2.1_to_E1.C.4.1.2.15' not in check_list %}
+  - header: '#### <E1.C.4.1.2.1_to_E1.C.4.1.2.15>'
+    command: |
+     service1="inetd aixmibd dhcpcd dhcprd dhcpsd dpid2 gated hostmibd named routed rwhod sendmail snmpd snmpmibd timed"
+     /usr/bin/echo '"'"Service"'"'";"'"'"rc.tcpip_status"'"'";"'"'"lssrc_status"'"'
+     for i in $service1
+     do
+      grep_output=$(/usr/bin/grep "start[[:blank:]]/usr/sbin/$i" /etc/rc.tcpip)
+      if [[ "$grep_output" == *"#start /usr/sbin/$i \"\$src_running\""* ]] || [[ -z "$grep_output" ]]; then
+        a="disabled"
+      else
+        a="enable"
+      fi
+      lssrc_output=$(/usr/bin/lssrc -s $i | /usr/bin/grep -i $i | /usr/bin/awk '{print $3}')
+      if [[ "$lssrc_output" == "inoperative" ]]; then
+        b="inoperative"
+      else
+        b="active"
+      fi
+      /usr/bin/echo '"'$i'"'";"'"'$a'"'";"'"'$b'"'
+     done
+    become: true
+    footer: >
+      #### </E1.C.4.1.2.1_to_E1.C.4.1.2.15>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.1.5.1_to_E1.C.4.1.5.31' in check_list or 'all' in check_list) and '-E1.C.4.1.5.1_to_E1.C.4.1.5.31' not in check_list %}
+  - header: '#### <E1.C.4.1.5.1_to_E1.C.4.1.5.31>'
+    command: |
+     /usr/bin/lssrc -s inetd -l
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.1.5.1_to_E1.C.4.1.5.31>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+
+{% if ('E1.C.4.2.1.1_to_E1.C.4.2.1.18' in check_list or 'all' in check_list) and '-E1.C.4.2.1.1_to_E1.C.4.2.1.18' not in check_list %}
+  - header: '#### <E1.C.4.2.1.1_to_E1.C.4.2.1.18>'
+    command: |
+     /usr/sbin/no -a
+    become: true
+    footer: >
+      #### </E1.C.4.2.1.1_to_E1.C.4.2.1.18>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.5.1.2' in check_list or 'all' in check_list) and '-E1.C.4.5.1.2' not in check_list %}
+  - header: '#### <E1.C.4.5.1.2>'
+    command: |
+     /usr/bin/ls -l /usr/dt/bin/dtaction | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+     /usr/bin/ls -l /usr/dt/bin/dtappgather | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+     /usr/bin/ls -l /usr/dt/bin/dtprintinfo | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+     /usr/bin/ls -l /usr/dt/bin/dtsession | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.5.1.5' in check_list or 'all' in check_list) and '-E1.C.4.5.1.5' not in check_list %}
+  - header: '#### <E1.C.4.5.1.5>'
+    command: |
+     /usr/bin/ls -l /etc/dt/config/Xconfig| /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.5>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.5.1.6' in check_list or 'all' in check_list) and '-E1.C.4.5.1.6' not in check_list %}
+  - header: '#### <E1.C.4.5.1.6>'
+    command: |
+     /usr/bin/ls -l /etc/dt/config/Xservers | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.6>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.5.1.7' in check_list or 'all' in check_list) and '-E1.C.4.5.1.7' not in check_list %}
+  - header: '#### <E1.C.4.5.1.7>'
+    command: |
+     /usr/bin/ls -l /etc/dt/config/*/Xresources | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.7>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.1.5' in check_list or 'all' in check_list) and '-E1.C.5.1.1.5' not in check_list %}
+  - header: '#### <E1.C.5.1.1.5>'
+    command: |
+     /usr/bin/ls -ld /var/adm/sa | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.5>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.1.6' in check_list or 'all' in check_list) and '-E1.C.5.1.1.6' not in check_list %}
+  - header: '#### <E1.C.5.1.1.6>'
+    command: |
+     /usr/bin/ls -ld /var/spool/cron/crontabs | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.6>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.1.9' in check_list or 'all' in check_list) and '-E1.C.5.1.1.9' not in check_list %}
+  - header: '#### <E1.C.5.1.1.9>'
+    command: |
+     /usr/bin/ls -ld /etc/security/audit | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+     /usr/bin/ls -ld /etc/security/audit/* | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.9>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.3' in check_list or 'all' in check_list) and '-E1.C.5.1.2.3' not in check_list %}
+  - header: '#### <E1.C.5.1.2.3>'
+    command: |
+     /usr/bin/ls -l ~root/smit.log | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.4' in check_list or 'all' in check_list) and '-E1.C.5.1.2.4' not in check_list %}
+  - header: '#### <E1.C.5.1.2.4>'
+    command: |
+     /usr/bin/ls -l /etc/group | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.4>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.5' in check_list or 'all' in check_list) and '-E1.C.5.1.2.5' not in check_list %}
+  - header: '#### <E1.C.5.1.2.5>'
+    command: |
+     /usr/bin/ls -l /etc/inetd.conf | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.5>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.6' in check_list or 'all' in check_list) and '-E1.C.5.1.2.6' not in check_list %}
+  - header: '#### <E1.C.5.1.2.6>'
+    command: |
+     /usr/bin/ls -l /etc/motd | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.6>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.7' in check_list or 'all' in check_list) and '-E1.C.5.1.2.7' not in check_list %}
+  - header: '#### <E1.C.5.1.2.7>'
+    command: |
+     /usr/bin/ls -l /etc/passwd | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.7>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.8' in check_list or 'all' in check_list) and '-E1.C.5.1.2.8' not in check_list %}
+  - header: '#### <E1.C.5.1.2.8>'
+    command: |
+     /usr/bin/ls -le /etc/ssh/ssh_config | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.8>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.9' in check_list or 'all' in check_list) and '-E1.C.5.1.2.9' not in check_list %}
+  - header: '#### <E1.C.5.1.2.9>'
+    command: |
+     /usr/bin/ls -le /etc/ssh/sshd_config | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.9>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.10' in check_list or 'all' in check_list) and '-E1.C.5.1.2.10' not in check_list %}
+  - header: '#### <E1.C.5.1.2.10>'
+    command: |
+     /usr/bin/ls -l /var/adm/cron/at.allow | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.10>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.11' in check_list or 'all' in check_list) and '-E1.C.5.1.2.11' not in check_list %}
+  - header: '#### <E1.C.5.1.2.11>'
+    command: |
+     /usr/bin/ls -l /var/adm/cron/cron.allow | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.11>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.12' in check_list or 'all' in check_list) and '-E1.C.5.1.2.12' not in check_list %}
+  - header: '#### <E1.C.5.1.2.12>'
+    command: |
+     /usr/bin/ls -l /var/ct/RMstart.log| /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.12>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.13' in check_list or 'all' in check_list) and '-E1.C.5.1.2.13' not in check_list %}
+  - header: '#### <E1.C.5.1.2.13>'
+    command: |
+     /usr/bin/ls -l /var/adm/cron/log | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.13>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.14' in check_list or 'all' in check_list) and '-E1.C.5.1.2.14' not in check_list %}
+  - header: '#### <E1.C.5.1.2.14>'
+    command: |
+     /usr/bin/ls -l /var/tmp/dpid2.log| /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.14>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.15' in check_list or 'all' in check_list) and '-E1.C.5.1.2.15' not in check_list %}
+  - header: '#### <E1.C.5.1.2.15>'
+    command: |
+     /usr/bin/ls -l /var/tmp/hostmibd.log| /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.15>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.2.16' in check_list or 'all' in check_list) and '-E1.C.5.1.2.16' not in check_list %}
+  - header: '#### <E1.C.5.1.2.16>'
+    command: |
+     /usr/bin/ls -l /var/tmp/snmpd.log| /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.16>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.7.1.6' in check_list or 'all' in check_list) and '-E1.C.4.7.1.6' not in check_list %}
+  - header: '#### <E1.C.4.7.1.6>'
+    command: |
+     /usr/bin/ls -ld /var/spool/mqueue | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.7.1.6>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.7.1.5' in check_list or 'all' in check_list) and '-E1.C.4.7.1.5' not in check_list %}
+  - header: '#### <E1.C.4.7.1.5>'
+    command: |
+     /usr/bin/ls -ld /var/spool/clientmqueue | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.7.1.5>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.7.1.4' in check_list or 'all' in check_list) and '-E1.C.4.7.1.4' not in check_list %}
+  - header: '#### <E1.C.4.7.1.4>'
+    command: |
+     /usr/bin/ls -l /etc/mail/sendmail.cf | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.7.1.4>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.6.1.2' in check_list or 'all' in check_list) and '-E1.C.4.6.1.2' not in check_list %}
+  - header: '#### <E1.C.4.6.1.2>'
+    command: |
+     /usr/bin/ls -l /etc/[rs]hosts.equiv | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.4.6.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.5.1.1.2' in check_list or 'all' in check_list) and '-E1.C.5.1.1.2' not in check_list %}
+  - header: '#### <E1.C.5.1.1.2>'
+    command: |
+     /usr/bin/ls -ld /audit | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+     /usr/bin/ls -ld /etc/security/audit | /usr/bin/awk '{print "\"" $1 "\"" ";" "\"" $3 "\"" ";" "\"" $4 "\""  ";"  "\"" $9 "\"" }'
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.6.1.4_to_E1.C.4.6.1.15' in check_list or 'all' in check_list) and '-E1.C.4.6.1.4_to_E1.C.4.6.1.15' not in check_list %}
+  - header: '#### <E1.C.4.6.1.4_to_E1.C.4.6.1.15>'
+    command: |
+     #check banner file should not empty
+     file="/etc/ssh/ssh_banner"; [ -e $file ] && [ -s $file ] && /usr/bin/echo $file is not empty || /usr/bin/echo $file is empty
+     /usr/sbin/sshd -T
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.6.1.4_to_E1.C.4.6.1.15>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.6.1.16' in check_list or 'all' in check_list) and '-E1.C.4.6.1.16' not in check_list %}
+  - header: '#### <E1.C.4.6.1.16>'
+    command: |
+     /usr/bin/cat /etc/ssh/sshd_config
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.6.1.16>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.6.1.1' in check_list or 'all' in check_list) and '-E1.C.4.6.1.1' not in check_list %}
+  - header: '#### <E1.C.4.6.1.1>'
+    command: |
+     /usr/sbin/sshd -i </dev/null
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.6.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.6.1.3' in check_list or 'all' in check_list) and '-E1.C.4.6.1.3' not in check_list %}
+  - header: '#### <E1.C.4.6.1.3>'
+    command: |
+      lsuser -a id home ALL | while read name ids homes; do
+        home=$(echo ${homes} | cut -f2 -d= 2>/dev/null)
+        if [ -d "$home" ]; then  # Ensure home directory exists
+          # fstype is checked, if it is nfs (or cannot be determined) it will be skipped
+          fstype=$(lsfs | grep -w "$(df -g $home | awk 'NR==2 {print $1}' | sed 's:.*/::')" 2>/dev/null | awk '{print $4}'); fstype=${fstype:-nfs}
+          if [ "$fstype" != "nfs" ]; then
+              # As .shosts has to reside in the home directory (and not in any subdirectories)
+              # we prevent the find command to traverse recursively.
+              # Regardless, this setting is garbage and the sshd_config should be checked instead.
+              # What is this "official solution"? `find / -name '.shosts' -exec rm {} ;`
+              # Unbelievable.
+              /usr/bin/find "$home" -type d -prune -o -name ".shosts" -print 2>/dev/null
+          else
+            echo "Skipped searching ".shosts" on $home as it is on an NFS filesystem"
+          fi
+        fi
+      done
+    become: true
+    footer: >
+      #### </E1.C.4.6.1.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.1.4.2' in check_list or 'all' in check_list) and '-E1.C.4.1.4.2' not in check_list %}
+  - header: '#### <E1.C.4.1.4.2>'
+    command: |
+     /usr/sbin/lsnfsmnt -l | /usr/bin/egrep -v "^Name" | /usr/bin/egrep -v "nosuid|nodev"
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.1.4.2>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.1.1.1_to_E1.C.1.1.3' in check_list or 'all' in check_list) and '-E1.C.1.1.1_to_E1.C.1.1.3' not in check_list %}
+  - header: '#### <E1.C.1.1.1_to_E1.C.1.1.3>'
+    command: |
+     trustchk -p 2>/tmp/trustchk;cat /tmp/trustchk;rm /tmp/trustchk
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.1.1.1_to_E1.C.1.1.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.1.1' in check_list or 'all' in check_list) and '-E1.C.5.1.1.1' not in check_list %}
+  - header: '#### <E1.C.5.1.1.1>'
+    command: |
+     lsuser -R files -a id home ALL | while read name ids homes rest;
+     do
+     uid_check=$(echo ${ids} | cut -f2 -d =)
+     if [[ ${uid_check} -ge 200 ]]; then
+     home=$(echo ${homes} | cut -f2 -d =)
+     if [[ ${home} == "/dev/null" ]]; then
+     continue
+     elif [[ ! -d ${home} ]]; then
+     /usr/bin/printf "%-32s does not exist; recommend to lock account named [%s]\n" ${home} ${name}
+     else [[ ${home} != "/" && ${home} != "/dev/null" ]]
+     /usr/bin/perl -e '$f=$ARGV[0]; $m=(stat $f)[2]; \
+     printf("Recommend chmod on: %s: to remove group or world write mode\n", $f) if $m & 022; \
+     printf("Recommend remove ACL on: %s\n ", $f) if $m & 0200000000; \
+     exit($m & 0200000022)' ${home} \
+     || (ls -led ${home} && (aclget ${home} | grep -ip Enabled))
+     fi
+     fi
+     done
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.1>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.1.7' in check_list or 'all' in check_list) and '-E1.C.5.1.1.7' not in check_list %}
+  - header: '#### <E1.C.5.1.1.7>'
+    command: |
+     echo "/:${PATH}" | tr ':' '\n' | grep "^/" | sort -u | while read DIR
+     do
+     DIR=${DIR:-$(pwd)}
+     while [[ -d ${DIR} ]]
+     do
+     [[ "$(ls -ld ${DIR})" = @(d???????w? *) ]] && print " WARNING ${DIR} is world writable"
+     [[ "$(ls -ld ${DIR})" = @(d????w???? *) ]] && print " WARNING ${DIR} is group writable"
+     [[ "$(ls -ld ${DIR} |awk '{print $3}')" != @(root|bin) ]] && print " WARNING ${DIR} is not owned by root or bin"
+     DIR=${DIR%/*}
+     done
+     done
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.7>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.2.1' in check_list or 'all' in check_list) and '-E1.C.5.1.2.1' not in check_list %}
+  - header: '#### <E1.C.5.1.2.1>'
+    command: |
+     crontab -l |egrep -v '^#' |awk '{print $6}' |grep "^/" |sort -u | while read DIR
+     do
+     DIR=${DIR:-$(pwd)}
+     while [[ -a ${DIR} ]]
+     do
+     [[ "$(ls -ld ${DIR})" = @(????????w? *) ]] && print " WARNING ${DIR} is world writable"
+     [[ "$(ls -ld ${DIR})" = @(?????w???? *) ]] && print " WARNING ${DIR} is group writable"
+     [[ "$(ls -ld ${DIR} |awk '{print $3}')" != @(root|bin) ]] && print " WARNING ${DIR} is not owned by root or bin"
+     DIR=${DIR%/*}
+     done
+     done
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.1>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.1.3' in check_list or 'all' in check_list) and '-E1.C.5.1.1.3' not in check_list %}
+  - header: '#### <E1.C.5.1.1.3>'
+    command: |
+     SPECIAL="security/(aixpert|audit|ice)"
+     a=`/usr/bin/find /etc/security ! -user root -a ! -user bin -ls |wc -l |awk '{print $1}'`
+     b=`/usr/bin/find /etc/security -type d -a ! -group security -ls | /usr/bin/egrep -v ${SPECIAL}|wc -l |awk '{print $1}'`
+     c=`/usr/bin/find /etc/security/aixpert /etc/security/ice -type d -a ! -group bin -ls|wc -l |awk '{print $1}'`
+     d=`/usr/bin/find /etc/security/audit -type d ! -group audit -ls|wc -l |awk '{print $1}'`
+     e=`/usr/bin/find /etc/security -type d -ls |/usr/bin/awk '{print $NF " " $3}' |/usr/bin/grep -v drwxr-s---|wc -l |awk '{print $1}'`
+     f=$(($a + $b +$c + $d + $e))
+     /usr/bin/echo '"'"files/folder under /etc/security not owned by root/bin"'"'";"'"'"folders under /etc/security not owned by group security"'"'";"'"'"folder under /etc/security/aixpert & /etc/security/ice not owned by group bin"'"'";"'"'"folder under /etc.security/audit not owned by group audit"'"'";"'"'"folder under /etc/security permission not drwxr-s---"'"'";"'"'"total non-compliance file/folder count"'"'
+     /usr/bin/echo '"'$a'"'";"'"'$b'"'";"'"'$c'"'";"'"'$d'"'";"'"'$e'"'";"'"'$f'"'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.5.1.1.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.2.2' in check_list or 'all' in check_list) and '-E1.C.5.1.2.2' not in check_list %}
+  - header: '#### <E1.C.5.1.2.2>'
+    command: 'echo "Non-Automatable according to current TechSpec guidelines"'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.2>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.1.4.4' in check_list or 'all' in check_list) and '-E1.C.4.1.4.4' not in check_list %}
+  - header: '#### <E1.C.4.1.4.4>'
+    command: |
+     /usr/sbin/lsnfsexp | grep -v 'anon=-1' | grep anon=
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.1.4.4>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.3.1.2_&_E1.C.4.3.1.3' in check_list or 'all' in check_list) and '-E1.C.4.3.1.2_&_E1.C.4.3.1.3' not in check_list %}
+  - header: '#### <E1.C.4.3.1.2_&_E1.C.4.3.1.3>'
+    command: |
+     #Use only lsfilt which is different than tech spec where grep used. This modified as per feedback.
+     /usr/sbin/lsfilt
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.3.1.2_&_E1.C.4.3.1.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.6.3.1.10' in check_list or 'all' in check_list) and '-E1.C.6.3.1.10' not in check_list %}
+  - header: '#### <E1.C.6.3.1.10>'
+    command: 'echo "Non-Automatable according to current TechSpec guidelines"'
+    become: true
+    footer: >
+      #### </E1.C.6.3.1.10>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.5.1.3' in check_list or 'all' in check_list) and '-E1.C.4.5.1.3' not in check_list %}
+  - header: '#### <E1.C.4.5.1.3>'
+    command: |
+     /usr/bin/egrep "dtsession\*saverTimeout:|dtsession\*lockTimeout:" /etc/dt/config/*/sys.resources
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.5.1.4' in check_list or 'all' in check_list) and '-E1.C.4.5.1.4' not in check_list %}
+  - header: '#### <E1.C.4.5.1.4>'
+    command: |
+     /usr/bin/egrep "Dtlogin\*greeting.labelString|Dtlogin\*greeting.persLabelString:" /etc/dt/config/*/Xresources
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.4>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.2.1.2' in check_list or 'all' in check_list) and '-E1.C.2.1.2' not in check_list %}
+  - header: '#### <E1.C.2.1.2>'
+    command: 'echo "Non-Automatable according to current TechSpec guidelines"'
+    become: true
+    footer: >
+      #### </E1.C.2.1.2>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.3.1.6' in check_list or 'all' in check_list) and '-E1.C.3.1.6' not in check_list %}
+  - header: '#### <E1.C.3.1.6>'
+    command: |
+     file1="/etc/motd"; [ -e $file1 ] && [ -s $file1 ] && /usr/bin/echo $file1 is not empty || /usr/bin/echo $file1 is empty
+     #Use segment E1.C.5.1.2.6 for motd file permission.
+    become: true
+    footer: >
+      #### </E1.C.3.1.6>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.1.4.3' in check_list or 'all' in check_list) and '-E1.C.4.1.4.3' not in check_list %}
+  - header: '#### <E1.C.4.1.4.3>'
+    command: |
+     file2="/etc/exports"; [ -e $file1 ] && cat file2 || /usr/bin/echo $file2 not present
+    become: true
+    footer: >
+      #### </E1.C.4.1.4.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.2.1.12' in check_list or 'all' in check_list) and '-E1.C.4.2.1.12' not in check_list %}
+  - header: '#### <E1.C.4.2.1.12>'
+    command: |
+     /usr/sbin/nfso -a
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.2.1.12>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+
+{% if ('E1.C.4.4.1.2' in check_list or 'all' in check_list) and '-E1.C.4.4.1.2' not in check_list %}
+  - header: '#### <E1.C.4.4.1.2>'
+    command: |
+     /usr/bin/lslpp -Lcq bos.net.tcp.sendmail >/dev/null 2>&1 && /usr/bin/echo '"'"Sendmail"'"'";"'"'"installed"'"'|| /usr/bin/echo '"'"Sendmail"'"'";"'"'"not installed"'"'
+     /usr/bin/ls -ld /usr/sbin/sendmail | /usr/bin/awk '{print"\"" $1 "\"" ";" "\"" $9 "\""}'
+    become: true
+    footer: >
+      #### </E1.C.4.4.1.2>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.5.1.1' in check_list or 'all' in check_list) and '-E1.C.4.5.1.1' not in check_list %}
+  - header: '#### <E1.C.4.5.1.1>'
+    command: |
+     /usr/bin/lslpp -L |/usr/bin/grep -i X11.Dt
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.5.1.1>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.5.2.1' in check_list or 'all' in check_list) and '-E1.C.4.5.2.1' not in check_list %}
+  - header: '#### <E1.C.4.5.2.1>'
+    command: |
+     /usr/bin/cat /etc/ftpusers
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.5.2.1>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.5.2.2' in check_list or 'all' in check_list) and '-E1.C.4.5.2.2' not in check_list %}
+  - header: '#### <E1.C.4.5.2.2>'
+    command: |
+     if [[ $(/usr/bin/grep -c "^ftp[[:blank:]]" /etc/inetd.conf) -gt 0 ]]; then
+     if /usr/bin/lslpp -L "bos.msg.en_US.net.tcp.client" >/dev/null 2>&1; then
+     MSG=$(dspcat /usr/lib/nls/msg/en_US/ftpd.cat 1 9 2>/dev/null)
+     if [[ -n "$MSG" ]]; then
+     echo "$MSG"
+     else
+     echo "Error: Could not get FTP message from /usr/lib/nls/msg/en_US/ftpd.cat"
+     fi
+     fi
+     fi
+    become: true
+    footer: >
+      #### </E1.C.4.5.2.2>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.7.1.1_to_E1.C.4.7.1.3' in check_list or 'all' in check_list) and '-E1.C.4.7.1.1_to_E1.C.4.7.1.3' not in check_list %}
+  - header: '#### <E1.C.4.7.1.1_to_E1.C.4.7.1.3>'
+    command: |
+     test -e /etc/mail/helpfile && /usr/bin/echo "Sendmail HELP file : available" || /usr/bin/echo "Sendmail HELP file : missing"
+     /usr/bin/grep -v ^# /etc/mail/sendmail.cf |/usr/bin/egrep -i "SmtpGreetingMessage|PrivacyOptions|DaemonPortOptions"
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.7.1.1_to_E1.C.4.7.1.3>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.4.8.1.5' in check_list or 'all' in check_list) and '-E1.C.4.8.1.5' not in check_list %}
+  - header: '#### <E1.C.4.8.1.5>'
+    command: |
+     /usr/bin/cat /etc/profile |/usr/bin/grep -v ^#
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.8.1.5>
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('E1.C.5.1.2.17' in check_list or 'all' in check_list) and '-E1.C.5.1.2.17' not in check_list %}
+  - header: '#### <E1.C.5.1.2.17>'
+    command: |
+     /usr/bin/ls -ld /etc/mail/submit.cf| /usr/bin/awk '{print"\"" $1 "\"" ";" "\"" $9 "\""}'
+    become: true
+    footer: >
+      #### </E1.C.5.1.2.17>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.4.1.1' in check_list or 'all' in check_list) and '-E1.C.4.4.1.1' not in check_list %}
+  - header: '#### <E1.C.4.4.1.1>'
+    command: |
+     /usr/bin/lslpp -Lcq bos.net.tcp.snmp >/dev/null 2>&1
+     SNMP=$?
+     /usr/bin/lslpp -Lcq bos.net.tcp.snmpd >/dev/null 2>&1
+     SNMPD=$?
+     if [[ ${SNMP} -eq 0 || ${SNMPD} -eq 0 ]]; then
+      echo "SNMP and/or SNMPD support is installed"
+     else
+      echo "SNMP software is not installed"
+     fi
+     /usr/bin/ls -ld  /usr/sbin/snmpdv3ne | /usr/bin/awk '{print"\"" $1 "\"" ";" "\"" $9 "\""}'
+     /usr/bin/ls -ld /usr/sbin/snmpdv1 | /usr/bin/awk '{print"\"" $1 "\"" ";" "\"" $9 "\""}'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.4.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.1.1.4' in check_list or 'all' in check_list) and '-E1.C.1.1.4' not in check_list %}
+  - header: '#### <E1.C.1.1.4>'
+    command: |
+     /usr/bin/find -L / \( -fstype jfs -o -fstype jfs2 \) -type l -ls 2>/dev/null |/usr/bin/wc -l | awk '{print $1}'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.1.1.4>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.7.1.1' in check_list or 'all' in check_list) and '-E1.C.7.1.1' not in check_list %}
+  - header: '#### <E1.C.7.1.1>'
+    command: |
+     file="/var/adm/cron/cron.allow"; [ ! -e $file ] || [ "$(grep -v '^[[:space:]]*$' "$file")" ] && echo '"'cron.allow'"'";"'"'pass'"'|| echo '"'cron.allow'"'";"'"'fail'"'
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.7.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.8.1.1' in check_list or 'all' in check_list) and '-E1.C.4.8.1.1' not in check_list %}
+  - header: '#### <E1.C.4.8.1.1>'
+    command: |
+     /usr/bin/lssec -f /etc/security/login.cfg -s usw -a logintimeout
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.8.1.1>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.8.1.2' in check_list or 'all' in check_list) and '-E1.C.4.8.1.2' not in check_list %}
+  - header: '#### <E1.C.4.8.1.2>'
+    command: |
+     /usr/bin/lssec -f /etc/security/login.cfg -s default -a logindelay
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.8.1.2>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('E1.C.4.8.1.3' in check_list or 'all' in check_list) and '-E1.C.4.8.1.3' not in check_list %}
+  - header: '#### <E1.C.4.8.1.3>'
+    command: |
+     /usr/bin/lssec -f /etc/security/login.cfg -s default -a herald
+     exit 0
+    become: true
+    footer: >
+      #### </E1.C.4.8.1.3>
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('correct_TL' in check_list or 'all' in check_list) and '-correct_TL' not in check_list %}
+  - header: '#### <correct_TL>'
+    command: |
+     oslevel -rl `oslevel -rq | head -1`
+     exit 0
+    become: true
+    footer: >
+      #### </correct_TL>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('wpar_list' in check_list or 'all' in check_list) and '-wpar_list' not in check_list %}
+  - header: '#### <wpar_list>'
+    command: |
+     /usr/sbin/lswpar
+    become: true
+    footer: >
+      #### </wpar_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+
+{% if ('lparstat_u' in check_list or 'all' in check_list) and '-lparstat_u' not in check_list %}
+  - header: '#### <lparstat_u>'
+    command: |
+     output=$(/usr/bin/lparstat -u 2>/dev/null) && echo "$output" | /usr/bin/awk '/(FW|AIX) Update Access Key Expiration/ { print $1, $2, $3, $4, $5, substr($NF,1,4)"-"substr($NF,5,2)"-"substr($NF,7,2) }' || /usr/bin/echo "Failed to get lparstat -u output" >&2
+    become: true
+    footer: >
+      #### </lparstat_u>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}

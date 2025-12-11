@@ -1,0 +1,1814 @@
+---
+settings_global:
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# ---------------------------------------------------=== tcphc.pl required segments - never disable ===----------------------------------------------------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  - header: '#### <tcphc_segments>'
+    become: true
+    command: |
+      echo 'following segments used by tcphc: os_release (redhat_release) system_serial_number system_hwinfo system_swinfo (lscpu) (hostname), never disable' ;
+      echo '#### </tcphc_segments>' ;
+      echo '' ;
+      echo '#### <os_release>' ;
+      /usr/bin/awk -F= '{gsub(/"/, "", $2); if ($1=="PRETTY_NAME") {print $2}}' /etc/os-release || /bin/awk -F= '{gsub(/"/, "", $2); if ($1=="PRETTY_NAME") {print $2}}' /etc/os-release || echo "ERR=awk os-release Failed to run!" ;
+      echo '#### </os_release>' ;
+      echo '' ;
+{% if ansible_facts.os_family == "RedHat" %}
+      echo '#### <redhat_release>' ;
+      /usr/bin/cat /etc/redhat-release || echo "ERR=Failed to run!" ;
+      echo '#### </redhat_release>' ;
+      echo '' ;
+{% endif %}
+      echo '#### <system_serial_number>' ;
+{% if ansible_facts["architecture"] == "ppc64le" or ansible_facts["architecture"] == "ppc64" %}
+      serial_number=$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'ERR=SN was unreadable!' ) ;
+{% else %}
+      serial_number=$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo "ERR=SN was unreadable!" ) ;
+{% endif %}
+      echo "${serial_number}" ;
+      echo '#### </system_serial_number>' ;
+      echo '' ;
+      echo '#### <system_hwinfo>'
+      is_virt=$(if [ -x /usr/bin/systemd-detect-virt ] ; then
+        output=$(/usr/bin/systemd-detect-virt 2>/dev/null) &&  rc=${?} || rc=${?} ;
+        if [ "${output}" == "none" ] ; then "echo 0 ${output}" ;
+        elif [ -n "${output}" ] ; then  echo "1 ${output}" ;
+        else "N/A" ;
+        fi
+      else
+        /bin/grep flags /proc/cpuinfo  | /bin/grep -q hypervisor && echo '1 proc' || echo '0 none' ;
+      fi ) || echo "ERR=virtdetection $rc $output" || true
+{% if ansible_facts["architecture"] == "ppc64le" or ansible_facts["architecture"] == "ppc64" %}
+      echo "VENDOR=$(/usr/bin/grep system_type /proc/powerpc/lparcfg    | /usr/bin/cut -d '=' -f 2  | /usr/bin/cut -d ',' -f 1 || echo 'N/A' ;)" ;
+      echo "PRODUCT=$(/usr/bin/grep system_type /proc/powerpc/lparcfg   | /usr/bin/cut -d '=' -f 2                             || echo 'N/A' ;)" ;
+      echo "FIRMWARE=$(/usr/sbin/lshw | /usr/bin/grep -A 5 firmware     | /usr/bin/grep product     | /usr/bin/cut -d':' -f2   || echo 'N/A' ;)" ;
+      echo "HW-NOTIFY=$(/bin/cat '/sys/firmware/devicetree/base/ibm,platform-hardware-notification' | /usr/bin/tr '\0' '\n'    || echo 'N/A' ;)" ;
+      echo "PART-UUID=$(/bin/cat '/sys/firmware/devicetree/base/ibm,partition-uuid'                 | /usr/bin/tr '\0' '\n'    || echo 'N/A' ;)" ;
+      echo "PART-NAME=$(/bin/cat '/sys/firmware/devicetree/base/ibm,partition-name'                 | /usr/bin/tr '\0' '\n'    || echo 'N/A' ;)" ;
+      echo "IS_VIRTUAL=${is_virt}" || true ;
+      echo "SN=${serial_number}" || true ;
+{% else %}
+      echo "VENDOR=$(/usr/sbin/dmidecode -s system-manufacturer   || /bin/cat /sys/devices/virtual/dmi/id/sys_vendor      || echo 'N/A' ;)" ;
+      echo "PRODUCT=$(/usr/sbin/dmidecode -s system-product-name  || /bin/cat /sys/devices/virtual/dmi/id/product_name    || echo 'N/A' ;)" ;
+      echo "VERSION=$(/usr/sbin/dmidecode -s system-version       || /bin/cat /sys/devices/virtual/dmi/id/product_version || echo 'N/A' ;)" ;
+      echo "FIRMWARE=$(/usr/sbin/dmidecode -s bios-version        || /bin/cat /sys/devices/virtual/dmi/id/bios_version    || echo 'N/A' ;)" ;
+      echo "IS_VIRTUAL=${is_virt}" || true ;
+{% endif %}
+      echo '#### </system_hwinfo>';
+      echo '' ;
+      echo '#### <system_swinfo>'
+      /usr/bin/grep -E '^PRETTY_NAME=' /etc/os-release || echo "PRETTY_NAME=N/A" ;
+      /usr/bin/grep -E '^NAME='       /etc/os-release  || echo "NAME=N/A" ;
+      /usr/bin/grep -E '^VERSION_ID=' /etc/os-release  || echo "VERSION_ID=N/A" ;
+      /usr/bin/grep -E '^VERSION='    /etc/os-release  || echo "VERSION=N/A" ;
+      /usr/bin/grep -E '^ID='          /etc/os-release || echo "ID=N/A" ;
+      echo "FQDN=$({ [ -x /usr/bin/hostnamectl ] && /usr/bin/hostnamectl --static ; /usr/bin/hostname; /usr/bin/hostname -f; } | /usr/bin/awk '{ if (length($0) > len) { len=length($0); name=$0 } } END { print name }' || echo 'N/A' ;)" || true ;
+      echo "SHORT_HOSNAME=$(/usr/bin/hostname -f       || echo 'N/A' ;)" ;
+      echo '#### </system_swinfo>';
+      echo '' ;
+      echo '#### <lscpu>'
+      /usr/bin/lscpu || /bin/lscpu || echo "ERR=lscpu Failed to run!" ;
+      echo '#### </lscpu>';
+      echo '' ;
+      echo '#### <hostname>'
+      /usr/bin/hostname || /bin/hostname || echo "ERR=hostname Failed to run!" ;
+      echo '#### </hostname>';
+      echo '' ;
+
+    footer: ''
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('commands_ps_Z' in check_list or 'all' in check_list) and '-commands_ps_Z' not in check_list %}
+  - header: '#### <commands_ps_Z>'
+    become: true
+    command: |
+        name='ps_Z'
+        command='/bin/ps -efZ'
+        echo "${name}<${command}" ;
+        { IFS=$'\n' read -r -d '' "output"; IFS=$'\n' read -r -d '' "error_output"; IFS=$'\n' read -r -d '' "exit_code";
+        } < <((printf '\0%s\0%d\0' "$(((({ ${command} ; echo "${?}" 1>&3-; } | /bin/tr -d '\0' 1>&4-) 4>&2- 2>&1- | /bin/tr -d '\0' 1>&4-) 3>&1- | exit "$(/bin/cat)") 4>&1-)" "${?}" 1>&2) 2>&1) ;
+        [ "${exit_code}" = "0" ] && last_status="OK" || last_status="ERR" ;
+        while read -r cmdline ; do
+          [ -n "${cmdline}" ] && echo "${name}:${cmdline}" || true ;
+        done <<< "${output}"  || echo "ERR=(while_stdout)" ;
+        while read -r cmdline ; do
+          [ -n "${cmdline}" ] && echo "${name}|${cmdline}" || true ;
+        done <<< "${error_output}"  || echo "ERR=(while_stderr)" ;
+        echo "${name}=${last_status}(${exit_code})" ;
+    footer: '#### </commands_ps_Z>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# ---------------------------------------------------=== This Block planed to common Linux segments ===----------------------------------------------------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+  - header: '#### <common_linux_segment>'
+    become: true
+    command: |
+      declare -a names ;
+      declare -a times ;
+      names+=('common_linux_start') ;
+      times+=($(/usr/bin/date +%s)) || true
+      echo 'not used segment, sub segments are available bellow' ;
+      name='common_linux_segment'
+      echo "#### </${name}>" ;
+      echo '' ;
+      linux_common_commands='''
+{% if udc_debug | default(false) | bool %}
+      good:/bin/true
+      bad:false
+      error_sample:ls /boot | grep efi ||  echo no_efi_dir
+{% endif %}
+{% if ('commands_kernel_version' in check_list or 'all' in check_list) and '-commands_kernel_version' not in check_list %}
+      kernel_version:/bin/uname -r
+{% endif %}
+{% if ('commands_export' in check_list or 'all' in check_list) and '-commands_export' not in check_list %}
+      export:export
+{% endif %}
+{% if ('commands_uptime' in check_list or 'all' in check_list) and '-commands_uptime' not in check_list %}
+      uptime:/bin/uptime
+{% endif %}
+{% if ('commands_free' in check_list or 'all' in check_list) and '-commands_free' not in check_list %}
+      free:/bin/free
+{% endif %}
+{% if ('commands_df_H' in check_list or 'all' in check_list) and '-commands_df_H' not in check_list %}
+      df_H:/usr/bin/timeout 60 /bin/df -H
+{% endif %}
+{% if ('commands_inode' in check_list or 'all' in check_list) and '-commands_inode' not in check_list %}
+      inode:/usr/bin/timeout 60 /bin/df -ali -x autofs
+{% endif %}
+{% if ('commands_multipath_ll' in check_list or 'all' in check_list) and '-commands_multipath_ll' not in check_list %}
+      multipath_ll:/usr/bin/timeout 60 /sbin/multipath -ll
+{% endif %}
+{% if ('commands_not_mounted' in check_list or 'all' in check_list) and '-commands_not_mounted' not in check_list %}
+      not_mounted:/usr/bin/timeout 60 /bin/mount --fake --verbose --all
+{% endif %}
+{% if ('commands_findmnt_verify' in check_list or 'all' in check_list) and '-commands_findmnt_verify' not in check_list %}
+      findmnt_verify:/usr/bin/timeout 60 /bin/findmnt --verify
+{% endif %}
+{% if ansible_facts.os_family== "RedHat" and ansible_facts.distribution_major_version | int >= 7 %}
+{% if ('commands_yum_sec' in check_list or 'all' in check_list) and '-commands_yum_sec' not in check_list %}
+      yum_sec:/usr/bin/timeout 120 /bin/yum -q list-sec
+{% endif %}
+{% endif %}
+{% if ('commands_useradd_D' in check_list or 'all' in check_list) and '-commands_useradd_D' not in check_list %}
+      useradd_D:/sbin/useradd -D
+{% endif %}
+{% if ('commands_sudo_V' in check_list or 'all' in check_list) and '-commands_sudo_V' not in check_list %}
+      sudo_V:/bin/sudo -V
+{% endif %}
+{% if ('commands_nft_list_tables' in check_list or 'all' in check_list) and '-commands_nft_list_tables' not in check_list %}
+      nft_list_tables:/usr/sbin/nft list tables
+{% endif %}
+{% if ('commands_nft_list_ruleset' in check_list or 'all' in check_list) and '-commands_nft_list_ruleset' not in check_list %}
+      nft_list_ruleset:/usr/sbin/nft list ruleset
+{% endif %}
+{% if ('commands_iptables_list' in check_list or 'all' in check_list) and '-commands_iptables_list' not in check_list %}
+      iptables_list:/sbin/iptables -L -v -n
+{% endif %}
+{% if ('commands_ip6tables_list' in check_list or 'all' in check_list) and '-commands_ip6tables_list' not in check_list %}
+      ip6tables_list:/sbin/ip6tables -L -v -n
+{% endif %}
+{% if ('commands_gnome_settings' in check_list or 'all' in check_list) and '-commands_gnome_settings' not in check_list %}
+      gnome_settings:/usr/bin/timeout 60 /bin/gsettings list-recursively
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      chkconfig_list:/usr/sbin/chkconfig --list
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      chkconfig_list_xinetd:/usr/sbin/chkconfig --list --type xinetd
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      semodule_l:semodule -l
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int >= 7 %}
+{% if ('commands_getenforce' in check_list or 'all' in check_list) and '-commands_getenforce' not in check_list %}
+      getenforce:/sbin/getenforce
+{% endif %}
+{% if ('commands_sestatus' in check_list or 'all' in check_list) and '-commands_sestatus' not in check_list %}
+      sestatus:/sbin/sestatus
+{% endif %}
+{% if ('commands_authselect_list' in check_list or 'all' in check_list) and '-commands_authselect_list' not in check_list %}
+      authselect_list:/bin/authselect list
+{% endif %}
+{% if ('commands_authselect_current' in check_list or 'all' in check_list) and '-commands_authselect_current' not in check_list %}
+      authselect_current:/bin/authselect current
+{% endif %}
+{% if ('commands_fwcmd_defzone' in check_list or 'all' in check_list) and '-commands_fwcmd_defzone' not in check_list %}
+      fwcmd_defzone:/bin/firewall-cmd --get-default-zone
+{% endif %}
+{% if ('commands_fwcmd_state' in check_list or 'all' in check_list) and '-commands_fwcmd_state' not in check_list %}
+      fwcmd_state:/bin/firewall-cmd --state
+{% endif %}
+{% if ('commands_auditctl_l' in check_list or 'all' in check_list) and '-commands_auditctl_l' not in check_list %}
+      auditctl_l:/sbin/auditctl -l
+{% endif %}
+{% if ('commands_grubby' in check_list or 'all' in check_list) and '-commands_grubby' not in check_list %}
+      grubby:/sbin/grubby --info=ALL
+{% endif %}
+{% if ('commands_systemctl_list_unitfiles' in check_list or 'all' in check_list) and '-commands_systemctl_list_unitfiles' not in check_list %}
+      systemctl_list_unitfiles:systemctl list-unit-files
+{% endif %}
+{% endif %}
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+{% if ('commands_apparmor_status' in check_list or 'all' in check_list) and '-commands_apparmor_status' not in check_list %}
+      apparmor_status:apparmor_status
+{% endif %}
+{% if ('commands_ufw_status' in check_list or 'all' in check_list) and '-commands_ufw_status' not in check_list %}
+      ufw_status:ufw status verbose
+{% endif %}
+{% if ('commands_journald_conf' in check_list or 'all' in check_list) and '-commands_journald_conf' not in check_list %}
+      journald_conf:/usr/bin/systemd-analyze cat-config  /etc/systemd/journald.conf
+{% endif %}
+{% endif %}
+      '''
+      while read -r line ; do
+        [ -z "${line}" ]        && continue || true ;
+        [ "${line:0:1}" = "#" ] && continue || true ;
+        command="${line#*:}"    || continue || true ;
+        name="${line%%:*}"      || continue || true ;
+        names+=(${name}) ;
+        times+=($(/usr/bin/date +%s)) || true
+        echo "#### <commands_${name}>";
+        echo "${name}<${command}" ;
+        { IFS=$'\n' read -r -d '' "output"; IFS=$'\n' read -r -d '' "error_output"; IFS=$'\n' read -r -d '' "exit_code";
+        } < <((printf '\0%s\0%d\0' "$(((({ ${command} ; echo "${?}" 1>&3-; } | /bin/tr -d '\0' 1>&4-) 4>&2- 2>&1- | /bin/tr -d '\0' 1>&4-) 3>&1- | exit "$(/bin/cat)") 4>&1-)" "${?}" 1>&2) 2>&1) ;
+        [ "${exit_code}" = "0" ] && last_status="OK" || last_status="ERR" ;
+        while read -r cmdline ; do
+          [ -n "${cmdline}" ] && echo "${name}:${cmdline}" || true ;
+        done <<< "${output}"  || echo "ERR=(while_stdout)" ;
+        while read -r cmdline ; do
+          [ -n "${cmdline}" ] && echo "${name}|${cmdline}" || true ;
+        done <<< "${error_output}"  || echo "ERR=(while_stderr)" ;
+        echo "${name}=${last_status}(${exit_code})" ;
+      echo "#### </commands_${name}>";
+      echo '';
+      done <<< "${linux_common_commands}"  || echo "ERR=(while_commands)" ;
+
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 8 and techspec_version['redhat_os_linux.8'] | default('latest') == 'v9.2' %}
+        commands_backward_compatibly='''
+          uptime:/usr/bin/uptime
+          free:/usr/bin/free
+          sestatus:/usr/sbin/sestatus
+          auditctl_l:/sbin/auditctl -l
+          gnome_settings:/usr/bin/gsettings list-recursively
+          ps_Z:/usr/bin/ps -efZ
+          df_H:/usr/bin/timeout 60 /usr/bin/df -H
+          inode:/usr/bin/timeout 60 /usr/bin/df -ali -x autofs
+          useradd_D:/usr/sbin/useradd -D
+          authselect_list:/usr/bin/authselect list
+          fwcmd_defzone:/usr/bin/firewall-cmd --get-default-zone
+          fwcmd_state:/usr/bin/firewall-cmd --state
+          nftables_list:/usr/sbin/nft list tables
+          iptables_list:/usr/sbin/iptables -L -v -n
+          ip6tables_list:/usr/sbin/ip6tables -L -v -n
+        '''
+      name='commands' ;
+      echo "#### <${name}>";
+      names+=('commands_old') ;
+      times+=($(/usr/bin/date +%s)) || true
+      while read -r line ; do
+        [ -z "${line}" ]        && continue || true ;
+        [ "${line:0:1}" = "#" ] && continue || true ;
+        command="${line#*:}"    || continue || true ;
+        name="${line%%:*}"      || continue || true ;
+        echo "${name}=${command}" ;
+        output=$($command 2>&1) && last_status="OK" || last_status="ERR" ;
+        while read -r cmdline ; do
+          [ -n "${cmdline}" ] && echo "${name}:${cmdline}" || true ;
+        done <<< "${output}"  || echo "ERR=(while_output)" ;
+        echo "${name}=${last_status}" ;
+      done <<< "${commands_backward_compatibly}"  || echo "ERR=(while_commands)" ;
+      name='commands' ;
+      echo "#### </${name}>";
+      echo '';
+{% endif %}
+
+{% if ansible_facts.distribution == "OracleLinux" %}
+      commands_backward_compatibly='''
+        uptime:/usr/bin/uptime
+        free:/usr/bin/free
+        df_H:/usr/bin/timeout 60 /usr/bin/df -H
+        inode:/usr/bin/timeout 60 /usr/bin/df -ali -x autofs
+      '''
+      while read -r line ; do
+        [ -z "${line}" ]        && continue || true ;
+        [ "${line:0:1}" = "#" ] && continue || true ;
+        command="${line#*:}"    || continue || true ;
+        name="${line%%:*}"      || continue || true ;
+        echo "#### <${name}>";
+        $command ;
+        echo "#### </${name}>";
+      done <<< "${commands_backward_compatibly}"  || echo "ERR=(while_commands)" ;
+      echo '';
+
+      declare -A categories
+      config="/etc/os-release"
+      categories["config"]='''
+      /etc/motd
+      '''
+      for category in ${!categories[@]} ; do
+        echo "#### <${category}_files>" ;
+        all_files=$(echo "${categories[${category}]}" | /usr/bin/sort | /usr/bin/uniq) || true ;
+        all_files="${!category} $all_files" ;
+        for file in ${all_files}; do
+           [ "${file:0:1}" != "/" ] && continue || true ;
+           /usr/bin/grep -H -v "^\s*$\|^\s*\#" "${file}" 2>/dev/null && echo "${file}=OK" || echo "${file}=ERR(missing_empty_or_contain_only_commented_lines)" ;
+        done || echo "ERR=(while_running_configfiles_segment)"
+        echo "#### </${category}_files>" ;
+        echo "" ;
+      done || true ;
+
+{% endif %}
+
+{% if ( ansible_facts.distribution| lower == "redhat" and ansible_facts.distribution_major_version | int >= 7 ) or ( ansible_facts.distribution | lower == "ubuntu" and ansible_facts.distribution_major_version | int >= 20 )  %}
+      DEFAULT_TIMEOUT=60
+      oldformat_checks="""
+{% if ('mount' in check_list or 'all' in check_list) and '-mount' not in check_list %}
+      mount:/usr/bin/timeout ${DEFAULT_TIMEOUT} /bin/mount
+{% endif %}
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+{% if ('ss_tuplan' in check_list or 'all' in check_list) and '-ss_tuplan' not in check_list %}
+      ss_tuplan:/usr/bin/timeout ${DEFAULT_TIMEOUT} /usr/bin/ss -tulpan
+{% endif %}
+{% endif %}
+{% if ansible_facts.distribution | lower == "redhat" %}
+{% if ('ss_tuplan' in check_list or 'all' in check_list) and '-ss_tuplan' not in check_list %}
+      ss_tuplan:/usr/bin/timeout ${DEFAULT_TIMEOUT} /usr/sbin/ss -tulpan
+{% endif %}
+{% endif %}
+{% if ('systemctl' in check_list or 'all' in check_list) and '-systemctl' not in check_list %}
+      systemctl:/usr/bin/timeout ${DEFAULT_TIMEOUT} /usr/bin/systemctl -a --all
+{% endif %}
+{% if ('sysctl' in check_list or 'all' in check_list) and '-sysctl' not in check_list %}
+      sysctl:/usr/bin/timeout ${DEFAULT_TIMEOUT} /usr/sbin/sysctl -a
+{% endif %}
+{% if ('test_timeout' in check_list or 'all' in check_list) and '-test_timeout' not in check_list %}
+      test_timeout:/usr/bin/timeout 0.1 sleep 2
+{% endif %}
+{% if ('test_path' in check_list or 'all' in check_list) and '-test_path' not in check_list %}
+      test_path:uptime
+{% endif %}
+{% if ('gnome_settings' in check_list or 'all' in check_list) and '-gnome_settings' not in check_list %}
+      gnome_settings:/bin/gsettings list-recursively
+{% endif %}
+{% if ('nft_list_ruleset' in check_list or 'all' in check_list) and '-nft_list_ruleset' not in check_list %}
+      nft_list_ruleset:/sbin/nft list ruleset
+{% endif %}
+      """
+      while read -r line ; do
+        [ -z "${line}" ]        && continue || true ;
+        [ "${line:0:1}" = "#" ] && continue || true ;
+        command="${line#*:}"    || continue || true ;
+        name="${line%%:*}"      || continue || true ;
+        names+=(${name}) ;
+        times+=($(/usr/bin/date +%s)) || true
+        echo "#### <${name}>";
+        $command 2>&1 && echo "$name=OK(${?})" || echo "$name=ERR(${?})" ;
+        echo "#### </${name}>";
+        echo '';
+      done <<< "${oldformat_checks}"  || true ;
+{% if ('sysctl_cat' in check_list or 'all' in check_list) and '-sysctl_cat' not in check_list %}
+      names+=('sysctl_cat') ;
+      times+=($(/usr/bin/date +%s)) || true
+      name='sysctl_cat' ;
+      echo "#### <${name}>";
+{% if ( ansible_facts.distribution| lower == "redhat" and ansible_facts.distribution_major_version | int >= 8 ) or ( ansible_facts.distribution | lower == "ubuntu" and ansible_facts.distribution_major_version | int >= 20 )  %}
+      /usr/lib/systemd/systemd-sysctl --cat-config | /usr/bin/grep -v "^\s*$\|^\s*\#"  2>/dev/null && echo "sysctl_cat=OK(0)" || echo "sysctl_cat=ERR(${?})" ;
+{% endif %}
+{% if ansible_facts.os_family== "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      result=$(for file in /etc/sysctl.conf /etc/sysctl.d/*.conf /usr/lib/sysctl.d/*.conf /usr/local/lib/sysctl.d/*.conf /run/sysctl.d/*.conf /lib/sysctl.d/*.conf /etc/ufw/sysctl.conf ; do
+               /usr/bin/grep -h -v "^\s*$\|^\s*\#" "${file}" 2>/dev/null || true
+               done || true ) ;
+      [ -n "$result"  ] &&  ( echo "$result"; echo "sysctl_cat=OK(0)" ) || echo "sysctl_cat=ERR(${?})"
+{% endif %}
+      echo "#### </${name}>";
+      echo '' ;
+{% endif %}
+{% if ('sshd_t' in check_list or 'all' in check_list) and '-sshd_t' not in check_list %}
+      names+=('sshd_t') ;
+      times+=($(/usr/bin/date +%s)) || true
+      name='sshd_t' ;
+      echo "#### <${name}>";
+      /usr/sbin/sshd -T -C user=root -C host="$(/usr/bin/hostname)" -C addr="$(/usr/bin/grep $(/usr/bin/hostname) /etc/hosts | /usr/bin/awk '{print $1}')" && echo "sshd_t=OK(${?})" || echo "sshd_t=ERR(${?})Failed to run!" ;
+      echo "#### </${name}>";
+      echo '' ;
+{% endif %}
+{# 2.nd endif for techspec #}
+{% endif %}
+{% if ('packages' in check_list or 'all' in check_list) and '-packages' not in check_list %}
+      names+=('packages') ;
+      times+=($(/usr/bin/date +%s)) || true
+      name='packages' ;
+      echo "#### <${name}>";
+{% if ansible_facts.os_family== "RedHat"  %}
+      if   [ -e '/bin/rpm' ]  ; then pkg_list=$(   /bin/rpm -qa && echo "packages=OK" || echo "packages=ERR(${?})rpm" ; ) ;
+{% endif %}
+{% if ansible_facts.os_family== "Debian"  %}
+      if [ -e '/bin/dpkg' ] ; then pkg_list=$( { /bin/dpkg -l && echo 'packages=OK' || echo 'packages=ERR(${?})dpkg' ; } | /usr/bin/awk '{if ($1 ~ /^i/)  print $2"-"$3"|"$1; if ($1 ~ /packages=.*/ ) print $1}' || echo "packages=ERR(${?})dpkg-awk" ; ) ;
+{% endif %}
+      else echo "packages=ERR(no_compatibile_packager_found)" ;
+      fi
+      echo "$pkg_list" ;
+      echo "#### </${name}>";
+      echo '' ;
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 8 and techspec_version['redhat_os_linux.8'] | default('latest') == 'v9.2' %}
+{% if ('rpm' in check_list or 'all' in check_list) and '-rpm' not in check_list %}
+      name='rpm' ;
+      echo "#### <${name}>";
+      echo "$pkg_list" ;
+      echo "#### </${name}>";
+      echo '' ;
+{# rpm/techspec/packages #}
+{% endif %}
+{% endif %}
+{% endif %}
+{% if ('check_ext4' in check_list or 'all' in check_list) and '-check_ext4' not in check_list %}
+      names+=('check_ext4') ;
+      times+=($(/usr/bin/date +%s)) || true
+      name='check_ext4' ;
+      echo "#### <${name}>";
+      df_list=$(/usr/bin/timeout 60 /bin/df --portability --local --type=ext4 2>&1) && exit_code=${?}  || exit_code=${?} ;
+      if [ ${exit_code} -ge 124 ] ; then
+        echo "check_ext4=ERR=POLICY FAILED DUE TO df command timeout - may remote filesystem or storage  is unreachable - PERFORM MANUAL VERIFICATION" ;
+      else
+        ext4_fs_list=$(echo "$df_list" | /usr/bin/awk '{if (NR!=1) print $1}') || echo "check_ext4=ERR=awk" ;
+        if [ -z "${ext4_fs_list}" ] ; then
+          echo "check_ext4=OK=no ext4 mounted" ;
+        else
+          for fs in $ext4_fs_list ; do
+            command="/sbin/tune2fs -l ${fs}" ;
+            echo "${fs}<${command}" ;
+            { IFS=$'\n' read -r -d '' "output"; IFS=$'\n' read -r -d '' "error_output"; IFS=$'\n' read -r -d '' "exit_code";
+            } < <((printf '\0%s\0%d\0' "$(((({ ${command} ; echo "${?}" 1>&3-; } | tr -d '\0' 1>&4-) 4>&2- 2>&1- | tr -d '\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1) ;
+            [ "${exit_code}" = "0" ] && last_status="OK" || last_status="ERR" ;
+            while read -r cmdline ; do
+              [ -n "${cmdline}" ] && echo "${fs}:${cmdline}" || true ;
+            done <<< "${output}"  || echo "ERR=(while_stdout)" ;
+            while read -r cmdline ; do
+              [ -n "${cmdline}" ] && echo "${fs}|${cmdline}" || true ;
+            done <<< "${error_output}"  || echo "ERR=(while_stderr)" ;
+          done || echo "check_ext4=ERR(for)" ;
+        fi
+      fi
+      echo "#### </check_ext4>";
+      echo '' ;
+{% endif %}
+
+
+{% if udc_debug | default(false) | bool %}
+      names+=('end') ;
+      times+=($(/usr/bin/date +%s)) || true
+      echo '#### <common_linux_stats>' ;
+      for i in "${!names[@]}" ; do  echo "${names[$i]}: $(( ${times[$((i+1))]} - ${times[$i]} )) sec" ; done || true ;
+      last=${i} ;
+      echo "sum: $(( $(/usr/bin/date +%s) - ${times[0]} )) sec" || true ;
+      echo '''check_list: {{ check_list }} ''' ;
+      echo '#### </common_linux_stats>' ;
+      echo '' ;
+{% endif %}
+
+      exit 0
+
+    footer: ''
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# ---------------------------------------------=== These segments are used by best practices and techspec ===----------------------------------------------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('shadow_extended' in check_list or 'all' in check_list) and '-shadow_extended' not in check_list %}
+  - header: '#### <shadow_extended>'
+    command: |
+      days_elapsed=$(( $(/usr/bin/date +%s) / 86400 )) || days_elapsed=20000 ;
+      /usr/bin/awk -F: -v epoch="${days_elapsed}" 'BEGIN{OFS=":"} {
+        if(length($2) >2){$2="obfuscated"}
+        {$9=$3-epoch}
+        if( $8 ){$10=$8-epoch}else{$10=99999}
+        if( $5 ){$11=$3+$5-epoch}else{$11=99999}
+{% if ansible_facts.distribution | lower == "redhat" %}
+      ;print}' /etc/shadow || echo "shadow_extended=ERR(${?})" ;
+{% else %}
+      ;print}' /etc/shadow && echo "shadow_extended=OK(${?})" || echo "shadow_extended=ERR(${?})" ;
+{% endif %}
+      [ ${days_elapsed} -gt 20000 ] || echo "shadow_extended=ERR(The system time is behind. ${days_elapsed}) days from epoch" ;
+
+    become: true
+    footer: >
+      #### </shadow_extended>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('passwd_extended' in check_list or 'all' in check_list) and '-passwd_extended' not in check_list %}
+  - header: '#### <passwd_extended>'
+    command: |
+      MAXUSERCOUNT=8000
+      MAXUSERCOUNT=8000
+      required_cmds="/usr/bin/awk /usr/bin/grep /usr/bin/cut /usr/bin/sort /usr/bin/cat /usr/bin/wc /usr/bin/df /usr/bin/xargs"
+      for cmd in $required_cmds; do if test -x "$cmd" ; then true ; else echo "ERR=${cmd} not available" ; exit 0 ;  fi ; done
+
+      [ "$(/usr/bin/cat /etc/passwd | /usr/bin/wc -l)" -lt "$MAXUSERCOUNT" ] || { echo "ERR=(there are too many local users on the server, please check manually.)" ; exit 0 ; } ;
+      [ "$(/usr/bin/cat /etc/group  | /usr/bin/wc -l)" -lt "$MAXUSERCOUNT" ] || { echo "ERR=(there are too many local groups on the server, please check manually.)" ; exit 0 ; } ;
+
+      uid_min=$( { /usr/bin/grep ^\h*UID_MIN /etc/login.defs     2>/dev/null || echo "UID_MIN 1000"    ; } | /usr/bin/awk '{print $2}') ;
+      uid_max=$( { /usr/bin/grep ^\h*UID_MAX /etc/login.defs     2>/dev/null || echo "UID_MAX 60000"   ; } | /usr/bin/awk '{print $2}') ;
+      sid_min=$( { /usr/bin/grep ^\h*SYS_UID_MIN /etc/login.defs 2>/dev/null || echo "SYS_UID_MIN 201" ; } | /usr/bin/awk '{print $2}') ;
+      sid_max=$( { /usr/bin/grep ^\h*SYS_UID_MAX /etc/login.defs 2>/dev/null || echo "SYS_UID_MAX 999" ; } | /usr/bin/awk '{print $2}') ;
+      [ "$sid_max" -lt "$uid_min" ] || { echo "ERR= sidmax $sid_max greater than uid_min  $uid_min - overlaping" ; exit 0 ; } ;
+      groups=$(/usr/bin/cut -s -d: -f3 /etc/group | /usr/bin/sort -n -u)
+      shadow_id=$(/usr/bin/getent group shadow | /usr/bin/awk -F: '{print $3}')
+      l_valid_shells="^($(/usr/bin/awk -F\/ '($NF != "nologin" && $NF != "false") {print}' /etc/shells | /usr/bin/sed -rn '/^\//{s,/,\\\\/,g;p}' | /usr/bin/paste -s -d '|' - ))$"
+      locks=$(/usr/bin/cut -s -d: -f2 /etc/shadow | /usr/bin/cut -c1-2 | while read -r line ; do [ -z "${line}" ] && echo "N" || echo "${line}" ; done)
+      /usr/bin/awk -F: -v shadow_id="${shadow_id}" -v pat="$l_valid_shells" -v grp_as_string="$groups" -v locks_as_string="$locks" -v uid_min="$uid_min" -v uid_max="$uid_max" -v sid_min="$sid_min" -v sid_max="$sid_max" 'BEGIN{OFS=":"} {
+        split(locks_as_string,locks," " )
+        split(grp_as_string,grparray," " )
+        for (i in grparray) grp[grparray[i]] = ""
+        if      ($3==0) {$8="R"}
+        else if ($3>=uid_min&&$3<=uid_max) {$8="U"}
+        else if ($3>=sid_min&&$3<=sid_max) {$8="S"}
+        else {$8="E"}
+        if ($4 in grp) {$9="Y"} else {$9="N"}
+        if ($3<uid_min) {$10="S"} else {$10="U"}
+        if (locks[NR]) {$11=locks[NR]} else {$11="E"}
+        if ($4==shadow_id) {$12="Y"} else {$12="N"}
+        if ($7 ~ pat) {$13="Y"} else {$13="N"}
+{% if ansible_facts.distribution | lower == "redhat" %}
+        ; print}' /etc/passwd || echo "passwd_extended=ERR(${?})"
+{% else %}
+        ; print}' /etc/passwd && echo "passwd_extended=OK(${?})" || echo "passwd_extended=ERR(${?})"
+{% endif %}
+
+    become: true
+    footer: >
+      #### </passwd_extended>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('permissions' in check_list or 'all' in check_list) and '-permissions' not in check_list %}
+  - header: '#### <permissions>'
+    command: |
+      files='''
+      /
+      /usr
+      /usr/local
+      /var
+      /var/tmp
+      /tmp
+      /opt
+      /opt/samgr
+      /opt/*
+
+      /boot
+      /boot/efi
+      /boot/grub2
+      /boot/efi/EFI/*
+      /boot/grub2/*
+      /boot/grub/grub.cfg
+
+      /var/log/*
+      /var/log/messages
+      /var/log/wtmp
+      /var/log/secure
+      /var/log
+      /etc/exports
+      /etc/crontab
+      /etc/cron.hourly
+      /etc/cron.daily
+      /etc/cron.weekly
+      /etc/cron.monthly
+      /etc/cron.allow
+      /etc/cron.deny
+      /etc/cron.d
+      /etc/cron.d/*
+      /var/spool/cron/root
+      /var/spool/cron/*
+      /etc/at.allow
+      /etc/at.deny
+      /etc
+      /etc/opt
+      /etc/passwd
+      /etc/passwd-
+      /etc/shadow
+      /etc/shadow-
+      /etc/gshadow
+      /etc/gshadow-
+      /etc/group
+      /etc/group-
+      /etc/shells
+      /etc/motd
+      /etc/issue
+      /etc/issue.net
+      /etc/selinux/config
+      /etc/snmp/snmpd.conf
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      /etc/vsftpd/vsftpd.conf
+      /etc/vsftpd/user_list
+      /etc/vsftpd/vsftpd.pem
+      /var/log/tallylog
+      /var/run/faillock
+      /etc/rc.d/rc*.d/*
+{% endif %}
+      /etc/security/opasswd
+      /etc/security/opasswd.old
+      /etc/profile.d/Kyndrylsinit.sh
+      /etc/profile.d/Kyndrylsinit.csh
+      /etc/ssh/sshd_config
+      /etc/ssh/sshd_config.d/*.conf
+      /usr/bin/csh
+      /usr/bin/gsettings
+      /bin/csh
+      '''
+
+      ssh_files=$(/usr/bin/find -L /etc/ssh -xdev -type f ) || echo "ERR=/etc/ssh(while_finding_ssh)" ;
+      authselect_files=$(/usr/bin/find /etc/authselect -type f ) || echo "ERR=/etc/authselect(while_finding_authselectfiles)" ;
+      grub_files=$(/usr/bin/find /boot -type f \( -name 'grubenv' -o -name 'grub.conf' -o -name 'user.cfg' -o -name 'grub.cfg' \) ) || echo "ERR=/boot(while_finding_grubconfigs)" ;
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      root_home=$(/usr/bin/awk -F':' '/^root:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$root_home" ] && root_home_files="$root_home/.rhosts $root_home/.netrc"  || echo "ERR=could_not_find_root_home" ;
+      cert_file=$(/usr/bin/grep -H "^rsa_cert_file" "/etc/vsftpd/vsftpd.conf" 2>/dev/null | /usr/bin/awk -F'=' '{print $2}') || true
+      [ -n "$cert_file" ] && cert_files="$cert_file"  || cert_files="/etc/pki/tls/certs_entry_missing_in_config" ;
+      priv_key_file=$(/usr/bin/grep -H "^rsa_private_key_file" "/etc/vsftpd/vsftpd.conf" 2>/dev/null | /usr/bin/awk -F'=' '{print $2}') || true
+      [ -n "$priv_key_file" ] && priv_key_files="$priv_key_file"  || priv_key_files="/etc/pki/tls/private_entry_missing_in_config" ;
+{% endif %}
+      all_files=$(echo "$files $grub_files $authselect_files $ssh_files $root_home_files $cert_files $priv_key_files"  | /usr/bin/sort | /usr/bin/uniq) || all_files=${files}
+      for file in ${all_files} ;  do
+        [ "${file:0:1}" != "/" ] && continue || true ;
+        stat_output=$(/usr/bin/stat -L -c "%n: %a %U %G %u %g  %s %Y %i %h %A %F" "${file}")  || true ;
+        file_output=$(/usr/bin/file -b "${file}" ) || true ;
+        [ -n "$stat_output" ] && echo "$stat_output $file_output" || echo "${file}=ERR(File_does_not_exist)" ;
+      done || echo "ERR=for_all_files"
+
+    become: true
+    footer: '#### </permissions>'
+
+{% endif %}
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('all' in check_list or  'permissions_ftp_home' in check_list or 'permissions_ftp_home_bin' in check_list or 'permissions_ftp_home_lib' in check_list or 'permissions_ftp_home_etc' in check_list) %}
+  - header: '#### <ftp_home_permissions>'
+    command: |
+
+      declare -A categories
+
+{% if ('permissions_ftp_home' in check_list or 'all' in check_list) and '-permissions_ftp_home' not in check_list %}
+      ftp_homedir=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_homedir" ] && ftp_home_dirs_files=$(/usr/bin/find -L "$ftp_homedir" ) || true ;
+      anonymous_ftp_dirs_files=$(echo "$ftp_home_dirs_files" ) || true
+      categories["ftp_home"]="""${anonymous_ftp_dirs_files}
+      """
+{% endif %}
+
+{% if ('permissions_ftp_home_bin' in check_list or 'all' in check_list) and '-permissions_ftp_home_bin' not in check_list %}
+      ftp_homedir=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_homedir" ] && ftp_home_bin_files=$(/usr/bin/find -L "$ftp_homedir"/bin -maxdepth 1 -type f) || true ;
+      [ -d "$ftp_homedir" ] && anonymous_ftp_bin_files=$(echo ""$ftp_homedir"/bin $ftp_home_bin_files" ) || true ;
+      categories["ftp_home_bin"]="""${anonymous_ftp_bin_files}
+      """
+{% endif %}
+
+{% if ('permissions_ftp_home_lib' in check_list or 'all' in check_list) and '-permissions_ftp_home_lib' not in check_list %}
+      ftp_homedir=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_homedir" ] && ftp_home_lib_files=$(/usr/bin/find -L "$ftp_homedir"/lib -maxdepth 1 -type f) || true ;
+      [ -d "$ftp_homedir" ] && anonymous_ftp_lib_files=$(echo ""$ftp_homedir"/lib $ftp_home_lib_files" ) || true ;
+      categories["ftp_home_lib"]="""${anonymous_ftp_lib_files}
+      """
+{% endif %}
+
+{% if ('permissions_ftp_home_etc' in check_list or 'all' in check_list) and '-permissions_ftp_home_etc' not in check_list %}
+      ftp_homedir=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_homedir" ] && ftp_home_etc_files=$(/usr/bin/find -L "$ftp_homedir"/etc -maxdepth 1 -type f) || true ;
+      [ -d "$ftp_homedir" ] && anonymous_ftp_etc_files=$(echo ""$ftp_homedir"/etc $ftp_home_etc_files" ) || true ;
+      categories["ftp_home_etc"]="""${anonymous_ftp_etc_files}
+      """
+{% endif %}
+
+      echo 'This segment has been splited, use the new segments'
+      echo '#### </ftp_home_permissions>'
+      echo ''
+
+      for category in ${!categories[@]} ; do
+        echo "#### <permissions_${category}>" ;
+        [ ! -d "$ftp_homedir" ] && echo "ERR=ftp_home_doesnt_exist" || true ;
+        all_files=$(echo "${categories[${category}]}" | /usr/bin/sort | /usr/bin/uniq) || true ;
+        all_files="${!category} $all_files" ;
+        for file in ${all_files}; do
+           [ "${file:0:1}" != "/" ] && continue || true ;
+           stat_output=$(/usr/bin/stat -L -c "%n: %a %U %G %u %g  %s %Y %i %h %A %F" "${file}")  || true ;
+           file_output=$(/usr/bin/file -b "${file}" ) || true ;
+           [ -n "$stat_output" ] && echo "$stat_output $file_output" || echo "${file}=ERR(File_does_not_exist)" ;
+        done || echo "ERR=for_all_files"
+
+        echo "#### </permissions_${category}>" ;
+        echo "" ;
+      done || true ;
+      exit 0 ;
+
+    become: true
+    footer: ''
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+{% if ('ftp_home_dirs_files' in check_list or 'all' in check_list) and '-ftp_home_dirs_files' not in check_list %}
+  - header: '#### <ftp_home_dirs_files>'
+    command: |
+      suid_max=$({ /usr/bin/grep ^\h*SYS_UID_MAX /etc/login.defs 2>/dev/null || echo "SYS_UID_MAX 999" ; } | /usr/bin/awk '{print $2}') ;
+      echo "Privileged UID = $suid_max"
+      ftp_home=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_home" ] && anonymous_ftp_dirs_files=$(/usr/bin/find -L $ftp_home -maxdepth 1 -mindepth 1 \( -path /var/ftp/bin -o -path /var/ftp/etc -o -path /var/ftp/lib \) -prune -o -print) || echo "ERR=ftp_home_doesnt_exist" ;
+      for file in ${anonymous_ftp_dirs_files} ;  do
+        stat_output=$(/usr/bin/stat -L -c "%n: %a %U %G %u %g  %s %Y %i %h %A %F" "${file}")  || true ;
+        file_output=$(/usr/bin/file -b "${file}" ) || true ;
+        uid=$(echo $stat_output | /usr/bin/awk '{print $5}') || true ;
+        [ -n "$stat_output" ] && [ "$uid" -le "$suid_max" ] && priv_uid="priv_uid" || priv_uid="non-priv_uid" || echo "${file}=ERR(File_does_not_exist)" ;
+        [ -n "$stat_output" ] && echo "$stat_output $file_output $priv_uid" || echo "${file}=ERR(File_does_not_exist)" ;
+      done || echo "ERR=for_all_files"
+
+    become: true
+    footer: '#### </ftp_home_dirs_files>'
+{% endif %}
+{% endif %}
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('configfiles' in check_list or 'all' in check_list or  'configfiles_gnome' in check_list or 'configfiles_boot' in check_list or 'configfiles_auth' in check_list or 'configfiles_shell' in check_list or 'configfiles_cron' in check_list or 'configfiles_daemon' in check_list or 'configfiles_ftp_files' in check_list or 'configfiles_sys' in check_list or  'configfiles_osfiles' in check_list) and '-configfiles' not in check_list %}
+  - header: '#### <configfiles_new>'
+    command: |
+
+      declare -A categories
+
+{% if ('configfiles_gnome' in check_list or 'all' in check_list) and '-configfiles_gnome' not in check_list %}
+      gnome_filelist=$(/usr/bin/find /etc/dconf/db/*/ -type f  ) || echo "ERR=(while_finding_files)" ;
+      categories["gnome"]="""${gnome_filelist}
+      /etc/gdm/custom.conf
+      /etc/dconf/profile/gdm
+      /etc/dconf/db/gdm.d/*
+      /etc/dconf/db/gdm.d/*/*
+      /etc/dconf/db/gdm.d/*/*/*
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /etc/gdm/custom.conf
+      /etc/gdm/daemon.conf
+      /etc/gdm3/custom.conf
+      /etc/gdm3/daemon.conf
+{% endif %}
+      """
+{% endif %}
+
+{% if ('configfiles_boot' in check_list or 'all' in check_list) and '-configfiles_boot' not in check_list %}
+      boot_filelist=$(/usr/bin/find /boot -type f \( -name 'grubenv' -o -name 'grub.conf' -o -name 'user.cfg' -o -name 'grub.cfg' \) ) || echo "ERR=/boot(while_finding_grubconfigs)" ;
+      categories["boot"]="""${boot_filelist}
+      /boot/grub/grub.cfg
+      /boot/grub2/grub.cfg
+      /boot/grub2/user.cfg
+      /boot/grub2/grubenv
+      /boot/grub2/grub.conf
+      /boot/efi/EFI/redhat/grub.conf
+      /boot/efi/EFI/redhat/grubenv
+      /boot/efi/EFI/redhat/grub.cfg
+      """
+{% endif %}
+
+{% if ('configfiles_auth' in check_list or 'all' in check_list) and '-configfiles_auth' not in check_list %}
+      auth="/etc/authselect/authselect.conf"
+      auth_filelist=$(/usr/bin/find /etc/authselect -type f ) || echo "ERR=/etc/authselect(while_finding_authselectfiles)" ;
+      categories["auth"]="""${auth_filelist}
+      /etc/authselect/password-auth
+      /etc/authselect/system-auth
+      /etc/authselect/*/*/*
+      /etc/security/faillock.conf
+      /etc/security/pwhistory.conf
+      /etc/security/pwquality.conf
+      /etc/security/pwquality.conf.d/*.conf
+      /etc/libuser.conf
+      /etc/login.defs
+      /etc/pam.d/su
+      /etc/pam.d/postlogin
+      /etc/pam.d/system-auth
+      /etc/pam.d/password-auth
+      /usr/lib/tmpfiles.d/pam.conf
+      /etc/audit/rules.d/*.rules
+      /etc/crypto-policies/config
+      /etc/crypto-policies/state/CURRENT.pol
+      /etc/pam.d/common-session
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /etc/pam.d/*
+      /etc/default/login
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      /etc/pam.d/rlogin
+      /etc/pam.d/rsh
+      /etc/securetty
+      /etc/pam.d/other
+{% endif %}
+      """
+{% endif %}
+
+{% if ('configfiles_shell' in check_list or 'all' in check_list) and '-configfiles_shell' not in check_list %}
+      categories["shell"]='''
+      /etc/skel/.cshrc
+      /etc/skel/.login
+      /etc/skel/.profile
+      /etc/skel/.bashrc
+      /etc/skel/.bash_profile
+      /etc/skel/.bash_login
+      /etc/skel/.tcshrc
+      /etc/bashrc
+      /etc/bashrc*
+      /etc/bash.bashrc
+      /etc/profile
+      /etc/profile.d/*.sh
+      /etc/profile.d/Kyndrylsinit.sh
+      /etc/profile.d/Kyndrylsinit.csh
+      /etc/csh.login.local
+      /etc/csh.login
+      /root/.bash_profile
+      /root/.bashrc
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      /etc/profile.local
+      /etc/shells
+{% endif %}
+      '''
+{% endif %}
+
+{% if ('configfiles_cron' in check_list or 'all' in check_list) and '-configfiles_cron' not in check_list %}
+      categories["cron"]='''
+      /etc/crontab
+      /etc/cron.*
+      /etc/cron.d/*
+      /var/spool/cron/root
+      /var/spool/cron/*
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /var/spool/cron/crontabs/root
+{% endif %}
+      '''
+{% endif %}
+
+{% if ('configfiles_daemon' in check_list or 'all' in check_list) and '-configfiles_daemon' not in check_list %}
+      categories["daemon"]='''
+      /etc/postfix/main.cf
+      /etc/postfix/master.cf
+      /etc/rsyslog.conf
+      /etc/rsyslog.d/*.conf
+      /etc/aide.conf
+      /etc/aide.conf.d/*.conf
+      /etc/chrony.conf
+      /etc/chrony.d/*
+      /etc/sysconfig/chronyd
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /etc/chrony/chrony.conf
+      /etc/chrony/conf.d/*
+      /etc/chrony/sources.d/*
+      /etc/systemd/timesyncd.conf
+      /etc/systemd/timesyncd.conf.d/*
+      /etc/ntp.conf
+      /etc/aide/aide.conf
+      /etc/aide/aide.conf.d/*.conf
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      /etc/vsftpd/ftpusers
+      /etc/ftpusers
+      /etc/vsftpd.ftpusers
+      /etc/ntp.conf
+      /usr/lib/systemd/system/ntpd.service
+      /etc/xinetd.d/wu-ftpd
+      /etc/xinetd.d/tftp                                   #\# QL.1.5.2.1_rh7v10.1
+      /etc/exports
+      /etc/snmp/snmpd.conf
+      /etc/vsftpd/vsftpd.conf
+      /etc/vsftpd/user_list
+{% endif %}
+      '''
+{% endif %}
+
+{# ------------------------------------------------=== This configfiles category is for RHEL7 only ===----------------------------------------------------- #}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+{% if ('configfiles_ftp_files' in check_list or 'all' in check_list) and '-configfiles_ftp_files' not in check_list %}
+      ftp_home=$(/usr/bin/awk -F':' '/^ftp:/ {print $6}' /etc/passwd  ) || true;
+      [ -n "$ftp_home" ] && anonymous_ftp_etc_passwd="$ftp_home/etc/passwd" || echo "ERR=ftp_home_doesnt_exist" ;
+      categories["ftp_files"]="""${anonymous_ftp_etc_passwd}
+      """
+{% endif %}
+{% endif %}
+{# ------------------------------------------------=== This configfiles category is for RHEL7 only ===----------------------------------------------------- #}
+
+{% if ('configfiles_sys' in check_list or 'all' in check_list) and '-configfiles_sys' not in check_list %}
+      sys="/etc/pam.d/su"
+      categories["sys"]='''
+      /proc/cmdline
+      /etc/group
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /sys/module/ipv6/parameters/disable
+      /sys/module/ipv6/parameters/disable_ipv6
+      /sys/module/ipv6/parameters/autoconf
+{% endif %}
+      '''
+{% endif %}
+
+{% if ('configfiles_osfiles' in check_list or 'all' in check_list) and '-configfiles_osfiles' not in check_list %}
+      osfiles="/etc/os-release"
+      categories["osfiles"]='''
+      /etc/motd
+      /etc/issue
+      /etc/issue.net
+      /etc/systemd/coredump.conf
+      /etc/dnf/dnf.conf
+      /etc/yum.conf
+      /etc/yum.repos.d/*
+      /etc/selinux/config
+      /etc/sysconfig/sshd
+      /etc/sysconfig/nftables.conf
+      /etc/systemd/journald.conf
+      /etc/systemd/journald.conf.d/*
+      /usr/lib/systemd/system/rescue.service*
+      /etc/sudoers*
+      /etc/sudoers*/*
+      /etc/modprobe.d/*
+      /proc/cpuinfo
+      /etc/security/limits.conf
+      /etc/security/limits.d/*
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      /etc/default/apport
+      /etc/nftables.conf
+      /etc/nftables.rules
+      /usr/lib/ntp/ntp-systemd-wrapper
+      /etc/ufw/before.rules
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      /etc/security/*
+      /etc/ssh/sshd_config
+      /etc/ssh/sshd_config.d/*.conf
+      /etc/hosts.equiv
+{% endif %}
+      ''' ;
+{% endif %}
+
+      echo 'ERR=configfiles segment has been splited use the new segments'
+      echo '#### </configfiles_new>'
+      echo ''
+
+      for category in ${!categories[@]} ; do
+        echo "#### <configfiles_${category}>" ;
+        all_files=$(echo "${categories[${category}]}" | /usr/bin/sort | /usr/bin/uniq) || true ;
+        all_files="${!category} $all_files" ;
+        for file in ${all_files}; do
+           [ "${file:0:1}" != "/" ] && continue || true ;
+           /usr/bin/grep -H -v "^\s*$\|^\s*\#" "${file}" 2>/dev/null && echo "${file}=OK" || echo "${file}=ERR(missing_empty_or_contain_only_commented_lines)" ;
+        done || echo "ERR=(while_running_configfiles_segment)"
+        echo "#### </configfiles_${category}>" ;
+        echo "" ;
+      done || true ;
+{% if techspec_version['redhat_os_linux.8'] | default('latest') == 'v10.1' %}
+        echo "#### <gnome_files>" ;
+        category='gnome' ;
+        all_files=$(echo "${categories[${category}]}" | /usr/bin/sort | /usr/bin/uniq) || true ;
+        all_files="${!category} $all_files" ;
+        for file in ${all_files}; do
+           [ "${file:0:1}" != "/" ] && continue || true ;
+           /usr/bin/grep -H -v "^\s*$\|^\s*\#" "${file}" 2>/dev/null && echo "${file}=OK" || echo "${file}=ERR(missing_empty_or_contain_only_commented_lines)" ;
+        done || echo "ERR=(while_running_configfiles_segment)"
+        echo "#### </gnome_files>" ;
+        echo "" ;
+{% endif %}
+
+      exit 0 ;
+
+    become: true
+    footer: ''
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# ------------------------------------------------=== These segments are used by best techspec only ===----------------------------------------------------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ( ansible_facts.distribution | lower == "redhat" and ansible_facts.distribution_major_version | int >= 7 ) or ( ansible_facts.distribution | lower == "ubuntu" and ansible_facts.distribution_major_version | int >= 20 )  %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('modprobe_cis' in check_list or 'all' in check_list) and '-modprobe_cis' not in check_list %}
+  - header: '#### <modprobe_cis>'
+    command: |
+      for l_mname in cramfs freevxfs hfs hfsplus jffs2 usb-storage squashfs udf dccp tipc rds sctp ; do
+        if modprobe_out="$(/usr/sbin/modprobe -n -v "$l_mname" 2>&1 )" ; then
+          [ -z "$modprobe_out" ] && modprobe_out="is_loadable:and_loaded" ;
+          echo "cis_${l_mname}:is_available:"${modprobe_out} ;
+          if ! /usr/sbin/lsmod | /usr/bin/grep "${l_mname}" > /dev/null 2>&1 ; then
+            echo "cis_${l_mname}:not_loaded" ;
+            l_loadable="$(/usr/sbin/modprobe -n -v "$l_mname" 2>/dev/null )" ;
+            [ "$(/usr/bin/wc -l <<< "$l_loadable")" -gt "1" ] && l_loadable="$(/usr/bin/grep -P -- "(^\h*install|\b$l_mname)\b" <<< "$l_loadable")" ;
+            if m=$(/usr/bin/grep -Pq -- '^\h*install \/bin\/(true|false)' <<< "$l_loadable";) ; then
+              echo "cis_${l_mname}:not_loadable:"${modprobe_out}
+            else
+              echo "cis_${l_mname}:is_loadable:${l_loadable}"
+            fi
+          else
+            echo "cis_${l_mname}:is_loaded" ;
+          fi
+          /usr/sbin/modprobe --showconfig | /usr/bin/grep -Pq -- '^\h*blacklist\h+'"${l_mname//-/_}"'\b' && echo "cis_${l_mname}:is_denied" || echo "cis_${l_mname}:not_denied" ;
+        else
+          echo "cis_${l_mname}:not_available:${modprobe_out}" ;
+        fi ;
+      done || echo "ERR=while running CIS modprobe segment" ;
+
+    become: true
+    footer: '#### </modprobe_cis>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('systemctl_active' in check_list or 'all' in check_list) and '-systemctl_active' not in check_list %}
+  - header: '#### <systemctl_active_new>'
+    command: |
+      echo 'ERR=systemctl_active segment has been splited use the new segments'
+      echo '#### </systemctl_active_new>'
+      echo ''
+      services='''
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+      apport.service
+      isc-dhcp-server
+      isc-dhcp-server.service
+      isc-dhcp-server6.service
+      bind9.service
+      rsync.service
+      smbd.service
+      tftpd-hpa.service
+      apache2.socket
+      systemd-journal-upload.service
+      chrony.service
+      ufw.service
+      ntp.service
+      systemd-timesyncd.service
+      systemd-journal-remote.service
+      crond.service
+      cron
+      cron.service
+      iptables.service
+      rsyslog.service
+      dailyaidecheck.service
+      dailyaidecheck.timer
+{% endif %}
+{% if ansible_facts.distribution | lower == "redhat" %}
+      cyrus-imapd.service
+      dhcpd.service
+      dhcpd6.service
+      firewalld.service
+      httpd.socket
+      httpd.service
+      named.service
+      nfs-server
+      rsyncd
+      rsyncd.socket
+      rsyncd.service
+      smb.service
+      telnet.socket
+      tftp.socket
+      tftp.service
+{% endif %}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 7 %}
+      rexd.service
+      rstatd.service
+      rusersd.service
+      finger.socket
+      rwhod.service
+      rsh.socket
+      rlogin.socket
+      rexec.socket
+      auditd.service
+      chronyd.service
+      apache.service
+      lighttpd.service
+      nfs.service
+{% endif %}
+      ntpd
+      slapd.service
+      openntpd
+      aidecheck.service
+      aidecheck.timer
+      autofs.service
+      avahi-daemon.socket
+      avahi-daemon.service
+      bluetooth.service
+      crond
+      cups.socket
+      cups.service
+      dnsmasq.service
+      dovecot.socket
+      dovecot.service
+      nfs-server.service
+      nftables.service
+      nginx.service
+      rpcbind
+      rpcbind.socket
+      rpcbind.service
+      rsyslog
+      snmpd.service
+      squid.service
+      systemd-journald.service
+      systemd-journal-remote.socket
+      tmp.mount
+      vsftpd.service
+      xinetd.service
+      ypserv.service
+      apache2.service
+      '''
+
+      echo '#### <systemctl_is_enabled>'
+      for SERVICE in ${services}; do
+        [ "${SERVICE:0:1}" = "#" ] && continue || true ;
+        status=$(/usr/bin/systemctl is-enabled ${SERVICE} 2>/dev/null) && echo "${SERVICE}:${status}":=0 || echo "${SERVICE}:${status}:=1" ;
+      done || echo "ERR=while running systemctl_is_enabled segment"
+      echo '#### </systemctl_is_enabled>'
+      echo ''
+      echo '#### <systemctl_is_active>'
+      for SERVICE in ${services}; do
+        [ "${SERVICE:0:1}" = "#" ] && continue || true ;
+        status=$(/usr/bin/systemctl is-active ${SERVICE} 2>/dev/null) && echo "${SERVICE}:${status}":=0 || echo "${SERVICE}:${status}:=1" ;
+      done || echo "ERR=while running systemctl_is_active segment"
+      echo '#### </systemctl_is_active>'
+      echo ''
+
+    become: true
+    footer: ''
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('check_dups' in check_list or 'all' in check_list) and '-check_dups' not in check_list %}
+  - header: '#### <check_dups>'
+    command: |
+      required_cmds="/usr/bin/cat /usr/bin/sort /usr/bin/uniq /usr/bin/wc /usr/bin/tr"
+      for cmd in $required_cmds; do if test -x "$cmd" ; then true ; else echo "ERR=${cmd} not available" ; exit 0 ;  fi ; done
+      for field in 1 3 ; do
+        [ "$field" = "1" ] && fieldname="name"
+        [ "$field" = "3" ] && fieldname="id"
+        for target in passwd group; do
+          count_all_users=$(/usr/bin/cat /etc/${target} | /usr/bin/wc -l)
+          count_dup_users=$(/usr/bin/cat /etc/${target} | /usr/bin/cut -f ${field} -d":" | /usr/bin/sort -n | /usr/bin/uniq -d | /usr/bin/wc -l)
+          count_uni_users=$(/usr/bin/cat /etc/${target} | /usr/bin/cut -f ${field} -d":" | /usr/bin/sort -n | /usr/bin/uniq -u | /usr/bin/wc -l)
+{% if udc_debug | default(false) | bool %}
+            echo "$count_all_users $count_dup_users $count_uni_users"
+{% endif %}
+          if   [ -z "$count_all_users" ] ;    then echo "check_dups_${target}_${fieldname}:read_all_failed" ;
+          elif [ -z "$count_uni_users" ] ;    then echo "check_dups_${target}_${fieldname}:read_uni_failed" ;
+          elif [ "$count_all_users" -eq 0 ] ; then echo "check_dups_${target}_${fieldname}:all_count_failed";
+          elif [ "$count_uni_users" -eq 0 ] ; then echo "check_dups_${target}_${fieldname}:uni_count_failed";
+          elif [ "$count_dup_users" -eq 0 ] ; then echo "check_dups_${target}_${fieldname}:No_dups" ;
+          else
+           dups=$(/usr/bin/cat /etc/${target} | /usr/bin/cut -f ${field} -d":" | /usr/bin/sort -n | /usr/bin/uniq -d | /usr/bin/tr '\n' ' ') ;
+           echo "check_dups_${target}_${fieldname}:Dups: ${dups}" ;
+          fi ;
+        done ;
+      done ;
+
+    become: true
+    footer: >
+      #### </check_dups>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('check_by_users' in check_list or 'all' in check_list) and '-check_by_users' not in check_list %}
+  - header: '#### <check_by_users>'
+    command: |
+      required_cmds="/usr/bin/awk /usr/bin/stat /bin/getent"
+      for cmd in $required_cmds; do if test -x "$cmd" ; then true ; else echo "check_by_users=ERR=$cmd not available" ; exit 0 ;  fi ; done
+      for lists in notexist_homes badperm_homes badowned_homes forward netrc badperm_netrc rhosts badperm_dotfiles badperm_bashhistory ; do declare -a $lists ; done ;
+      user_list=$(/usr/bin/timeout 60 /usr/bin/getent passwd 2>&1) && getent_exit=$? || exit_code=${?} ;
+      [ "${exit_code}" -ge 124 ] && echo "check_by_users=ERR=POLICY FAILED DUE TO getent command timeout - may remote directory server is unreachable - only local users will be checked - PERFORM MANUAL VERIFICATION" ;
+      [ "${exit_code}" -ge 124 ] && user_list=$(cat /etc/passwd);
+      users=$( echo "${user_list}" | /usr/bin/awk -F: '($1!~/(halt|sync|shutdown|nfsnobody)/ && $7!~/^(\/usr)?\/sbin\/nologin(\/)?$/ && $7!~/(\/usr)?\/bin\/false(\/)?$/) { print $1 " " $6 }' ; )
+      while read -r user home ; do
+        h_stat='__' ; h_stat='__'; h_perm='__' ; n_stat='__'; n_perm='__' ;
+        if [ -d "${home}" ] ; then
+          if h_stat=$(/usr/bin/stat -L -c "%a:%U" "${home}" 2>/dev/null) 2>/dev/null ; then
+            h_owner="${h_stat#*:}" ;
+            h_perm="${h_stat%:*}" ;
+            h_gperm="${h_perm: (-2): (-1)}" ;
+            [ "${h_owner}" = "${user}" ] || badowned_homes+=("${home}:$h_owner") ;
+            [ "${h_perm:(-1)}" = '0' ]   || badperm_homes+=("${home}:$h_perm") ;
+            [ "${h_gperm}" = '0' -o "${h_gperm}" = '1' -o "${h_gperm}" = '5' ]  || badperm_homes+=("${home}:$h_perm") ;
+          else notexist_homes+=("${home}:ERR=stat") ;
+          fi
+        else notexist_homes+=("${home}:${user}") ;
+        fi
+        if [ -f "${home}/.netrc"  ] ; then
+          netrc+=("${home}/.netrc:${user}") ;
+          n_stat=$(/usr/bin/stat -L -c "%a:%U" "${home}/.netrc" 2>/dev/null) 2>/dev/null || echo "check_by_users=ERR=while reading ${home}/.netrc" ;
+          n_perm="${n_stat%:*}" ;
+          [ "${n_perm:(-2)}" = '00' ] || [ "${n_perm}" = '0' ] || badperm_netrc+=("${home}/.netrc:$n_perm") ;
+        fi
+        [ ! -f "${home}/.forward" ] || forward+=("${home}/.forward") ;
+        [ ! -f "${home}/.rhosts" ]  || rhosts+=("${home}/.rhosts") ;
+        for file in "${home}"/.*; do
+          if [ ! -h "${file}" ] && [ -f "${file}" ]; then
+            d_stat=$(/usr/bin/stat -L -c "%A" "${file}" 2>/dev/null)
+            d_gperm="${d_stat:5:1}" ;
+            d_wperm="${d_stat:8:1}" ;
+            if [ "${d_gperm}" != "-" ] || [ "${d_wperm}" != "-" ]; then badperm_dotfiles+=("${file}:$d_stat") ;fi
+          fi
+        done
+        if [ -f "${home}/.bash_history" ] ; then
+          hist_perm=$(/usr/bin/stat -L -c "%A" "${home}/.bash_history")
+          echo "${hist_perm}" | /usr/bin/grep -P '\-...\-\-\-\-\-\-' > /dev/null || badperm_bashhistory+=("${home}/.bash_history:${hist_perm}") ;
+        fi
+{% if udc_debug | default(false) | bool %}
+        echo "U:$user H:$home HO:${h_owner} HP:${h_perm:(-2)} NP:${n_perm:(-2)} F:$file S:$d_stat G:$d_gperm W:$d_wperm HIST:${hist_perm}" ;
+{% endif %}
+      done <<< "$users"
+      for lists in notexist_homes badperm_homes badowned_homes forward netrc badperm_netrc rhosts badperm_dotfiles badperm_bashhistory; do declare -p $lists ; done
+
+    become: true
+    footer: >
+      #### </check_by_users>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('log_permissions' in check_list or 'all' in check_list) and '-log_permissions' not in check_list %}
+  - header: '#### <log_permissions>'
+    command: |
+      name='log_permissions' ;
+      /bin/find -L /var/log -maxdepth 1 -type f  -printf "%p: %m %u %g\n" 2>&1  && /bin/find -L /var/log -mindepth 2 -type f \( -perm /0137 -o ! -user root -o ! -group root \)  -printf "%p: %m %u %g\n"  2>&1 && echo "$name=OK(${?})" || echo "$name=ERR(${?})" ;
+
+    become: true
+    footer: '#### </log_permissions>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('worldwriteable' in check_list or 'all' in check_list) and '-worldwriteable' not in check_list %}
+  - header: '#### <worldwriteable>'
+    command: |
+
+      VAR1=1
+      MAXFSCOUNT=100
+      MAXFILECOUNTPERFS=1000000
+      MAXFILECOUNTPERFS=10000000
+      MAXRUNTIME=20
+      MAXRUNTIME=1800
+      MAXRESULTSIZE=1024
+      MAXRESULTSIZE=33554432
+      SAMPLESIZE=256
+
+      required_cmds="/usr/bin/getent /usr/bin/timeout /usr/bin/awk /usr/bin/wc /usr/bin/df /usr/bin/nice /usr/bin/xargs /usr/bin/head /usr/bin/tail"
+      for cmd in $required_cmds; do if test -x "$cmd" ; then true ; else echo "ERR=(${cmd}) is missing" ; exit 0 ;  fi ; done
+      is_volumes_under_homes=$(while IFS=: read -r username _ _ _ _ home _; do  [ -d "${home}/.local/share/containers/storage/" ] && echo -n "${home} " ; done < <(/usr/bin/getent passwd) )
+      df_list=$( /usr/bin/timeout 60 /usr/bin/df --local --portability --print-type -x overlay -x gpfs -x tmpfs 2>&1 ) && exit_code=${?}  || exit_code=${?} ;
+      if [ ${exit_code} -ge 124 ] ; then
+        echo "ERR=POLICY FAILED DUE TO df command timeout (exit code: ${exit_code}) - may remote filesystem or storage is unreachable - PERFORM MANUAL VERIFICATION" ;
+        echo "${df_list}" ;
+      elif [ ${exit_code} -ge 1   ] ; then
+        echo "ERR=POLICY FAILED DUE TO df command error (exit code: ${exit_code}) - PERFORM MANUAL VERIFICATION" ;
+        echo "${df_list}" ;
+      elif [ $( echo "${df_list}" | /usr/bin/wc -l ) -gt ${MAXFSCOUNT} ] ; then
+        echo "ERR=POLICY FAILED DUE TO there are too many volumes mounted on the server - PERFORM MANUAL VERIFICATION" ;
+        echo "${df_list}" ;
+      elif ! /usr/bin/awk -v maxfile="${MAXFILECOUNTPERFS}" {'if (NR!=1) if  ($4>maxfile) print "ERR=POLICY FAILED DUE TO "$1 " have more than "maxfile" files("$4") - PERFORM MANUAL VERIFICATION" ; if (NR!=1) if ($4>maxfile) exit 1 '}  <<< "$(/usr/bin/timeout 60 /usr/bin/df --portability --print-type -x gpfs -x tmpfs --inodes)" ; then
+        echo "${df_list}" ;
+      else
+        /usr/bin/timeout 60 /usr/bin/mount | grep '^overlay\b' && echo "ERR=POLICY FAILED DUE TO system contain overlay fs - PERFORM MANUAL VERIFICATION" || true ;
+        /usr/bin/timeout 60 /usr/bin/mount | grep '^gpfs\b'    && echo "ERR=POLICY FAILED DUE TO system contain gpfs - PERFORM MANUAL VERIFICATION" || true ;
+        [ -d /var/lib/docker/overlay2/ ]                       && echo "ERR=POLICY FAILED DUE TO system may contain /var/lib/docker/overlay2/ directory - PERFORM MANUAL VERIFICATION" || true ;
+        [ -n "${is_volumes_under_homes}" ]                     && echo "ERR=POLICY FAILED DUE TO system may contain container volume under $is_volumes_under_homes directories - PERFORM MANUAL VERIFICATION" || true ;
+        result=$(/usr/bin/timeout "${MAXRUNTIME}" /usr/bin/find $(echo "$df_list" | /usr/bin/awk {'if (NR!=1) print $7'} ) -xdev \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -nouser -printf "%p:NOUSER\n" \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -nogroup -printf "%p:NOGROUP\n" \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -type f -perm -0002 -printf "%p:WWFILE\n"  \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o  \( -type d -perm -0002 -a ! -perm -1000 -printf  "%p:WWDIR\n"  \) 2>&1 && echo "OK" || { echo "" ; sleep 0.1 ; echo "ERR=(${?}) POLICY FAILED DUE TO find command error or find command run too long (more than $MAXRUNTIME sec) - PERFORM MANUAL VERIFICATION" ; } ; ) ;
+        size=$(echo -n "${result}" | /usr/bin/wc -c ;) || true ;
+        [ ${size} -eq 0 ] && echo "ERR=POLICY FAILED DUE TO - result not valid PERFORM MANUAL VERIFICATION" || true ;
+        [ ${size} -lt ${MAXRESULTSIZE} ] && echo "${result}" || { echo "ERR=POLICY FAILED DUE TO too many files found to be non-compliant cannot be processed on the CACF platform result size: ${size} bytes - PERFORM MANUAL VERIFICATION" ; echo "${result}" | /usr/bin/head -n ${SAMPLESIZE} ; echo "${result}" | /usr/bin/tail -n ${SAMPLESIZE} ;  } || true
+
+      fi
+      exit 0
+
+    become: true
+    footer: >
+      #### </worldwriteable>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('open_not_covered_ports' in check_list or 'all' in check_list) and '-open_not_covered_ports' not in check_list %}
+{% if ansible_facts.distribution | lower == "ubuntu" %}
+  - header: '#### <open_not_covered_ports>'
+    command: |
+      if [ -x '/usr/bin/ss' ]; then
+        ss='/usr/bin/ss'
+       elif [ -x '/usr/sbin/ss' ]; then
+        ss='/usr/sbin/ss'
+       else
+        echo "ERR=POLICY FAILED DUE TO ss binary is missing - PERFORM MANUAL VERIFICATION"
+      fi
+      ot=$(echo $($ss -tln | /usr/bin/awk '(NR > 1 && $4!~/%lo:/ && $4!~/127.0.0.1:/ && $4!~/\[?::1\]?:/) {split($4, a, ":"); print a[length(a)]}' | /usr/bin/sort -un)) || echo "ERR=ss tcp" ;
+      ou=$(echo $($ss -uln | /usr/bin/awk '(NR > 1 && $4!~/%lo:/ && $4!~/127.0.0.1:/ && $4!~/\[?::1\]?:/) {split($4, a, ":"); print a[length(a)]}' | /usr/bin/sort -un)) || echo "ERR=ss udp" ;
+      ut=$( /usr/sbin/ufw status verbose         | /usr/bin/perl -nle 'print $1 if /^\h*(\d+)\/tcp/'                                                   | /usr/bin/sort -un ) || echo "debug=ufw tcp" ;
+      uu=$( /usr/sbin/ufw status verbose         | /usr/bin/perl -nle 'print $1 if /^\h*(\d+)\/udp/'                                                   | /usr/bin/sort -un ) || echo "debug=ufw udp" ;
+      i4t=$( /usr/sbin/iptables  -L INPUT  -v -n | /usr/bin/perl -nle 'print $1 if /\htcp\h+(?:spt:\d+\h+)?dpt:(\d+)/'                                 | /usr/bin/sort -un ) || echo "debug=iptables tcp" ;
+      i4u=$( /usr/sbin/iptables  -L INPUT  -v -n | /usr/bin/perl -nle 'print $1 if /\hudp\h+(?:spt:\d+\h+)?dpt:(\d+)/'                                 | /usr/bin/sort -un ) || echo "debug=iptables udp" ;
+      i6t=$( /usr/sbin/ip6tables -L INPUT  -v -n | /usr/bin/perl -nle 'print $1 if /\htcp\h+(?:spt:\d+\h+)?dpt:(\d+)/'                                 | /usr/bin/sort -un ) || echo "debug=ip6tables tcp" ;
+      i6u=$( /usr/sbin/ip6tables -L INPUT  -v -n | /usr/bin/perl -nle 'print $1 if /\hudp\h+(?:spt:\d+\h+)?dpt:(\d+)/'                                 | /usr/bin/sort -un ) || echo "debug=ip6tables udp" ;
+      open_t=($ot) || true ;
+      open_u=($ou) || true ;
+      for port in ${open_t[@]} ; do
+       echo "|-|${port}|tcp|$(for i in ut i4t i6t ; do echo "${!i}" | /usr/bin/grep -qx "^${port}$" && echo -n 'Y|' || echo -n 'N|' ; done)" ;
+      done || true ;
+      for port in ${open_u[@]} ; do
+       echo "|-|${port}|udp|$(for i in uu i4u i6u ; do echo "${!i}" | /usr/bin/grep -qx "^${port}$" && echo -n 'Y|' || echo -n 'N|' ; done)" ;
+      done || true ;
+      echo "$ss -tuln";
+      $ss -tuln 2>&1 || true ;
+      echo '/usr/sbin/ufw status verbose';
+      /usr/sbin/ufw status verbose 2>&1 || true ;
+      echo '/usr/sbin/iptables -L INPUT -v -n';
+      /usr/sbin/iptables -L INPUT -v -n 2>&1 || true ;
+      echo '/usr/sbin/ip6tables -L INPUT -v -n';
+      /usr/sbin/ip6tables -L INPUT -v -n 2>&1 || true ;
+
+    become: true
+    footer: '#### </open_not_covered_ports>'
+
+{% endif %}
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# --------------------------------------==== Segments what arrived from CIS benchmark directly, but still in use ===---------------------------------------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('wifi_check' in check_list or 'all' in check_list) and '-wifi_check' not in check_list %}
+  - header: '#### <wifi_check>'
+    command: |
+      {
+      if [ -n "$(/usr/bin/find /sys/class/net/*/ -type d -name wireless)" ]; then
+        t=0
+        mname=$(for driverdir in $(find /sys/class/net/*/ -type d -name wireless | /usr/bin/xargs -0 /usr/bin/dirname); do /usr/bin/basename "$(/usr/bin/readlink -f "$driverdir"/device/driver/module)";done | /usr/bin/sort -u)
+        for dm in $mname; do
+          if /usr/bin/grep -Eq "^\s*install\s+$dm\s+/bin/(true|false)" /etc/modprobe.d/*.conf; then /bin/true
+          else echo "$dm is not disabled" ; t=1 ;
+          fi
+        done
+      [ "$t" -eq 0 ] && echo "Wireless is not enabled"
+      else echo "Wireless is not enabled"
+      fi
+      } || echo "ERR=segment"
+    become: true
+    footer: >
+      #### </wifi_check>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nft_loopback' in check_list or 'all' in check_list) and '-nft_loopback' not in check_list %}
+  - header: '#### <nft_loopback>'
+    command: |
+      l_output=""
+      l_output2=""
+      if /usr/sbin/nft list ruleset | /usr/bin/awk '/hook\s+input\s+/,/\}\s*(#.*)?$/' | /usr/bin/grep -Pq -- '\H+\h+"lo"\h+accept'; then
+        l_output="$l_output - Network traffic to the loopback address is correctly set to accept"
+      else
+        l_output2="$l_output2 - Network traffic to the loopback address is not set to accept"
+      fi
+      l_ipsaddr="$(nft list ruleset | /usr/bin/awk '/filter_IN_public_deny|hook\s+input\s+/,/\}\s*(#.*)?$/' | /usr/bin/grep -P -- 'ip\h+saddr')"
+      echo "$l_ipsaddr"
+      if /usr/bin/grep -Pq -- 'ip\h+saddr\h+127\.0\.0\.0\/8\h+(counter\h+packets\h+\d+\h+bytes\h+\d+\h+)?drop' <<< "$l_ipsaddr" || /usr/bin/grep -Pq -- 'ip\h+daddr\h+\!\=\h+127\.0\.0\.1\h+ip\h+saddr\h+127\.0\.0\.1\h+drop' <<< "$l_ipsaddr"; then
+        l_output="$l_output - IPv4 network traffic from loopback address correctly set to drop"
+      else
+        l_output2="$l_output2 - IPv4 network traffic from loopback address not set to drop"
+      fi
+      if /usr/bin/grep -Pq -- '^\h*0\h*$' /sys/module/ipv6/parameters/disable; then
+        l_ip6saddr="$(nft list ruleset | /usr/bin/awk '/filter_IN_public_deny|hook input/,/}/' | /usr/bin/grep 'ip6 saddr')"
+        if /usr/bin/grep -Pq 'ip6\h+saddr\h+::1\h+(counter\h+packets\h+\d+\h+bytes\h+\d+\h+)?drop' <<< "$l_ip6saddr" || /usr/bin/grep -Pq -- 'ip6\h+daddr\h+\!=\h+::1\h+ip6\h+saddr\h+::1\h+drop' <<< "$l_ip6saddr"; then
+          l_output="$l_output - IPv6 network traffic from loopback address correctly set to drop"
+        else
+          l_output2="$l_output2 - IPv6 network traffic from loopback address not set to drop"
+        fi
+      fi
+      if [ -z "$l_output2" ]; then echo "Audit Result:PASS *** $l_output"
+      else echo "Audit Result:FAIL *** $l_output2 - Correctly set:$l_output"
+      fi
+    become: true
+    footer: >
+      #### </nft_loopback>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('root_path' in check_list or 'all' in check_list) and '-root_path' not in check_list %}
+  - header: '#### <root_path>'
+    command: >
+      RPCV="$(sudo -Hiu root env | grep '^PATH=' | cut -d= -f2)" ;
+      echo "$RPCV" | grep -q "::" && echo "root's path contains a empty directory (::)" ;
+      echo "$RPCV" | grep -q ":$" && echo "root's path contains a trailing (:)" ;
+      for x in $(echo "$RPCV" | tr ":" " ");
+      do if [ -d "$x" ] ;
+      then ls -ldH "$x" | awk '$9 == "." {print "PATH contains current working directory (.)"} $3 != "root" {print $9, "is not owned by root"} substr($1,6,1) != "-" {print $9, "is group writable"} substr($1,9,1) != "-" {print $9, "is world writable"}' ;
+      else echo "$x is not a directory" ;
+      fi ;
+      done || echo "ERR:while" ;
+    become: true
+    footer: >
+      #### </root_path>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# -----==== Followings are temporaly added segments, used only in techspec v9.2 in sat 1.36, just copied from section guildlines, tested on CLS ===--------- #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int == 8 %}
+{% if techspec_version['redhat_os_linux.8'] | default('latest') == 'v9.2' %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('modprobe' in check_list or 'all' in check_list) and '-modprobe' not in check_list %}
+  - header: '#### <modprobe>'
+    command: |
+      for MODULE in cramfs freevxfs jffs2 hfs hfsplus squashfs udf dccp sctp rds tipc usb-storage vfat nf_tables ip_tables ipv6; do
+        /usr/sbin/modinfo $MODULE >/dev/null 2>/dev/null && ! /usr/sbin/modprobe -n --first-time $MODULE 2>/dev/null && echo "$MODULE Loaded $(/usr/bin/grep -r "\s$MODULE\s" /etc/modprobe.d/* 2>/dev/null)" || echo "$MODULE Not loaded$(/usr/bin/grep -r "\s$MODULE\s" /etc/modprobe.d/* 2>/dev/null | head -1)" || true ;
+      done || echo "ERR=while running modprobe segment" ;
+
+    become: true
+    footer: '#### </modprobe>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('systemctl_active' in check_list or 'all' in check_list) and '-systemctl_active' not in check_list %}
+  - header: '#### <systemctl_active>'
+    command: |
+        for SERVICE in rsyncd nfs-server aidecheck.service aidecheck.timer rpcbind rpcbind.socket nftables firewalld iptables iptables.service ip6tables ip6tables.service  systemd-journal-remote.socket ; do
+          status=$(/usr/bin/systemctl is-enabled ${SERVICE} 2>/dev/null) && echo "${SERVICE}:${status}" || echo "${SERVICE}:Not found" ;
+        done || echo "ERR: while running systemctl_active segment"
+    become: true
+    footer: >
+      #### </systemctl_active>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('configfiles' in check_list or 'all' in check_list) and '-configfiles' not in check_list %}
+  - header: '#### <configfiles>'
+    command:  |
+      files='''
+      /etc/rsyslog.conf
+      /etc/rsyslog.d/*.conf
+      /etc/dconf/profile/gdm
+      /etc/dconf/db/gdm.d/*
+      /etc/sysctl.conf
+      /etc/sysctl.d/*.conf
+      /usr/lib/systemd/system/rescue.service*
+
+      /etc/sudoers*
+      /etc/audit/rules.d/*.rules
+
+      /boot/grub2/grub.cfg
+      /boot/grub2/grubenv
+      /boot/grub2/grub.conf
+      /boot/efi/EFI/redhat/grub.conf
+      /boot/efi/EFI/redhat/grubenv
+      /boot/efi/EFI/redhat/grub.cfg
+
+      /etc/yum.conf
+      /etc/yum.repos.d/*
+      /etc/redhat-release
+      /etc/fstab
+      /etc/motd
+      /etc/samba/smb.conf
+      /etc/securetty
+      /etc/crypto-policies/config
+
+      /etc/gdm/custom.conf
+      /etc/skel/.cshrc
+      /etc/skel/.login
+      /etc/skel/.profile
+      /etc/skel/.bashrc
+      /etc/skel/.bash_profile
+      /etc/skel/.bash_login
+      /etc/skel/.tcshrc
+      /etc/security/faillock.conf
+      /etc/group
+      /etc/chrony.conf
+      /etc/sysconfig/chronyd
+      /etc/selinux/config
+      /etc/bashrc
+      /etc/bashrc*
+      /etc/profile
+      /etc/profile.d/*.sh
+      /etc/postfix/main.cf
+      /etc/postfix/master.cf
+      /etc/dnf/dnf.conf
+      /etc/profile.d/Kyndrylsinit.sh
+      /etc/profile.d/Kyndrylsinit.csh
+      /etc/csh.login.local
+      /etc/csh.login
+      /bin/csh
+      /etc/libuser.conf
+      /etc/systemd/coredump.conf
+      /etc/selinux/config
+      /etc/issue
+      /etc/issue.net
+      /etc/systemd/journald.conf
+      /etc/sysconfig/sshd
+      /etc/authselect/authselect.conf
+      /etc/login.defs
+      /etc/pam.d/su
+      /etc/pam.d/system-auth
+      /etc/pam.d/password-auth
+      /etc/authselect/password-auth
+      /etc/authselect/system-auth
+      /etc/security/pwquality.conf
+      /usr/lib/tmpfiles.d/pam.conf
+      /etc/authselect/password-auth
+      /etc/authselect/system-auth
+      /etc/sysconfig/nftables.conf
+      ''' ;
+
+      grub_files=$(/usr/bin/find /boot -type f \( -name 'grubenv' -o -name 'grub.conf' -o -name 'user.cfg' -o -name 'grub.cfg' \) ) || echo "ERR(while_finding_grubconfigs)" ;
+      all_files=$(echo "$files$grub_files" | /usr/bin/sort | /usr/bin/uniq) || all_files=${files}
+      all_files="/etc/os-release $all_files"
+      for file in ${all_files}; do
+         /usr/bin/grep -H -v "^\s*$\|^\s*\#" "${file}" 2>/dev/null && echo "${file}=OK" || echo "${file}=ERR(missing_empty_or_contain_only_commented_lines)" ;
+      done || echo "ERR(while_running_configfiles_segment)"
+
+    become: true
+    footer: >
+      #### </configfiles>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ipv6_check' in check_list or 'all' in check_list) and '-ipv6_check' not in check_list %}
+  - header: '#### <ipv6_check>'
+    command: |
+      sysctl_state="$(/usr/sbin/sysctl net.ipv6.conf.all.disable_ipv6 ; )" || true ;
+      kernel_param="$(usr/bin/grep 'ipv6.disable=1' /proc/cmdline     ; )" || true ;
+      if [ \( "$sysctl_state" = "net.ipv6.conf.all.disable_ipv6 = 1" \) -o \( -n "$kernel_param"  \) ] ; then echo "IPV6_Disabled(S:$sysctl_state K:$kernel_param)" ; else echo "IPV6_Enabled (S:$sysctl_state K:$kernel_param)" ; fi  ;
+
+    become: true
+    footer: >
+      #### </ipv6_check>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('allactive_entries_osr' in check_list or 'all' in check_list) and '-allactive_entries_osr' not in check_list %}
+{# IZ.1.8.13.1.2 #}
+  - header: '#### <allactive_entries_osr>'
+    command:
+      file="/var/spool/cron/root /etc/crontab /var/spool/cron/tabs/root /etc/cron.d/ /etc/init.d/ /etc/rc.d/rc*" ;
+      for i in $file ;
+      do getfacl $i 2> /dev/null | grep "user:" | grep -v "user::" || echo $i $(getfacl $i 2> /dev/null | grep owner) ;
+      done
+    become: true
+    footer: >
+      #### </allactive_entries_osr>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('crond_osr' in check_list or 'all' in check_list) and '-crond_osr' not in check_list %}
+{# IZ.1.8.20.1 #}
+  - header: '#### <crond_osr>'
+    command: |
+      entries=/etc/cron.d/* ;
+      ls /etc/cron.d/ > /dev/null && echo "OK: /etc/cron.d is exists"|| echo "ERR: /etc/cron.d  is missing" ;
+      ls $entries | while read DIR ;
+      do cPath=$(echo $(grep PATH $DIR | sed 's/^PATH=/:/')":" | sed 's~:/sbin:~:~g'| sed 's~:/bin:~:~g' | sed 's~:/usr/sbin:~:~g') ;
+      removeRun='' ;
+      [[ "$cPath" == ":/usr/bin:" ]] && removeRun='run-parts' ;
+      tVar=$(grep -v '^[[:space:]]*#' $DIR | awk '{print $7}' | awk '{print $1}' | grep -v '/' | grep -v internal | grep -v "^$removeRun$" | grep -v '^$') ;
+      [[ -n "$tVar" ]] && echo "ERR:Not fully qualified : file=$DIR : executable(s)=$tVar" || echo "OK:$DIR" ;
+      done || echo "OK:no item"
+    become: true
+    footer: >
+      #### </crond_osr>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('crond_osr_set' in check_list or 'all' in check_list) and '-crond_osr_set' not in check_list %}
+{# IZ.1.8.20.2 #}
+  - header: '#### <crond_osr_set>'
+    command: >
+      entries=/etc/cron.d/* ;
+      /bin/ls $entries | while read DIR ;
+      do grep -v -- '^[[:space:]]*#' $DIR | awk '{print $7}' | grep '^/' | while read FILE ;
+      do while [[ -a ${FILE} ]] ;
+      do [[ "$(ls -ld ${FILE})" = @(????????w?*) ]] && printf " WARNING ${DIR} : ${FILE} is world writable\n" ;
+      FILE=${FILE%/*} ;
+      done || true ;
+      done || true ;
+      done | sort -u || true
+    become: true
+    footer: >
+      #### </crond_osr_set>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('crontab_osr_path' in check_list or 'all' in check_list) and '-crontab_osr_path' not in check_list %}
+{# IZ.1.8.15.1 #}
+  - header: '#### <crontab_osr_path>'
+    command: >
+      entries=/etc/crontab ;
+      grep -v '^[[:space:]]*#' $entries | grep -v '[[:space:]]run-parts' | awk '{print $7}' | grep -v internal | grep -v "^$" | while read DIR ;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do [[ "$(ls -ld ${DIR})" = @([!l]???????w?? *) ]] && printf " WARNING ${DIR} is world writable\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done
+    become: true
+    footer: >
+      #### </crontab_osr_path>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('crontab_osr_set' in check_list or 'all' in check_list) and '-crontab_osr_set' not in check_list %}
+{# IZ.1.8.15.2 #}
+  - header: '#### <crontab_osr_set>'
+    command: >
+      entries=/etc/crontab ;
+      grep -v '^[[:space:]]*#' $entries | grep -v '[[:space:]]run-parts' | awk '{print $7}' | grep -v internal | grep -v "^$" | while read DIR ;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do [[ "$(ls -ld ${DIR})" = @([!l]???????w?? *) ]] && printf " WARNING ${DIR} is world writable\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done
+    become: true
+    footer: >
+      #### </crontab_osr_set>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('groupids_assigned_to_osrs' in check_list or 'all' in check_list) and '-groupids_assigned_to_osrs' not in check_list %}
+{# IZ.1.8.1.3 #}
+  - header: '#### <groupids_assigned_to_osrs>'
+    command: >
+      for i in /var/log/wtmp /var/log/messages /var/log/secure ; do getfacl -p $i | grep group: | grep -v 'group::' ; done || echo "ERR:for"
+    become: true
+    footer: >
+      #### </groupids_assigned_to_osrs>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('osr_cron_root' in check_list or 'all' in check_list) and '-osr_cron_root' not in check_list %}
+{# IZ.1.8.14.2 #}
+  - header: '#### <osr_cron_root>'
+    command: >
+      crontab -l |grep -Ev '^#' |awk '{print $6}' |grep "^/" |sort -u | while read DIR;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do [[ "$(ls -ld ${DIR})" = @([!l]???????w?? *) ]] && printf " WARNING ${DIR} is world writable\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done || echo "ERR:while"
+    become: true
+    footer: >
+      #### </osr_cron_root>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('osr_crontab_group' in check_list or 'all' in check_list) and '-osr_crontab_group' not in check_list %}
+{# IZ.1.8.14.3 #}
+  - header: '#### <osr_crontab_group>'
+    command: >
+      SGM=$(grep SYS_GID_MAX /etc/login.defs | awk '{print $2}') ;
+      [[ -z "$SGM" ]] && SGM=$(expr $(grep ^GID_MIN /etc/login.defs | awk '{print $2}') - 1) ;
+      [[ -z "$SGM" ]] && SGM=999 ;
+      Group1=$(cat /etc/group | grep -v users | awk -F: '{ if ( $3 < '$SGM' ) { print $1"|" } }') ;
+      specGroups=$(echo $Group1 | sed 's/|$//' | sed 's/| /|/g') ;
+      crontab -l |egrep -v '^#' |awk '{print $6}' |grep "^/" |sort -u | while read DIR ;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do [[ "$(ls -ld ${DIR})" = @([!l]????w????? *) ]] && [[ "$(ls -ld ${DIR} |awk '{printf $4}')" != @($specGroups) ]] && printf " WARNING ${DIR} is not owned by section 5.0 group and is group writeable\n" ;
+      LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @(l?????????*) ]] && DIR=$( echo $DIR | awk '{ print $11 }') && LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @(?????w????*) ]] && [[ "$(echo $LSOUT |awk '{print $4}')" != @($specGroups) ]] && printf " WARNING ${DIR} is not owned by section 5.0 group and is group writeable\n" ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && extAcl=$( getfacl ${DIR} 2>/dev/null | grep '^group:' | grep -v 'group::' | grep 'w.$' | awk -F: '{print $2}' | egrep -v "$specGroups" | awk '{printf "%s,",$0;next;}') && [[ -n "${extAcl}" ]] && printf " WARNING ${DIR} grants write via extended acl to group(s): $extAcl not in section 5.0.\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done
+    become: true
+    footer: >
+      #### </osr_crontab_group>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('osr_etccrontab_group' in check_list or 'all' in check_list) and '-osr_etccrontab_group' not in check_list %}
+{# IZ.1.8.15.3 #}
+  - header: '#### <osr_etccrontab_group>'
+    command: >
+      entries=/etc/crontab ;
+      SGM=$(grep SYS_GID_MAX /etc/login.defs |  awk '{print $2}') ;
+      [[ -z "$SGM" ]] && SGM=$(expr $(grep ^GID_MIN /etc/login.defs |  awk '{print $2}') - 1) ;
+      [[ -z "$SGM" ]] && SGM=999 ;
+      Group1=$(cat /etc/group | grep -v users | awk -F: '{ if ( $3 <= '$SGM' ) { print $1"|" } }') ;
+      specGroups=$(echo $Group1 | sed 's/|$//' | sed 's/| /|/g') ;
+      grep -v '^[[:space:]]*#' $entries | grep -v '[[:space:]]run-parts' | awk '{print $7}' | grep -v internal | grep -v "^$" | while read DIR ;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @(?????w????*) ]] && [[ "$(echo $LSOUT |awk '{print $4}')" != @($specGroups) ]] && printf " WARNING ${DIR} is not owned by section 5.0 group and is group writeable\n" ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && extAcl=$( getfacl ${DIR} 2>/dev/null | grep '^group:' | grep -v 'group::' | grep 'w.$' | awk -F: '{print $2}' | egrep -v "$specGroups" | awk '{printf "%s,",$0;next;}') && [[ -n "${extAcl}" ]] && printf " WARNING ${DIR} grants write via extended acl to group(s): $extAcl not in section 5.0.\n" ;
+      [[ "$LSOUT" = @(l?????????*) ]] && printf "ALERT: ${DIR} is a symlink.  Eliminate symlink or improve check or manually check.\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done || echo "ERR:while" ;
+      exit
+    become: true
+    footer: >
+      #### </osr_etccrontab_group>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('osr_rcd_group' in check_list or 'all' in check_list) and '-osr_rcd_group' not in check_list %}
+{# IZ.1.8.18.3 #}
+  - header: '#### <osr_rcd_group>'
+    command: >
+      entries='/etc/rc.d/rc[0-9].d/*' ;
+      SGM=$(grep SYS_GID_MAX /etc/login.defs |  awk '{print $2}') ;
+      [[ -z "$SGM" ]] && SGM=$(expr $(grep ^GID_MIN /etc/login.defs |  awk '{print $2}') - 1) ;
+      [[ -z "$SGM" ]] && SGM=999 ;
+      Group1=$(cat /etc/group | grep -v users | awk -F: '{ if ( $3 <= '$SGM' ) { print $1"|" } }') ;
+      specGroups=$(echo $Group1 | sed 's/|$//' | sed 's/| /|/g') ;
+      ls -d $entries | while read DIR ;
+      do C=1 ;
+      DIR=${DIR:-$(pwd)} ; BASE=$DIR ;BASE2='' ; NOTE='' ;
+      while [[ -n ${DIR} && $C -lt 10 ]] ;
+      do LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ -z "$LSOUT" ]] && echo "Note:  LSOUT is null for ${DIR}"  ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && [[ "$(echo \"$LSOUT\" |awk '{print $4}')" != @($specGroups) ]] && printf " WARNING ${NOTE}${DIR} is not owned by section 5.0 group and is group writeable.\n" && break ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && extAcl=$( getfacl ${DIR} 2>/dev/null | grep '^group:' | grep -v 'group::' | grep 'w.$' | awk -F: '{print $2}'  | egrep -v "$specGroups" | awk '{printf "%s,",$0;next;}') && [[ -n "${extAcl}" ]] && printf " WARNING ${NOTE}${DIR} grants extended acl to group(s) $extAcl not in section 5.0 and is group writeable.\n" && break ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && [[ "$(echo \"$LSOUT\" |awk '{print $4}')"  = @($specGroups) ]] && break ;
+      [[ "$LSOUT" = @([!l]????[!w]????*) ]] && break ;
+      [[ "$LSOUT" = @(l?????????*) ]] && [[ -n $BASE2 ]] && BASE2='' && DIR='' && printf "ALERT: $BASE has complex symlinks and must be manually checked.\n" && break ;
+      if [[ "$LSOUT" = @(l?????????*) && -z $BASE2 ]] ;
+      then relapathchk=$(ls -ld $DIR | grep "\.\.")  ;
+      if [[ "$relapathchk" != "" ]] ;
+      then BASE2=$(ls -ld $DIR | awk -F'-> ..' '{print $2}') ;
+      DIR=${DIR%/*} ; DIR=${DIR%/*} ;
+      [[ -n $DIR ]] && [[ -n ${BASE2} ]] && DIR=$DIR${BASE2} && NOTE="For entry $BASE <- Symlink " ;
+      else BASE2=$(ls -ld $DIR | awk -F'-> ' '{print $2}') ;
+      DIR=${BASE2} ; NOTE="For entry $BASE <- Symlink " ;
+      fi ;
+      fi ;
+      ((C=$C+1)) ;
+      [[ $C == 10 ]] && echo "ALERT ${BASE} has over 10 layers of symbolic link level, must be verified manually."  ;
+      done ;
+      done || echo "ERR:while" ;
+    become: true
+    footer: >
+      #### </osr_rcd_group>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('osr_rcd_other' in check_list or 'all' in check_list) and '-osr_rcd_other' not in check_list %}
+{# IZ.1.8.18.2 #}
+  - header: '#### <osr_rcd_other>'
+    command: >
+      entries=/etc/rc.d/rc[0-9].d/* ;
+      ls -d $entries | while read DIR ;
+      do C=1 ; DIR=${DIR:-$(pwd)} ; BASE=$DIR ; BASE2='' ; NOTE='' ;
+      while [[ -n ${DIR} && $C -lt 10 ]] ;
+      do LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @([!l]???????w?*) ]] && echo "WARNING: ${NOTE}${DIR} is world writable" && break ;
+      [[ "$LSOUT" = @([!l]???????[!w]?*) ]] && break ;
+      [[ "$LSOUT" = @(l?????????*) ]] && [[ -n $BASE2 ]] && BASE2='' && DIR='' && echo "ALERT: $BASE has complex symlinks and must be manually checked." && break ;
+      if [[ "$LSOUT" = @(l?????????*) && -z $BASE2 ]] ;
+      then relapathchk=$(ls -ld $DIR | grep "\.\.") ;
+      if [[ "$relapathchk" != "" ]] ;
+      then BASE2=$(ls -ld $DIR | awk -F'-> ..' '{print $2}') ;
+      DIR=${DIR%/*} ;
+      DIR=${DIR%/*} ;
+      [[ -n $DIR ]] && [[ -n ${BASE2} ]] && DIR=$DIR${BASE2} && NOTE="For entry $BASE <- Symlink " ;
+      else BASE2=$(ls -ld $DIR | awk -F'-> ' '{print $2}') ;
+      DIR=${BASE2} ;
+      NOTE="For entry $BASE <- Symlink " ;
+      fi ;
+      fi ;
+      ((C=$C+1)) ;
+      [[ $C == 10 ]] && echo "ALERT ${BASE} has over 10 layers of symbolic link level, must be verified manually." ;
+      done ;
+      done || echo "ERR:while" ;
+    become: true
+    footer: >
+      #### </osr_rcd_other>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('userids_to_own_osrs' in check_list or 'all' in check_list) and '-userids_to_own_osrs' not in check_list %}
+{# IZ.1.8.1.2 #}
+  - header: '#### <userids_to_own_osrs>'
+    command: >
+      for i in /var/log/wtmp /var/log/messages /var/log/secure ; do test -e $i && getfacl -p $i | grep user: | grep -v 'user::' || echo $i "No acl used" ; done
+    become: true
+    footer: >
+      #### </userids_to_own_osrs>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# IZ.1.8.20.3 #}
+{% if ('osr_crond_group' in check_list or 'all' in check_list) and '-osr_crond_group' not in check_list %}
+  - header: '#### <osr_crond_group>'
+    command: |
+      entries=/etc/cron.d/* ;
+      SGM=$(grep SYS_GID_MAX /etc/login.defs | awk '{print $2}') ;
+      [[ -z "$SGM" ]] && SGM=$(expr $(grep ^GID_MIN /etc/login.defs | awk '{print $2}') - 1) ;
+      [[ -z "$SGM" ]] && SGM=999 ;
+      Group1=$(cat /etc/group | grep -v users | awk -F: '{ if ( $3 < '$SGM' ) { print $1"|" } }') ;
+      specGroups=$(echo $Group1 | sed 's/|$//' | sed 's/| /|/g') ;
+      crontab -l |egrep -v '^#' |awk '{print $6}' |grep "^/" |sort -u | while read DIR ;
+      do DIR=${DIR:-$(pwd)} ;
+      while [[ -a ${DIR} ]] ;
+      do [[ "$(ls -ld ${DIR})" = @([!l]????w????? *) ]] && [[ "$(ls -ld ${DIR} |awk '{printf $4}')" != @($specGroups) ]] && printf " WARNING ${DIR} is not owned by section 5.0 group and is group writeable\n" ;
+      LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @(l?????????*) ]] && DIR=$( echo $DIR | awk '{ print $11 }') && LSOUT=$(ls -ld ${DIR} 2>/dev/null) ;
+      [[ "$LSOUT" = @(?????w????*) ]] && [[ "$(echo $LSOUT |awk '{print $4}')" != @($specGroups) ]] && printf " WARNING ${DIR} is not owned by section 5.0 group and is group writeable\n" ;
+      [[ "$LSOUT" = @([!l]????w????* *) ]] && extAcl=$( getfacl ${DIR} 2>/dev/null | grep '^group:' | grep -v 'group::' | grep 'w.$' | awk -F: '{print $2}' | egrep -v "$specGroups" | awk '{printf "%s,",$0;next;}') && [[ -n "${extAcl}" ]] && printf " WARNING ${DIR} grants write via extended acl to group(s): $extAcl not in section 5.0.\n" ;
+      DIR=${DIR%/*} ;
+      done ;
+      done || echo "ERR:while" ;
+    become: true
+    footer: >
+      #### </osr_crond_group>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# v9.2 #}
+{% endif %}
+{# rh8 legacy segments #}
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{# techspec only - rh8+ ub20+ #}
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

@@ -1,0 +1,96 @@
+{% if ('regkeys' in check_list or 'all' in check_list) and '-regkeys' not in check_list %}
+
+function ReadRegKey ([string]$s) {
+    $rtn = @()
+    #$rtn += [string]"#### <["+$s+"]>"
+    try {
+        if ($s.IndexOf(":") -gt 0) {
+            $key = $s.split(":")[0]
+            $name = $s.split(":")[1]
+            $cmd = "(Get-ItemProperty -ErrorAction SilentlyContinue -Path Registry::"""+$key+""")."""+$name+""""
+        } else {
+            $key = $s
+            $name = ""
+            $cmd = "Get-ItemProperty -ErrorAction SilentlyContinue -Path Registry::"""+$key+""""
+        }
+
+        $regkeycontent = Invoke-Expression $cmd
+        if ($regkeycontent -eq $null) {
+            $rtn += "registry key not found"
+        } elseif ($regkeycontent.Length -eq 0) {
+                $rtn += "registry key empty"
+            }
+        else {
+            foreach ($line in $regkeycontent) { $rtn += $line }
+        }
+    }
+    catch { 
+        MsgPrint "error" "key extract failed [ $($s) ]"
+        $rtn += "key extract failed"
+    }
+
+    #$rtn += [string]"#### </["+$s+"]>`n"
+    return $rtn
+}
+
+
+function ReadLoopRegKey {
+	param(
+		[string]$s
+	)
+	
+	$rtn = @()
+	$rtn += [string]"#### <["+$s+"]>"
+	
+    try {
+		if ($s.IndexOf("*") -gt 0) {
+			$root = $s.split("*")[0]
+			$childPath = $s.split("*")[1].TrimStart('\')
+			
+			foreach($child in Get-ChildItem -Path "Registry::$root"){
+				$fullPath = "$($child.Name)\$childPath"
+				$rtn += ReadRegKey $fullPath
+			}
+		} else {
+			$rtn += ReadRegKey $s
+		}
+    }
+    catch { 
+        MsgPrint "error" "key extract failed [ $($s) ]"
+        $rtn += "key extract failed"
+    }
+	
+	
+	$rtn += [string]"#### </["+$s+"]>`n"
+	return $rtn
+}
+
+
+
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\W32Time\TimeProviders\NtpServer:Enabled" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:DEP" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:SEHOP" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors:DisableWindowsLocationProvider" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors:DisableLocation" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet:SpynetReporting" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender\Reporting:DisableGenericRePorts" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive:DisableFileSync" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services:fSingleSessionPerUser" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services:fDisableCcm" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services:fDisableLPT" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services:fDisablePNPRedir" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search:ConnectedSearchPrivacy" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting:AutoApproveOSDumps" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\Consent:DefaultConsent" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Installer:SafeForScripting" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service:AllowAutoConfig" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service\WinRS:AllowRemoteShellAccess" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_USERS\*\Software\Policies\Microsoft\Assistance\Client\1.0:NoImplicitFeedback" | Out-File -FilePath $LogPath -Append
+ReadLoopRegKey "HKEY_USERS\*\Software\Policies\Microsoft\WindowsMediaPlayer:PreventCodecDownload" | Out-File -FilePath $LogPath -Append
+
+{% endif %}
+
+# Strip null-bytes and blank lines
+(Get-Content $LogPath) -replace "`0", "" | Set-Content $LogPath
+(Get-Content $LogPath) | where-object {$_ -ne ""} | Set-Content $LogPath

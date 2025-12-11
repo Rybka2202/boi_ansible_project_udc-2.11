@@ -1,0 +1,8 @@
+- name: Remediate redhat_os_8.1.0923164
+  ansible.builtin.file:
+    path: /etc/motd
+    state: file
+    owner: "{{ udc_parameters['owner'] | default('root') }}"
+    group: "{{ udc_parameters['group'] | default('root') }}"
+    mode: "0644"
+  become: true

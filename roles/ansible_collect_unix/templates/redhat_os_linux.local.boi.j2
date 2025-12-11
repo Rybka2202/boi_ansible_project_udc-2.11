@@ -1,0 +1,866 @@
+---
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('cat_sshd_config' in check_list or 'all' in check_list) and '-cat_sshd_config' not in check_list %}
+- header: '#### <cat_sshd_config>'
+  command: 'cat /etc/ssh/sshd_config'
+  become: true
+  footer: >
+    #### </cat_sshd_config>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sshd_config_permission' in check_list or 'all' in check_list) and '-sshd_config_permission' not in check_list %}
+- header: '#### <sshd_config_permission>'
+  command: 'ls -l /etc/ssh/sshd_config'
+  footer: >
+    #### </sshd_config_permission>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('yum_check_update' in check_list or 'all' in check_list) and '-yum_check_update' not in check_list %}
+- header: '#### <yum_check_update>'
+  command: 'yum check-update > /dev/null 2>&1; echo $?'
+  footer: >
+    #### </yum_check_update>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('host_allow_deny_permissions' in check_list or 'all' in check_list) and '-host_allow_deny_permissions' not in check_list %}
+- header: '#### <host_allow_deny_permissions>'
+  command: 'ls -l /etc/hosts.allow /etc/hosts.deny || echo "File not found"'
+  footer: >
+    #### </host_allow_deny_permissions>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('singlusr_auth_req' in check_list or 'all' in check_list) and '-singlusr_auth_req' not in check_list %}
+- header: '#### <singlusr_auth_req>'
+  command: >
+    for i in /usr/lib/systemd/system/rescue.service /usr/lib/systemd/system/emergency.service ; do test -e "$i" && grep /systemd-sulogin-shell $i || echo $i "Does not include setting" ; done
+  become: true
+  footer: '#### </singlusr_auth_req>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('crontab_aide_scheduled' in check_list or 'all' in check_list) and '-crontab_aide_scheduled' not in check_list %}
+- header: '#### <crontab_aide_scheduled>'
+  command: 'crontab -u root -l | grep aide || echo "Unknown error"'
+  become: true
+  footer: >
+    #### </crontab_aide_scheduled>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('dmesg_nxdx' in check_list or 'all' in check_list) and '-dmesg_nxdx' not in check_list %}
+- header: '#### <dmesg_nxdx>'
+  command: 'dmesg | grep -i "nx\|dx\|execute" | cat'
+  become: yes
+  footer: >
+    #### </dmesg_nxdx>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('rsyslog_conf_filecreatemode' in check_list or 'all' in check_list) and '-rsyslog_conf_filecreatemode' not in check_list %}
+- header: '#### <rsyslog_conf_filecreatemode>'
+  command: 'grep ^\$FileCreateMode /etc/rsyslog.conf || echo "Unknwon error"'
+  footer: >
+    #### </rsyslog_conf_filecreatemode>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('worldwriteable' in check_list or 'all' in check_list) and '-worldwriteable' not in check_list %}
+- header: '#### <worldwriteable>'
+  command: |
+
+    VAR1=1
+    MAXFSCOUNT=100
+    MAXFILECOUNTPERFS=1000000
+    MAXFILECOUNTPERFS=10000000
+    MAXRUNTIME=20
+    MAXRUNTIME=1800
+    MAXRESULTSIZE=1024
+    MAXRESULTSIZE=33554432
+    SAMPLESIZE=256
+
+    required_cmds="/usr/bin/getent /usr/bin/timeout /usr/bin/awk /usr/bin/wc /usr/bin/df /usr/bin/nice /usr/bin/xargs /usr/bin/head /usr/bin/tail"
+    for cmd in $required_cmds; do if test -x "$cmd" ; then true ; else echo "ERR=(${cmd}) is missing" ; exit 0 ;  fi ; done
+    is_volumes_under_homes=$(while IFS=: read -r username _ _ _ _ home _; do  [ -d "${home}/.local/share/containers/storage/" ] && echo -n "${home} " ; done < <(/usr/bin/getent passwd) )
+    df_list=$( /usr/bin/timeout 60 /usr/bin/df --local --portability --print-type -x overlay -x gpfs -x tmpfs 2>&1 ) && exit_code=${?}  || exit_code=${?} ;
+    if [ ${exit_code} -ge 124 ] ; then
+      echo "ERR=POLICY FAILED DUE TO df command timeout (exit code: ${exit_code}) - may remote filesystem or storage is unreachable - PERFORM MANUAL VERIFICATION" ;
+      echo "${df_list}" ;
+    elif [ ${exit_code} -ge 1   ] ; then
+      echo "ERR=POLICY FAILED DUE TO df command error (exit code: ${exit_code}) - PERFORM MANUAL VERIFICATION" ;
+      echo "${df_list}" ;
+    elif [ $( echo "${df_list}" | /usr/bin/wc -l ) -gt ${MAXFSCOUNT} ] ; then
+      echo "ERR=POLICY FAILED DUE TO there are too many volumes mounted on the server - PERFORM MANUAL VERIFICATION" ;
+      echo "${df_list}" ;
+    elif ! /usr/bin/awk -v maxfile="${MAXFILECOUNTPERFS}" {'if (NR!=1) if  ($4>maxfile) print "ERR=POLICY FAILED DUE TO "$1 " have more than "maxfile" files("$4") - PERFORM MANUAL VERIFICATION" ; if (NR!=1) if ($4>maxfile) exit 1 '}  <<< "$(/usr/bin/timeout 60 /usr/bin/df --portability --print-type -x gpfs -x tmpfs --inodes)" ; then
+      echo "${df_list}" ;
+    else
+      /usr/bin/timeout 60 /usr/bin/mount | grep '^overlay\b' && echo "ERR=POLICY FAILED DUE TO system contain overlay fs - PERFORM MANUAL VERIFICATION" || true ;
+      /usr/bin/timeout 60 /usr/bin/mount | grep '^gpfs\b'    && echo "ERR=POLICY FAILED DUE TO system contain gpfs - PERFORM MANUAL VERIFICATION" || true ;
+      [ -d /var/lib/docker/overlay2/ ]                       && echo "ERR=POLICY FAILED DUE TO system may contain /var/lib/docker/overlay2/ directory - PERFORM MANUAL VERIFICATION" || true ;
+      [ -n "${is_volumes_under_homes}" ]                     && echo "ERR=POLICY FAILED DUE TO system may contain container volume under $is_volumes_under_homes directories - PERFORM MANUAL VERIFICATION" || true ;
+      result=$(/usr/bin/timeout "${MAXRUNTIME}" /usr/bin/find $(echo "$df_list" | /usr/bin/awk {'if (NR!=1) print $7'} ) -xdev \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -nouser -printf "%p:NOUSER\n" \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -nogroup -printf "%p:NOGROUP\n" \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o \( -type f -perm -0002 -printf "%p:WWFILE\n"  \) ,  \( -path "/var/lib/docker/overlay2/*" -o -path "*/containers/storage/*" \) -prune -o  \( -type d -perm -0002 -a ! -perm -1000 -printf  "%p:WWDIR\n"  \) 2>&1 && echo "OK" || { echo "" ; sleep 0.1 ; echo "ERR=(${?}) POLICY FAILED DUE TO find command error or find command run too long (more than $MAXRUNTIME sec) - PERFORM MANUAL VERIFICATION" ; } ; ) ;
+      size=$(echo -n "${result}" | /usr/bin/wc -c ;) || true ;
+      [ ${size} -eq 0 ] && echo "ERR=POLICY FAILED DUE TO - result not valid PERFORM MANUAL VERIFICATION" || true ;
+      [ ${size} -lt ${MAXRESULTSIZE} ] && echo "${result}" || { echo "ERR=POLICY FAILED DUE TO too many files found to be non-compliant cannot be processed on the CACF platform result size: ${size} bytes - PERFORM MANUAL VERIFICATION" ; echo "${result}" | /usr/bin/head -n ${SAMPLESIZE} ; echo "${result}" | /usr/bin/tail -n ${SAMPLESIZE} ;  } || true
+
+    fi
+    exit 0
+
+  become: true
+  footer: >
+    #### </worldwriteable>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('etc_shadow_nopasswd' in check_list or 'all' in check_list) and '-etc_shadow_nopasswd' not in check_list %}
+- header: '#### <etc_shadow_nopasswd>'
+  command: >
+    cat /etc/shadow | awk -F: '($2 == "" ) { print $1 " does not have a password "}'
+  footer: >
+    #### </etc_shadow_nopasswd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('gu_id_usedonce' in check_list or 'all' in check_list) and '-gu_id_usedonce' not in check_list %}
+- header: '#### <gu_id_usedonce>'
+  command: >
+    cat /etc/passwd | cut -f3 -d":" | sort -n | uniq -c | while read x ; do [ -z "${x}" ] && break; set - $x; if [ $1 -gt 1 ]; then users=`awk -F: '($3 == n) { print $1 }' n=$2 /etc/passwd | xargs` ; echo "Duplicate UID ($2): ${users}" ; fi ; done ;
+    cat /etc/group | cut -f3 -d":" | sort -n | uniq -c | while read x ; do [ -z "${x}" ] && break ; set - $x ; if [ $1 -gt 1 ]; then groups=`awk -F: '($3 == n) { print $1 }' n=$2 /etc/group | xargs` ; echo "Duplicate GID ($2): ${groups}" ; fi ; done
+  become: true
+  footer: '#### </gu_id_usedonce>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('gpgcheck' in check_list or 'all' in check_list) and '-gpgcheck' not in check_list %}
+- header: '#### <gpgcheck>'
+  command: 'test -e /etc/yum.conf && grep --regexp=^gpgcheck= /etc/yum.conf || echo "no gpgcheck setting present"|cat'
+  become: true
+  footer: '#### </gpgcheck>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('limits_hard_core' in check_list or 'all' in check_list) and '-limits_hard_core' not in check_list %}
+- header: '#### <limits_hard_core>'
+  command: >
+      grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*.conf | LC_ALL=C sort -V |tail -1
+  become: true
+  footer: '#### </limits_hard_core>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nfs_server' in check_list or 'all' in check_list) and '-nfs_server' not in check_list %}
+- header: '#### <nfs_server>'
+  command: >
+    test -e /etc/exports && if [ $( hostname -s | grep -E 'clsdmdcabk01|clsdmecabk01|clsdmdmanl*|clsdmemanl*|clsppdmanl*|clsppemanl*|clssfdmanl*|clsprdmanl*|clspremanl*|clstldmanl*') ];
+    then echo "OK server exception" $(systemctl is-enabled nfs-server.service) ; else systemctl is-enabled nfs-server.service 2>&1 |cat ; fi
+  become: true
+  footer: '#### </nfs_server>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('httpd_server' in check_list or 'all' in check_list) and '-httpd_server' not in check_list %}
+- header: '#### <httpd_server>'
+  command: >
+    if [ $( hostname -s | grep 'sat.01') ];then echo "OK server exception" ; else systemctl is-enabled httpd 2>&1 |cat ; fi
+  become: true
+  footer: '#### </httpd_server>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('snmpd_state' in check_list or 'all' in check_list) and '-snmpd_state' not in check_list %}
+- header: '#### <snmpd_state>'
+  command: |
+    SERVICE_NAME=snmpd;
+    if systemctl cat $SERVICE_NAME > /dev/null 2>&1;then
+      echo "$(systemctl is-active $SERVICE_NAME) $(systemctl is-enabled $SERVICE_NAME)";
+    else
+      echo "Service $SERVICE_NAME not found";
+    fi
+  become: true
+  footer: '#### </snmpd_state>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tftp' in check_list or 'all' in check_list) and '-tftp' not in check_list %}
+- header: '#### <tftp>'
+  command: >
+    systemctl is-enabled tftp.socket 2>&1 |cat
+  become: true
+  footer: '#### </tftp>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('audit_prior_auditd' in check_list or 'all' in check_list) and '-audit_prior_auditd' not in check_list %}
+- header: '#### <audit_prior_auditd>'
+  command: 'grub2-editenv - list'
+  become: true
+  footer: >
+    #### </audit_prior_auditd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('audit_rules' in check_list or 'all' in check_list) and '-audit_rules' not in check_list %}
+- header: '#### <audit_rules>'
+  command: >
+    cat /etc/audit/audit.rules
+    #grep -vs '^\s*$\|^\s*\#' /etc/audit/audit.rules
+  become: true
+  footer: '#### </audit_rules>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditctl' in check_list or 'all' in check_list) and '-auditctl' not in check_list %}
+- header: '#### <auditctl>'
+  command: 'auditctl -l ; auditctl -s'
+  become: true
+  footer: '#### </auditctl>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('priv_cmd_collect' in check_list or 'all' in check_list) and '-priv_cmd_collect' not in check_list %}
+- header: '#### <priv_cmd_collect>'
+  command: >
+    file="/etc/audit/rules.d/audit.rules" ; test ! -e "$file" && echo $file does not exist || diff -sy <(find / -xdev \( -perm -4000 -o -perm -2000 \) -type f | awk '{print "-a always,exit -F path=" $1 " -F perm=x -F auid>='"$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs)"' -F auid!=4294967295 -k privileged" }' | sort) <(cat /etc/audit/rules.d/audit.rules | grep '\-k privileged' | sort)|cat
+  become: true
+  footer: '#### </priv_cmd_collect>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('rsyslog' in check_list or 'all' in check_list) and '-rsyslog' not in check_list %}
+- header: '#### <rsyslog>'
+  command: >
+    for i in /etc/rsyslog.conf /etc/rsyslog.d/QR*.conf ; do test -e $i && grep -v '^\s*$\|^\s*\#'  $i || echo $i "Not configured" ; done
+  become: true
+  footer: '#### </rsyslog>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sshd_t_c' in check_list or 'all' in check_list) and '-sshd_t_c' not in check_list %}
+- header: '#### <sshd_t_c>'
+  command: >
+    sshd -T -C user=root -C host="$(hostname)" -C addr="$(grep $(hostname) /etc/hosts | awk '{print $1}')";
+  become: true
+  footer: '#### </sshd_t_c>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pass_check' in check_list or 'all' in check_list) and '-pass_check' not in check_list %}
+- header: '#### <pass_check>'
+  command: '{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int >= 8 %}grep -v "^\s*$\|^\s*\#" /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/security/pwquality.conf /usr/lib/tmpfiles.d/pam.conf /etc/authselect/password-auth /etc/authselect/system-auth 2>&1 | cat;{% else %}echo "command not supported"{% endif %}'
+  become: true
+  footer: '#### </pass_check>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sysacount_secure' in check_list or 'all' in check_list) and '-sysacount_secure' not in check_list %}
+- header: '#### <sysacount_secure>'
+  command: >
+    awk -F: '($1!="root" && $1!="sync" && $1!="shutdown" && $1!="halt" && $1!~/^\+/ && $3<'"$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs)"' && $7!="'"$(which nologin)"'" && $7!="/bin/false") {print}' /etc/passwd ; awk -F: '($1!="root" && $1!~/^\+/ && $3<'"$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs)"') {print $1}' /etc/passwd | xargs -I '{}' passwd -S '{}' | awk '($2!="L" && $2!="LK") {print $1}'
+  become: true
+  footer: '#### </sysacount_secure>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('passwd' in check_list or 'all' in check_list) and '-passwd' not in check_list %}
+- header: '#### <passwd>'
+  command: 'cat /etc/passwd'
+  become: true
+  footer: '#### </passwd>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('umask_tmout' in check_list or 'all' in check_list) and '-umask_tmout' not in check_list %}
+- header: '#### <umask_tmout>'
+  command: >
+    which csh;
+    if [ $? -eq 0 ] ; then
+    IBMsinit=$( grep -En "/etc/profile.d/*.csh|IBMsinit.csh" /etc/csh.login| tail -1 | awk -F ":" '{ print $1 }' );
+    cshlocal=$( grep -n csh.login.local /etc/csh.login | awk -F ":" '{ print $1 }' );
+    timeout=$( grep -n autologout /etc/csh.login | awk -F ":" '{ print $1 }' | tail -1);
+    umask=$( grep -n umask /etc/csh.login | awk -F ":" '{ print $1 }' | tail -1);
+    if [[ -z $IBMsinit && -n $cshlocal ]]; then
+    if [[ -n $timeout && $timeout -gt $cshlocal ]]; then
+    echo "CSH Timeout - FAIL; The logout timeout is after invocation of /etc/csh.login.local";
+    else
+    if [[ -z $( grep -n IBMsinit.csh /etc/csh.login.local | awk -F ":" '{ print $1 }' ) ]]; then 
+      echo "CSH Timeout - FAIL; Neither /etc/csh.login nor /etc/csh.login.local invocates /etc/profile.d/IBMsinit.csh";
+    else 
+    timeout_local=$( grep -n autologout /etc/csh.login.local | awk -F ":" '{ print $1 }' );
+    IBMsinitlocal=$( grep -En "/etc/profile.d/*.csh|IBMsinit.csh" /etc/csh.login.local| tail -1 | awk -F ":" '{ print $1 }' );
+    if [[ -z $timeout_local || $timeout_local -lt $IBMsinitlocal ]]; then
+    echo "CSH Timeout - OK";
+    else
+    echo "CSH Timeout - FAIL; File /etc/csh.login.local defines timeout after calling the /etc/profile.d/IBMsinit.csh";
+    fi;
+    fi;
+    fi;
+    if [[ -n $umask && $umask -gt $cshlocal ]]; then
+    echo "CSH Umask - FAIL; The umask attribute is after invocation of /etc/csh.login.local";
+    else
+    if [[ -z $( grep -n IBMsinit.csh /etc/csh.login.local | awk -F ":" '{ print $1 }' ) ]]; then
+      echo "CSH Umask - FAIL; Neither /etc/csh.login nor /etc/csh.login.local invocates /etc/profile.d/IBMsinit.csh";
+    else
+    umask_local=$( grep -n umask /etc/csh.login.local | awk -F ":" '{ print $1 }' | tail -1 );
+    IBMsinitlocal=$( grep -En "/etc/profile.d/*.csh|IBMsinit.csh" /etc/csh.login.local| tail -1 | awk -F ":" '{ print $1 }' );
+    if [[ -z $umask_local || $umask_local -lt $IBMsinitlocal ]]; then
+    echo "CSH Umask - OK";
+    else
+    echo "CSH Umask - FAIL; File /etc/csh.login.local defines umask after calling the /etc/profile.d/IBMsinit.csh";
+    fi;
+    fi;
+    fi;
+    elif [[ -n $IBMsinit ]]; then
+    if [[ -n $timeout && $timeout -gt $IBMsinit ]]; then
+    echo "CSH Timeout - FAIL; The logout timeout is after invocation of /etc/profile.d/IBMsinit.csh";
+    else echo "CSH Timeout - OK";
+    fi;
+    if [[ -n $umask && $umask -gt $IBMsinit ]]; then
+    echo "CSH Umask - FAIL; The umask attribute is after invocation of /etc/profile.d/IBMsinit.csh";
+    else echo "CSH Umask - OK";
+    fi;
+    elif [[ -z $IBMsinit && -z $cshlocal ]]; then
+    echo "CSH Timeout - FAIL; Neither /etc/profile.d/IBMsinit.csh, nor /etc/csh.login.local is called from /etc/csh.login";
+    echo "CSH Umask - FAIL; Neither /etc/profile.d/IBMsinit.csh, nor /etc/csh.login.local is called from /etc/csh.login";
+    fi;
+    TMOUT_IMBSINITCSH=$( grep '^[^#]*autologout' /etc/profile.d/IBMsinit.csh | awk '{ print $2 }');
+    if [[ -n $TMOUT_IMBSINITCSH ]]; then
+    echo IBMSINIT_TMOUT_CSH $TMOUT_IMBSINITCSH;
+    else
+    echo IBMSINIT_TMOUT_CSH FAIL TMOUT not found;
+    fi;
+    UMASK_IMBSINITCSH=$( grep -EC 2 '^[^#]*if\s*\[\s*\$UID\s*-gt\s*199\s*\];\s*then' /etc/profile.d/IBMsinit.csh | grep umask );
+    if [[ -n $UMASK_IMBSINITCSH ]]; then
+    echo IBMSINIT_UMASK_CSH $UMASK_IMBSINITCSH;
+    else
+    echo IBMSINIT_UMASK_CSH FAIL Umask not found;
+    fi;
+    else
+    echo "CSH Timeout - OK";
+    echo "CSH Umask - OK";
+    fi ;
+    IBMsinit="";
+    timeout="";
+    umask="";
+    IBMsinit=$( grep -En "/etc/profile.d/*.sh|IBMsinit.sh" /etc/profile| tail -1 | awk -F ":" '{ print $1 }' );
+    PROFILElocal=$( grep -n profile.local /etc/profile | awk -F ":" '{ print $1 }' );
+    timeout=$( grep -n TMOUT /etc/profile | awk -F ":" '{ print $1 }' | tail -1 );
+    umask=$( grep -n umask /etc/profile | awk -F ":" '{ print $1 }' | tail -1 );
+    if [[ -z $IBMsinit && -n $PROFILElocal ]]; then
+    if [[ -n $timeout && $timeout -gt $PROFILElocal ]]; then
+    echo "PROFILE Timeout - FAIL; The logout timeout is after invocation of /etc/profile.local";
+    else
+    if [[ -z $( grep -n IBMsinit.sh /etc/profile.local | awk -F ":" '{ print $1 }' ) ]]; then 
+    echo "PROFILE Timeout - FAIL; Neither /etc/profile nor /etc/profile.local invocates /etc/profile.d/IBMsinit.sh";
+    else
+    timeout_local=$( grep -n TMOUT /etc/profile.local | awk -F ":" '{ print $1 }' | tail -1);
+    IBMsinitlocal=$( grep -En "/etc/profile.d/*.sh|IBMsinit.sh" /etc/profile.local| tail -1 | awk -F ":" '{ print $1 }' );
+    if [[ -z $timeout_local || $timeout_local -lt $IBMsinitlocal ]]; then
+    echo "PROFILE Timeout - OK";
+    else
+    echo "PROFILE Timeout - FAIL; File /etc/profile.local defines timeout after calling the /etc/profile.d/IBMsinit.sh";
+    fi;
+    fi;
+    fi;
+    if [[ -n $umask && $umask -gt $PROFILElocal ]]; then
+    echo "PROFILE Umask - FAIL; The umask attribute is after invocation of /etc/profile.local";
+    else
+    if [[ -z $( grep -n IBMsinit.sh /etc/profile.local | awk -F ":" '{ print $1 }' ) ]]; then
+    echo "PROFILE Umask - FAIL; Neither /etc/profile nor /etc/profile.local invocates the file /etc/profile.d/IBMsinit.sh";
+    else
+    umask_local=$( grep -n umask /etc/profile.local | awk -F ":" '{ print $1 }' | tail -1);
+    IBMsinitlocal=$( grep -En "/etc/profile.d/*.sh|IBMsinit.sh" /etc/profile.local| tail -1 | awk -F ":" '{ print $1 }' );
+    if [[ -z $umask_local || $umask_local -lt $IBMsinitlocal ]]; then
+    echo "PROFILE Umask - OK";
+    else
+    echo "PROFILE Umask - FAIL; File /etc/profile.local defines umask after calling the /etc/profile.d/IBMsinit.sh";
+    fi;
+    fi;
+    fi;
+    elif [[ -n $IBMsinit ]]; then
+    if [[ -n $timeout && $timeout -gt $IBMsinit ]]; then
+    echo "PROFILE Timeout - FAIL; The logout timeout is after invocation of /etc/profile.d/IBMsinit.sh";
+    else echo "PROFILE Timeout - OK";
+    fi;
+    if [[ -n $umask && $umask -gt $IBMsinit ]]; then
+    echo "PROFILE Umask - FAIL; The umask attribute is after invocation of /etc/profile.d/IBMsinit.sh";
+    else echo "PROFILE Umask - OK";
+    fi;
+    elif [[ -z $IBMsinit && -z $PROFILElocal ]]; then
+    echo "PROFILE Timeout - FAIL; Neither /etc/profile.d/IBMsinit.sh, nor /etc/profile.local is called from /etc/profile";
+    echo "PROFILE Umask - FAIL; Neither /etc/profile.d/IBMsinit.sh, nor /etc/profile.local is called from /etc/profile";
+    fi;
+    TMOUT_IMBSINITSH=$( grep "TMOUT=" /etc/profile.d/IBMsinit.sh );
+    if [[ -n $TMOUT_IMBSINITSH ]]; then
+    echo IBMSINIT_TMOUT_SH $TMOUT_IMBSINITSH;
+    else
+    echo IBMSINIT_TMOUT_SH FAIL TMOUT not found;
+    fi;
+    UMASK_IMBSINITSH=$( grep -EC 2 '^[^#]*if\s*\[\s*\$UID\s*-gt\s*199\s*\];\s*then' /etc/profile.d/IBMsinit.sh | grep umask );
+    if [[ -n $UMASK_IMBSINITSH ]]; then
+    echo IBMSINIT_UMASK_SH $UMASK_IMBSINITSH;
+    else
+    echo IBMSINIT_UMASK_SH FAIL Umask not found;
+    fi;
+    IBMsinit="";
+    umask="";
+    IBMsinit=$( grep -n "IBMsinit.sh" /etc/bashrc| tail -1 | awk -F ":" '{ print $1 }' );
+    umask=$( grep -n umask /etc/bashrc | awk -F ":" '{ print $1 }' | tail -1 );
+    if [[ -z $IBMsinit ]]; then
+    echo "BASHRC Umask FAIL; File /etc/profile.d/IBMsinit.sh is not called from /etc/bashrc";
+    else
+    if [[ -z $umask ]]; then
+    echo "BASHRC Umask OK";
+    else
+    if [[ $umask_bashrc -ge $IBMsinit ]]; then
+    echo "BASHRC Umask FAIL; The umask attribute is after invocation of /etc/profile.d/IBMsinit.sh";
+    else
+    echo "BASHRC Umask OK";
+    fi;
+    fi;
+    fi
+  become: true
+  footer: '#### </umask_tmout>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('noungroupedfiles' in check_list or 'all' in check_list) and '-noungroupedfiles' not in check_list %}
+- header: '#### <noungroupedfiles>'
+  command: >
+    df --local -P | awk '{if (NR!=1) print $6}' #| xargs -I '{}' find '{}' -xdev -nogroup
+  become: true
+  footer: '#### </noungroupedfiles>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nolegacy' in check_list or 'all' in check_list) and '-nolegacy' not in check_list %}
+- header: '#### <nolegacy>'
+  command: >
+    for i in /etc/passwd /etc/shadow /etc/group; do echo $i' ' $( grep -P "^\+[^:\n\r]*:" $i ); done
+  become: true
+  footer: '#### </nolegacy>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('root_path_integrity' in check_list or 'all' in check_list) and '-root_path_integrity' not in check_list %}
+- header: '#### <root_path_integrity>'
+  command: >
+    for x in $(echo $PATH | tr ":" " ") ; do if [ -d "$x" ] ;
+    then ls -ldH "$x" | awk '$9 == "." {print "PATH contains current working directory (.)"} $3 != "root" {print $9, "is not owned by root"} substr($1,6,1) != "-" {print $9, "is group writable"} substr($1,9,1) != "-" {print $9, "is world writable"}' ;
+    else echo "$x is not a directory" ;
+    fi;
+    done
+  become: true
+  footer: '#### </root_path_integrity>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('all_users_home' in check_list or 'all' in check_list) and '-all_users_home' not in check_list %}
+- header: '#### <all_users_home>'
+  command: >
+    grep -E -v '^(halt|sync|shutdown|setroubleshoot|clevis)' /etc/passwd | awk -F: '($6!="$( which nologin)" && $6!="/bin/false" && $6!="/dev/null" && $6!="/nonexisting") { print $1 " " $6 }' | while read -r user dir ;
+    do if [ ! -d "$dir" ] ;
+      then echo "The home directory ($dir) of user $user does not exist." ;
+    fi;done
+  become: true
+  footer: '#### </all_users_home>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('homedir_perm' in check_list or 'all' in check_list) and '-homedir_perm' not in check_list %}
+- header: '#### <homedir_perm>'
+  command: >
+    awk -F: '($1!~/(halt|sync|shutdown|nfsnobody)/ && $7!~/^(\/usr)?\/sbin\/nologin(\/)?$/ && $7!~/(\/usr)?\/bin\/false(\/)?$/) {print $1 " " $6}' /etc/passwd | while read -r user dir;
+    do if [ ! -d "$dir" ]; 
+    then echo "User: \"$user\" home directory: \"$dir\" doesn't exist" ;
+    else dirperm=$(stat -L -c "%A" "$dir") ;
+    if [ "$(echo "$dirperm" | cut -c6)" != "-" ] || [ "$(echo "$dirperm" | cut -c8)" != "-" ] || [ "$(echo "$dirperm" | cut -c9)" != "-" ] || [ "$(echo "$dirperm" | cut -c10)" != "-" ]; 
+    then echo "User: \"$user\" home directory: \"$dir\" has permissions: \"$(stat -L -c "%a" "$dir")\"" ;
+    fi ;
+    fi ;
+    done
+  become: true
+  footer: '#### </homedir_perm>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('own_their_home' in check_list or 'all' in check_list) and '-own_their_home' not in check_list %}
+- header: '#### <own_their_home>'
+  command: >
+    for i in $( awk -F: '($1!~/(halt|sync|shutdown|nfsnobody)/ && $7!~/^(\/usr)?\/sbin\/nologin(\/)?$/ && $7!~/(\/usr)?\/bin\/false(\/)?$/) {print $1":"$6}' /etc/passwd); 
+    do user=$(echo "$i" | cut -d: -f1) ;
+    dir=$(echo "$i" | cut -d: -f2) ;
+    if [ ! -d "$dir" ]; 
+    then [ -z "$output2" ] && output2="The following users' home directories don't exist: \"$user\"" || output2="$output2, \"$user\"" ;
+    else owner="$(stat -L -c "%U" "$dir")" ;
+    if [ "$owner" != "$user" ] && [ "$owner" != "root" ]; 
+    then [ -z "$output" ] && output="The following users' don't own their home directory: \"$user\" home directory is owned by \"$owner\"" || output="$output, \"$user\" home directory is owned by \"$owner\"" ;
+    fi ;
+    fi ;
+    done
+  become: true
+  footer: '#### </own_their_home>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('dotf_nogroupoww' in check_list or 'all' in check_list) and '-dotf_nogroupoww' not in check_list %}
+- header: '#### <dotf_nogroupoww>'
+  command: >
+    awk -F: '($1!~/(halt|sync|shutdown|nfsnobody)/ && $7!~/^(\/usr)?\/sbin\/nologin(\/)?$/ && $7!~/(\/usr)?\/bin\/false(\/)?$/) { print $6 }' /etc/passwd | while read -r dir;
+    do if [ -d "$dir" ];
+    then for file in "$dir"/.*;
+    do if [ ! -h "$file" ] && [ -f "$file" ];
+    then fileperm=$(stat -L -c "%A" "$file") ;
+    if [ "$(echo "$fileperm" | cut -c6)" != "-" ] || [ "$(echo "$fileperm" | cut -c9)" != "-" ];
+    then chmod go-w "$file" ;
+    fi ;
+    fi ;
+    done ;
+    fi ;
+    done
+  become: true
+  footer: '#### </dotf_nogroupoww>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nofile_named' in check_list or 'all' in check_list) and '-nofile_named' not in check_list %}
+- header: '#### <nofile_named>'
+  command: >
+    cat /etc/passwd | grep -E -v '^(root|halt|sync|shutdown)' | awk -F: '$7 != "/sbin/nologin" { print $1" "$6 }' | while read user dir; do if [ ! -d "$dir" ]; 
+    then echo "The home directory ($dir) of user $user does not exist." ;
+    else if [ ! -h "$dir/.rhosts" -a -f "$dir/.rhosts" ];
+    then echo ".rhosts file $dir/.rhosts exists" ;
+    if [ ! -h "$dir/.forward" -a -f "$dir/.forward" ];
+    then echo ".forward file $dir/.forward exists" ;
+    if [ ! -h "$dir/.netrc" -a -f "$dir/.netrc" ];
+    then echo ".netrc file $dir/.netrc exists" ;
+    fi ;
+    fi ;
+    fi ;
+    fi ;
+    done
+  become: true
+  footer: '#### </nofile_named>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('etcpass_eq_etcgroup' in check_list or 'all' in check_list) and '-etcpass_eq_etcgroup' not in check_list %}
+- header: '#### <etcpass_eq_etcgroup>'
+  command: >
+    for i in $(cut -s -d: -f4 /etc/passwd | sort -u );
+    do grep -q -P "^.*?:[^:]*:$i:" /etc/group ;
+    if [ $? -ne 0 ];
+    then echo "Group $i is referenced by /etc/passwd but does not exist in /etc/group" ;
+    fi ;
+    done
+  become: true
+  footer: '#### </etcpass_eq_etcgroup>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nodup_usr_names' in check_list or 'all' in check_list) and '-nodup_usr_names' not in check_list %}
+- header: '#### <nodup_usr_names>'
+  command: >
+    cut -d: -f1 /etc/group | sort | uniq -d | while read x ; do echo "Duplicate group name ${x} in /etc/group" ; done
+  become: true
+  footer: '#### </nodup_usr_names>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('noduplicate_groupnm' in check_list or 'all' in check_list) and '-noduplicate_groupnm' not in check_list %}
+- header: '#### <noduplicate_groupnm>'
+  command: >
+    cut -d: -f1 /etc/group | sort | uniq -d
+  become: true
+  footer: '#### </noduplicate_groupnm>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+- header: '#### <common_linux_segment>'
+  become: true
+  command: |
+{% if ('packages' in check_list or 'all' in check_list) and '-packages' not in check_list %}
+    names+=('packages') ;
+    times+=($(/usr/bin/date +%s)) || true
+    name='packages' ;
+    echo "#### <${name}>";
+{% if ansible_facts.os_family== "RedHat"  %}
+    if   [ -e '/bin/rpm' ]  ; then pkg_list=$(   /bin/rpm -qa && echo "packages=OK" || echo "packages=ERR(${?})rpm" ; ) ;
+{% endif %}
+{% if ansible_facts.os_family== "Debian"  %}
+    if [ -e '/bin/dpkg' ] ; then pkg_list=$( { /bin/dpkg -l && echo 'packages=OK' || echo 'packages=ERR(${?})dpkg' ; } | /usr/bin/awk '{if ($1 ~ /^i/)  print $2"-"$3"|"$1; if ($1 ~ /packages=.*/ ) print $1}' || echo "packages=ERR(${?})dpkg-awk" ; ) ;
+{% endif %}
+    else echo "packages=ERR(no_compatibile_packager_found)" ;
+    fi
+    echo "$pkg_list" ;
+    echo "#### </${name}>";
+    echo '' ;
+{% if ('rpm' in check_list or 'all' in check_list) and '-rpm' not in check_list %}
+    name='rpm' ;
+    echo "#### <${name}>";
+    echo "$pkg_list" ;
+    echo "#### </${name}>";
+    echo '' ;
+{# rpm/techspec/packages #}
+{% endif %}
+{% endif %}
+  footer: ''
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('modprobe' in check_list or 'all' in check_list) and '-modprobe' not in check_list %}
+- header: '#### <modprobe>'
+  command: |
+    for MODULE in cramfs freevxfs jffs2 hfs hfsplus squashfs udf dccp sctp rds tipc usb-storage vfat nf_tables ip_tables ipv6; do
+      /usr/sbin/modinfo $MODULE >/dev/null 2>/dev/null && ! /usr/sbin/modprobe -n --first-time $MODULE 2>/dev/null && echo "$MODULE Loaded $(/usr/bin/grep -r "\s$MODULE\s" /etc/modprobe.d/* 2>/dev/null)" || echo "$MODULE Not loaded$(/usr/bin/grep -r "\s$MODULE\s" /etc/modprobe.d/* 2>/dev/null | head -1)" || true ;
+    done || echo "ERR=while running modprobe segment" ;
+
+  become: true
+  footer: '#### </modprobe>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('aix_Business_Use_Notice_text' in check_list or 'all' in check_list) and '-aix_Business_Use_Notice_text' not in check_list %}
+- header: '#### <aix_Business_Use_Notice_text>'
+  command: >
+    tr -s ' ' < /etc/motd | tr -d '\n' | sed 's/\*//g'
+  footer: '#### </aix_Business_Use_Notice_text>'
+{% endif %}
+
+
+{# --- RHEL8/9 segments --------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ansible_facts.distribution == "RedHat" and ansible_facts.distribution_major_version | int >= 8 %}
+{% if ('coredump_conf' in check_list or 'all' in check_list) and '-coredump_conf' not in check_list %}
+- header: '#### <coredump_conf>'
+  command: >
+    cat /etc/systemd/coredump.conf
+  become: true
+  footer: '#### </coredump_conf>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('coredump_conf_dir' in check_list or 'all' in check_list) and '-coredump_conf_dir' not in check_list %}
+- header: '#### <coredump_conf_dir>'
+  command: >
+    ls -l /etc/systemd/coredump.conf.d/ || echo "Directory not found"
+  become: true
+  footer: '#### </coredump_conf_dir>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pam_latest_version' in check_list or 'all' in check_list) and '-pam_latest_version' not in check_list %}
+- header: '#### <pam_latest_version>'
+  command: >
+    dnf check-update pam || echo "Latest version installed"
+  become: true
+  footer: '#### </pam_latest_version>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('authselect_latest_version' in check_list or 'all' in check_list) and '-authselect_latest_version' not in check_list %}
+- header: '#### <authselect_latest_version>'
+  command: >
+    dnf check-update authselect || echo "Latest version installed"
+  become: true
+  footer: '#### </authselect_latest_version>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('passwd_root_set' in check_list or 'all' in check_list) and '-passwd_root_set' not in check_list %}
+- header: '#### <passwd_root_set>'
+  command: >
+    passwd -S root
+  become: true
+  footer: '#### </passwd_root_set>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('journal_upload_conf' in check_list or 'all' in check_list) and '-journal_upload_conf' not in check_list %}
+- header: '#### <journal_upload_conf>'
+  command: >
+    cat /etc/systemd/journal-upload.conf || echo "File not found"
+  become: true
+  footer: '#### </journal_upload_conf>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('augenrules_check' in check_list or 'all' in check_list) and '-augenrules_check' not in check_list %}
+- header: '#### <augenrules_check>'
+  command: >
+    augenrules --check
+  become: true
+  footer: '#### </augenrules_check>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_log_directory_perm' in check_list or 'all' in check_list) and '-auditd_log_directory_perm' not in check_list %}
+- header: '#### <auditd_log_directory_perm>'
+  command: >
+    stat -Lc "%n %a" "$(dirname $( awk -F"=" '/^\s*log_file\s*=\s*/ {print $2}' /etc/audit/auditd.conf))" 2>&1 | grep -Pv -- '^\h*\H+\h+([0,5,7][0,5]0)' | cat
+  become: true
+  footer: '#### </auditd_log_directory_perm>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_log_files_perm' in check_list or 'all' in check_list) and '-auditd_log_files_perm' not in check_list %}
+- header: '#### <auditd_log_files_perm>'
+  command: >
+    [ -f /etc/audit/auditd.conf ] && find "$(dirname $(awk -F "=" '/^\s*log_file/ {print $2}' /etc/audit/auditd.conf | xargs))" -type f \( ! -perm 600 -a ! -perm 0400 -a ! -perm 0200 -a ! -perm 0000 -a ! -perm 0640 -a ! -perm 0440 -a ! -perm 0040 \) -exec stat -Lc "%n %#a" {} +
+  become: true
+  footer: '#### </auditd_log_files_perm>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_log_files_ownership' in check_list or 'all' in check_list) and '-auditd_log_files_ownership' not in check_list %}
+- header: '#### <auditd_log_files_ownership>'
+  command: >
+    [ -f /etc/audit/auditd.conf ] && find "$(dirname $(awk -F "=" '/^\s*log_file/ {print $2}' /etc/audit/auditd.conf | xargs))" -type f ! -user root -exec stat -Lc "%n %U" {} + 2>&1
+  become: true
+  footer: '#### </auditd_log_files_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_log_files_group_ownership' in check_list or 'all' in check_list) and '-auditd_log_files_group_ownership' not in check_list %}
+- header: '#### <auditd_log_files_group_ownership>'
+  command: >
+    stat -c "%n %G" "$(dirname $(awk -F"=" '/^\s*log_file\s*=\s*/ {print $2}' /etc/audit/auditd.conf | xargs))"/* | grep -Pv '^\h*\H+\h+(adm|root)\b' | cat
+  become: true
+  footer: '#### </auditd_log_files_group_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_conf_files_perm' in check_list or 'all' in check_list) and '-auditd_conf_files_perm' not in check_list %}
+- header: '#### <auditd_conf_files_perm>'
+  command: >
+    find /etc/audit/ -type f \( -name '*.conf' -o -name '*.rules' \) -exec stat -Lc "%n %a" {} + | grep -Pv -- '^\h*\H+\h*([0,2,4,6][0,4]0)\h*$' | cat
+  become: true
+  footer: '#### </auditd_conf_files_perm>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_conf_files_ownership' in check_list or 'all' in check_list) and '-auditd_conf_files_ownership' not in check_list %}
+- header: '#### <auditd_conf_files_ownership>'
+  command: >
+    find /etc/audit/ -type f \( -name '*.conf' -o -name '*.rules' \) ! -user root | cat
+  become: true
+  footer: '#### </auditd_conf_files_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_conf_files_group_ownership' in check_list or 'all' in check_list) and '-auditd_conf_files_group_ownership' not in check_list %}
+- header: '#### <auditd_conf_files_group_ownership>'
+  command: >
+    find /etc/audit/ -type f \( -name '*.conf' -o -name '*.rules' \) ! -group root | cat
+  become: true
+  footer: '#### </auditd_conf_files_group_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_tools_perm' in check_list or 'all' in check_list) and '-auditd_tools_perm' not in check_list %}
+- header: '#### <auditd_tools_perm>'
+  command: >
+    stat -c "%n %a" /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/autrace /sbin/auditd /sbin/augenrules
+  become: true
+  footer: '#### </auditd_tools_perm>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_tools_ownership' in check_list or 'all' in check_list) and '-auditd_tools_ownership' not in check_list %}
+- header: '#### <auditd_tools_ownership>'
+  command: >
+    stat -c "%n %U" /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/autrace /sbin/auditd /sbin/augenrules
+  become: true
+  footer: '#### </auditd_tools_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_tools_group_ownership' in check_list or 'all' in check_list) and '-auditd_tools_group_ownership' not in check_list %}
+- header: '#### <auditd_tools_group_ownership>'
+  command: >
+    stat -c "%n %a %U %G" /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/autrace /sbin/auditd /sbin/augenrules
+  become: true
+  footer: '#### </auditd_tools_group_ownership>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd_tools_crypto_mechanism' in check_list or 'all' in check_list) and '-auditd_tools_crypto_mechanism' not in check_list %}
+- header: '#### <auditd_tools_crypto_mechanism>'
+  command: >
+    cat /etc/aide.conf.d/*.conf /etc/aide.conf || echo "Files not found"
+  become: true
+  footer: '#### </auditd_tools_crypto_mechanism>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('no_rogue_suid_sgid' in check_list or 'all' in check_list) and '-no_rogue_suid_sgid' not in check_list %}
+- header: '#### <no_rogue_suid_sgid>'
+  command: |
+    {% raw %}
+    {
+    l_output="" l_output2=""
+    a_arr=(); a_suid=(); a_sgid=() # initialize arrays
+    # Populate array with files that will possibly fail one of the audits
+    while read -r l_mpname; do
+    while IFS= read -r -d $'\0' l_file; do
+    [ -e "$l_file" ] && a_arr+=("$(stat -Lc '%n^%#a' "$l_file")")
+    done < <(find "$l_mpname" -xdev -not -path "/run/user/*" -type f \( -perm -2000 -o -perm -4000 \) -print0)
+    done <<< "$(findmnt -Derno target)"
+    # Test files in the array
+    while IFS="^" read -r l_fname l_mode; do
+    if [ -f "$l_fname" ]; then
+    l_suid_mask="04000"; l_sgid_mask="02000"
+    [ $(( $l_mode & $l_suid_mask )) -gt 0 ] && a_suid+=("$l_fname")
+    [ $(( $l_mode & $l_sgid_mask )) -gt 0 ] && a_sgid+=("$l_fname")
+    fi
+    done <<< "$(printf '%s\n' "${a_arr[@]}")" 
+    if ! (( ${#a_suid[@]} > 0 )); then
+    l_output="$l_output\n - There are no SUID files exist on the system"
+    else
+    l_output2="$l_output2\n - List of \"$(printf '%s' "${#a_suid[@]}")\" SUID executable files:\n$(printf '%s\n' "${a_suid[@]}")\n - end of list -\n"
+    fi
+    if ! (( ${#a_sgid[@]} > 0 )); then
+    l_output="$l_output\n - There are no SGID files exist on the system"
+    else
+    l_output2="$l_output2\n - List of \"$(printf '%s' "${#a_sgid[@]}")\" SGID executable files:\n$(printf '%s\n' "${a_sgid[@]}")\n - end of list -\n"
+    fi
+    [ -n "$l_output2" ] && l_output2="$l_output2\n- Review the preceding list(s) of SUID and/or SGID files to\n- ensure that no rogue programs have been introduced onto the system.\n" 
+    unset a_arr; unset a_suid; unset a_sgid # Remove arrays
+    # If l_output2 is empty, Nothing to report
+    if [ -z "$l_output2" ]; then
+    echo -e "\n- Audit Result:\n$l_output\n"
+    else
+    echo -e "\n- Audit Result:\n$l_output2\n"
+    [ -n "$l_output" ] && echo -e "$l_output\n"
+    fi
+    } | cat
+    {%- endraw %}
+    
+  become: true
+  footer: '#### </no_rogue_suid_sgid>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('shadowed_passwords' in check_list or 'all' in check_list) and '-shadowed_passwords' not in check_list %}
+- header: '#### <shadowed_passwords>'
+  command: >
+    awk -F: '($2 != "x" ) { print $1 " is not set to shadowed passwords "}' /etc/passwd
+  become: true
+  footer: '#### </shadowed_passwords>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auditd.conf' in check_list or 'all' in check_list) and '-auditd.conf' not in check_list %}
+- header: '#### <auditd.conf>'
+  command: >
+      cat /etc/audit/auditd.conf
+  become: true
+  footer: '#### </auditd.conf>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logrotate_conf' in check_list or 'all' in check_list) and '-logrotate_conf' not in check_list %}
+- header: '#### <logrotate_conf>'
+  command: >
+    grep -v '^\s*$\|^\s*\#' /etc/logrotate.conf /etc/logrotate.d/*
+  become: true
+  footer: '#### </logrotate_conf>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logfperm' in check_list or 'all' in check_list) and '-logfperm' not in check_list %}
+- header: '#### <logfperm>'
+  command: 'find /var/log/ -type f -perm /g+wx,o+rwx # -exec chmod g-wx,o-rwx "{}" +'
+  become: true
+  footer: '#### </logfperm>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('userspass_day_inpast' in check_list or 'all' in check_list) and '-userspass_day_inpast' not in check_list %}
+- header: '#### <userspass_day_inpast>'
+  command: >
+    epoch=$(($(date --date "$1" +%s)/86400)) ; cat /etc/shadow | awk -F: -v epoch="$epoch" '($3 > epoch+1 ) { print $1 " has a password change date in the future: " $3 " : today epoch is "epoch }'
+  become: true
+  footer: '#### </userspass_day_inpast>'
+
+{% endif %}
+{% endif %}

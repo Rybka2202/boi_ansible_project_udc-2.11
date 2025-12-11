@@ -1,0 +1,1336 @@
+# ==============================================================================================================================
+# Name:         commvault_db_simpana.global.ps1.j2
+#
+#               MSSQL Query Execution - for CommVault generating data for SAT
+#
+# Author:       Tamas Kamocsai, tamas.kamocsai@kyndryl.com, Kyndryl Inc.
+# Contributor:  Mircea Gaitan, mircea.gaitan@kyndryl.com, Kyndryl Inc.
+#
+# Created:      20220302
+# Last update:  20240616
+# ==============================================================================================================================
+
+# Params, pre-reqs
+Param (
+    $LogPath,
+    $LogFile,
+    [String]$AnsibleMode,
+    [String]$DeviceName,
+    [String]$ZipLog,
+    [String]$account,
+    [String]$blueid,
+    [String]$chipid,
+    [String]$location,
+    [String]$satteam,
+    [String]$hwswdomain,
+    [String]$dbName,
+    [String]$udcmode,
+    [String]$tpchcversion,
+    [String]$buildversion,
+    [String]$SqlInstance
+)
+
+# SATHC variables
+$tpchc_description = "Commvault_Simpana" # Value for description
+$tpchc_identifier = "None"               # Value for identifier
+$log_to_logfile = $true                  # Always generate log file
+$computer = ($env:COMPUTERNAME).ToLower()
+
+# Policy and Engine at Remote Collector
+if(!($tpchcversion)) {
+   $tpchcversion = "2.5.0"                       # Value for tpchversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -tpchversion parameter. Using default: $tpchcversion"
+}
+ # Code level for this script
+if(!($buildversion)) {
+   $buildversion	= "2.5.0.20240924"           # Value for buildversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -buildversion parameter. Using default: $buildversion"
+}
+if (!($AnsibleMode)) {
+    $AnsibleMode = $false
+    Write-Host -ForegroundColor Yellow "Missing -AnsibleMode parameter. Using default: $false"
+}
+if (!($DeviceName)) {
+    $DeviceName = ($env:COMPUTERNAME).ToLower()
+    Write-Host -ForegroundColor Yellow "Missing -DeviceName parameter. Using default: $DeviceName"
+}
+if (!($ZipLog)) {
+    $ZipLog = $True
+    Write-Host -ForegroundColor Yellow "Missing -ZipLog parameter. Using default: $True"
+}
+if (!($account)) {
+    $account = "SDE"
+    Write-Host -ForegroundColor Yellow "Missing -Account parameter. Using default: $account"
+}
+if (!($blueid)) {
+   $blueid = "BAC9999999"
+   Write-Host -ForegroundColor Yellow "Missing -Blueid parameter. Using default: $blueid"
+}
+if (!($chipid)) {
+   $chipid = "MyChip"
+   Write-Host -ForegroundColor Yellow "Missing -ChipID parameter. Using default: $chipid"
+}
+if (!($location)) {
+   $location = "Tucson"
+   Write-Host -ForegroundColor Yellow "Missing -Location parameter. Using default: $location"
+}
+if (!($satteam)) {
+   $satteam = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -SATTeam parameter. Using default: $satteam"
+}
+if (!($hwswdomain)) {
+   $hwswdomain = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -HWSWDomain parameter. Using default: $hwswdomain"
+}
+if(!($udcmode)){
+    $udcmode = $false
+    Write-Host -ForegroundColor Yellow "Missing -UDCmode parameter. Using default: $udcmode"
+}
+if (!($dbName)) {
+   $dbName = "CommServ"
+   Write-Host -ForegroundColor Yellow "Missing -DBName parameter. Using default: CommServ"
+}
+if (!($LogPath)) {
+    $LogPath = "$DeviceName.out"
+    Write-Host -ForegroundColor Yellow "Missing -LogPath parameter. Using default: $LogPath"
+}
+if (!($LogFile)) {
+    $LogFile = "$DeviceName.log"
+    Write-Host -ForegroundColor Yellow "Missing -LogFile parameter. Using default: $LogFile"
+}
+
+# Logs variables
+$localfolder = Get-Location
+$logdir = "$localfolder\$computer-log"
+
+$status = "FAILED"
+$status_code = 0
+
+# Cleaning old logs
+try {(Get-ChildItem -Path $loglocation -Filter "hyperv-$DeviceName*report.zip").FullName | Remove-Item -Force -ErrorAction Stop } catch {}
+try {
+    Get-Item $logdir -ErrorAction Stop | Out-Null
+    Remove-Item $logdir -Recurse | Out-Null
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+catch {
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+Remove-Item *.out -ErrorAction SilentlyContinue
+Remove-Item *.log -ErrorAction SilentlyContinue
+
+###############################################################################
+# MsgPrint function for logging purposes.
+###############################################################################
+function MsgPrint([string]$ShowStep, [string]$textMsg) {
+    if ($log_to_logfile) {
+        switch ($ShowStep.ToLower()) {
+            "info" {Write-Output "INFO:     $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "highlight"	{Write-Output "HIGHLIGHT:$(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "ok" {Write-Output "OK:       $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "error" {Write-Output "ERROR:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "warning" {Write-Output "WARNING:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "filelist" {Write-Output "FILES:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            default {Write-Output "DEFAULT:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+        }
+    }
+	return
+}
+
+$HostIP = (
+    Get-WmiObject Win32_NetworkAdapterConfiguration |
+    Where-Object {$_.IPAddress -ne $null -and $_.DefaultIPGateway -ne $null}
+).IPAddress[0]
+
+Write "#### <devicelist_cfg>" | out-file -Append -encoding UTF8 -FilePath $LogPath
+Write '"Devicename";"Deviceaddress";"Devicetype"' | out-file -Append -encoding UTF8  -FilePath $LogPath
+Write """$Devicename"";""$HostIP"";""$tpchc_description""" | out-file -Append -encoding UTF8 -FilePath $LogPath
+Write "#### </devicelist_cfg>`r`n" | out-file -Append -encoding UTF8 -FilePath $LogPath
+
+Write "#### <tpchc_cfg>"  | out-file -Append -encoding UTF8 -FilePath $LogPath
+Write '"tpchc_version";"build_version";"blue_id";"chip_id";"account";"location";"tpchc_description";"tpchc_identifier";"satteam";"hwswdomain"' | out-file -Append -encoding UTF8 -FilePath $LogPath
+Write """$tpchcversion"";""$buildversion"";""$blueid"";""$chipid"";""$account"";""$location"";""$tpchc_description"";""$tpchc_identifier"";""$satteam"";""$hwswdomain""" | out-file -Append -encoding UTF8 -FilePath $LogPath
+Write "#### </tpchc_cfg>`r`n" | out-file -Append -encoding UTF8 -FilePath $LogPath
+
+Write "#### <policy_cfg>" | Out-File -Append -encoding UTF8 -FilePath $logPath
+#Write "commvault_db_simpana.global.pol"  | Out-File -Append -encoding UTF8 -FilePath $logPath
+Write "#### </policy_cfg>`r`n" | Out-File -Append -encoding UTF8 -FilePath $logPath
+
+if ($udcmode -eq $false) {
+    $timestamp = get-date -format "yyyyMMdd-HHmmss"
+    $OS = Get-CimInstance -Class Win32_OperatingSystem
+    $OS_Version = $OS.Version
+    $PowerShell_Version = $PSVersionTable.PSVersion.tostring()
+    $iso8601DateTime = Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz"
+    Write "#### <cacf_cfg>" | Out-File -Append -encoding UTF8 -FilePath $LogPath
+    Write """collected_on"";""timestamp"";""gsma_code"";""tower_version"";""os_distribution"";""os_version"";""ansible_version"";""python_version"";""powershell_version"";""udc_version"";""healthcheck_timestamp_utc""" | Out-File -Append -encoding UTF8 -FilePath $LogPath
+    Write """$computer"";""$timestamp"";""$account"";"""";""Windows"";""$OS_Version"";"""";""0"";""$PowerShell_Version"";"""";""$iso8601DateTime""" | Out-File -Append -encoding UTF8 -FilePath $LogPath
+    Write "#### </cacf_cfg>`r`n" | Out-File -Append -encoding UTF8 -FilePath $LogPath
+}
+
+<#
+{% if 'chk01' in check_list or 'Windows_SystemInfo' in check_list or 'all' in check_list %}
+##########################################################################>
+MsgPrint "info" "Windows System Information"
+Write "#### <Windows_SystemInfo>" | out-file -Append -FilePath $LogPath -Encoding utf8
+$SystemInfo = New-Object -TypeName PSobject
+$computerSystem = get-wmiobject Win32_ComputerSystem -Computer $Computer
+$computerBIOS = get-wmiobject Win32_BIOS -Computer $Computer
+$computerOS = get-wmiobject Win32_OperatingSystem -Computer $Computer
+$computerCPU = get-wmiobject Win32_Processor -Computer $Computer
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+# set up the different possible types of licenses in an array:
+$licenseStatus=@{0="Unlicensed"; 1="Licensed"; 2="OOBGrace"; 3="OOTGrace"; 4="NonGenuineGrace"; 5="Notification"; 6="ExtendedGrace"}
+# Now get the license details and assign the object to $r
+$r = Get-WmiObject -Class SoftwareLicensingProduct | Where {$_.ApplicationID -eq "55c92734-d682-4d71-983e-d6ec3f16059f" -AND $_.PartialProductKey -ne $null}
+$PageFileResults = Get-WmiObject -Class Win32_PageFileUsage -Computer $Computer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "MachineName" -Value $computer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Manufacturer" -Value $computerSystem.Manufacturer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Model" -Value $computerSystem.Model
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value $computerOS.caption
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem ServicePack" -Value $computerOS.ServicePackMajorVersion
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BuildNumber" -Value $computerOS.BuildNumber
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Version" -Value $computerOS.Version
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "InstallDate" -value ($computerOS.ConvertToDateTime($ComputerOS.InstallDate))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "License" -Value $licenseStatus[[int]$r.LicenseStatus]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Uptime" -value ($computerOS.ConvertToDateTime($computerOS.LastBootUpTime))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BootDevice" -Value $computerOS.BootDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDevice" -Value $computerOS.SystemDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDirectory" -Value $computerOS.SystemDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "WindowsDirectory" -Value $computerOS.WindowsDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OSArchitecture" -Value $computerOS.OSArchitecture
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PowerShellVersion" -Value $PSVersionTable.PSVersion.tostring()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CurrentTimeZone" -Value $computerOS.CurrentTimeZone
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Debug" -Value $computerOS.Debug
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Distributed" -Value $computerOS.Distributed
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "EncryptionLevel" -Value $computerOS.EncryptionLevel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "DNS Host Name" -Value $computerSystem.DNSHostName
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Domain Role" -Value $DomainRole[$computerSystem.DomainRole]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Roles" -Value ($computerSystem.Roles -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Serial Number" -Value $computerBIOS.SerialNumber
+
+if ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU Array" -Value $computerCPU.Name[0]
+}
+else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU" -Value $computerCPU.Name
+}
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value $computerCPU.NumberOfCores.Count
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value $computerCPU.NumberOfLogicalProcessors.Count
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "RAM (GB)" -Value ([math]::Round($computerSystem.TotalPhysicalMemory/1GB,2))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePath" -Value $PageFileResults.Description
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "AutoManagedPageFile" -Value $computerSystem.AutomaticManagedPagefile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileSize(MB)" -Value $PageFileResults.AllocatedBaseSize
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileUsage(MB)" -Value $PageFileResults.CurrentUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePeakUsage(MB)" -Value $PageFileResults.PeakUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "TempPageFileInUse" -Value $PageFileResults.TempPageFile
+$SystemInfo | Out-File -Append -FilePath "$logdir\$computer.txt"
+$SystemInfo | Export-Csv -Delimiter ";" -NoTypeInformation -path $logdir\SystemInfo.csv -Encoding utf8
+Get-Content $logdir\SystemInfo.csv | Out-File -Append -FilePath $LogPath -Encoding utf8
+Write "#### </Windows_SystemInfo>`r`n" | out-file -Append -FilePath $LogPath -Encoding utf8
+<#
+{% endif %}
+
+
+###############################################################################>
+# Execute SQL codes and build segments automatically
+###############################################################################
+function Execute-SQL([string]$segmentName, [string]$sqlQuery, [string]$dbContext = $null) {
+    #set db context
+    if ($dbContext) {
+        $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+
+        try{
+            $sqlcmd.Connection = $sqlConn
+            $sqlcmd.CommandText = "USE [" + $dbContext + "]"
+            $numRows = $sqlcmd.ExecuteNonQuery()
+        }
+        catch [System.Data.SqlClient.SqlException]{
+            MsgPrint "error" $_
+        }
+        finally{
+            $sqlcmd.Dispose()
+        }
+    }
+
+    #build segmented output
+    $returnData = "#### <" + $segmentName.replace(" ", "_") + ">
+";
+
+    # Loging
+    MsgPrint "info" $segmentName.replace(" ", "_")
+
+    $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+
+    try{
+        $sqlcmd.Connection = $sqlConn
+        $sqlcmd.CommandText = $sqlQuery
+        $adp = New-Object System.Data.SqlClient.SqlDataAdapter $sqlcmd
+        $adp.SelectCommand.CommandTimeout = 60
+        $data = New-Object System.Data.DataSet
+        $adp.Fill($data) | Out-Null
+
+        #fetching header data for CSV
+        foreach ($cell in $data.Tables[0].Columns) {
+            $returnData += """" + $cell.ToString() + """;";
+        }
+
+        #strip the last ; char from the results and add a new line
+        $returnData = $returnData.Substring(0, $returnData.Length-1) + "
+";
+
+        #fetching data.
+        foreach ($row in $data.Tables[0].Rows) {
+            $returnData += """" + ($row.ItemArray -join """;""") + """
+"
+        }
+    }
+    catch [System.Data.SqlClient.SqlException]{
+        #$returnData += $_
+        MsgPrint "error" $_
+    }
+    finally{
+        $sqlcmd.Dispose()
+    }
+
+    #closing segment
+    $returnData = $returnData.Trim() + "
+#### </" + $segmentName.replace(" ", "_") + ">
+";
+
+    return $returnData;
+}
+
+
+###############################################################################
+# Connecting to SQL instance and executing the segments.
+###############################################################################
+function Get-SQLData($instance = $env:computername) {
+    $status = $False
+    $accessLvl = $False
+
+    Write-host "SQL Connection - $instance"
+    try {
+        $sqlConn = New-Object System.Data.SqlClient.SqlConnection
+        $sqlConn.ConnectionString = "Server=$instance;Integrated Security=true;Initial Catalog=master;Connect Timeout=5"
+
+        try {
+            $sqlConn.Open()
+            $status = $True
+        }
+        catch {
+            $script:status_code = 255
+            $script:status = "FAILED"
+            $status = $False
+            $output = $_
+            MsgPrint "error" $output
+            Write-Host $output -ForegroundColor Red
+            #$output | Out-File $logpath -encoding UTF8 -append
+            return
+        }
+
+        try {
+            $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+            $sqlcmd.Connection = $sqlConn
+            $sqlcmd.CommandText = "SELECT IS_SRVROLEMEMBER('sysadmin');"
+            $adp = New-Object System.Data.SqlClient.SqlDataAdapter $sqlcmd
+            $adp.SelectCommand.CommandTimeout = 60
+            $data = New-Object System.Data.DataSet
+            $adp.Fill($data) | Out-Null
+
+            if ($data.Tables[0].Rows[0].Item(0) -eq "1") {
+                $accessLvl = $True
+            }
+            else {
+                $script:status = "FAILED"
+                $script:status_code = 5
+                $accessLvl = $False
+                $output = "An error occurred during execution of the queries due to insufficient access level. The executor must have sysadmin access role."
+                write-host $output
+                MsgPrint "error" "error An error occurred during execution of the queries due to insufficient access level. The executor must have sysadmin access role."
+                #$output | Out-File $logpath -encoding UTF8 -append
+                $sqlConn.Close()
+                return
+            }
+
+            if ($accessLvl -eq $True) {
+
+                #checking if the CommServ database exists or not.
+                #if not, exit with error.
+
+                $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+                $sqlcmd.Connection = $sqlConn
+                $sqlcmd.CommandText = "SELECT COUNT(*) FROM sys.sysdatabases WHERE name LIKE 'CommServ'"
+                $adp = New-Object System.Data.SqlClient.SqlDataAdapter $sqlcmd
+                $adp.SelectCommand.CommandTimeout = 60
+                $data = New-Object System.Data.DataSet
+                $adp.Fill($data) | Out-Null
+
+                if ($data.Tables[0].Rows[0].Item(0) -ne "1") {
+                    $script:status_code = 5
+                    $script:status = "FAILED"
+                    $accessLvl = $False
+                    $output = "The required database is not available on this instance."
+                    write-host $output
+                    MsgPrint "error" "The required database is not available on this instance."
+                    #$output | Out-File $logpath -encoding UTF8 -append
+                    $sqlConn.Close()
+                    return
+                }
+
+
+                ###############################################################################
+                # Execute segments
+                ###############################################################################
+
+
+                <#
+				{% if 'chk02' in check_list or 'Password Requirements' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Password Requirements" "SELECT [id]
+					,[name]
+					,[value]
+					,[created]
+					,[modified]
+				FROM [CommServ].[dbo].[GXGlobalParam] where name = 'passwordComplexityLevel'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk03' in check_list or 'Retired Media' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Retired Media" "SELECT [MediaID]
+					,[BarCode]
+					,[MediaTypeID]
+					,[CreationTime]
+					,[NumberOfReUses]
+					,[LastExportTime]
+					,[MediaLocationType]
+					,[MediaLocation]
+					,[retentionFlags]
+					,[retentionExpireTime]
+					,[MediaFlags]
+					,[MediaStatusReason]
+					,[Attributes]
+					,[IsAged]
+					,[LibraryID]
+					,[LibraryName]
+					,[SpareGroupId]
+					,[SpareGroupName]
+					,[ExportLocationType]
+					,[ExportLocationId]
+					,[ExportLocation]
+					,[ContainerId]
+					,[ContainerName]
+					,[LastRestoreTime]
+					,[LastBackupTime]
+					,[PinMediaExpireTime]
+					,[TotalSpaceMB]
+					,[TotalFreeSpaceMB]
+					,[TotalCVDataSizeMB]
+					,[GroupType]
+					,[MediaStatus]
+					,[LastWriteLibraryID]
+					,[IsInMediaGroup]
+					,[TotalNumberOfSoftErrors]
+					,[TotalNumberOfHardErrors]
+					,[Description]
+				FROM [CommServ].[dbo].[CNMMMediaInfoView]
+                WHERE SpareGroupName = 'Retired Media'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk04' in check_list or 'VM Socket Consumption' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "VM Socket Consumption" "IF (OBJECT_ID('Lic_CUR_VMSockets_vw') > 0)
+                BEGIN
+                SELECT
+                    [HypervisorHost]
+                    ,[Sockets]
+				FROM
+                    [CommServ].[dbo].[Lic_CUR_VMSockets_vw]
+                END" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk05' in check_list or 'Dedupe Partition Information' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Dedupe Partition Information" "SELECT [MAName]
+					,[Volume]
+					,[TotalCapacityMB]
+					,[FreeDiskSpaceMB]
+					,[TotalSpaceUsedMB]
+					,[totalActiveDedupPartitions]
+					,[totalSealedDedupPartitions]
+				FROM [CommServ].[dbo].[DDBView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk06' in check_list or 'CV DB Maintenance Check' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "CV DB Maintenance Check" "SELECT [ID]
+					,[DBID]
+					,[DBName]
+					,[Status]
+					,[LastUpdated]
+				FROM [CommServ].[dbo].[CSDBMaintenanceSummaryView] where BatchStartDate > getDate()-30" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk07' in check_list or 'Failed backup jobs in last 24 hours' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Failed backup jobs in last 24 hours" "SELECT [jobid]
+					,[appid]
+					,[jobinitfrom]
+					,[clientname]
+					,[idataagent]
+					,[instance]
+					,[backupset]
+					,[subclient]
+					,[jobstatusInt]
+					,[jobstatus]
+					,[jobfailedreason]
+					,[startdate]
+				FROM [CommServ].[dbo].[CommCellBackupInfo] where jobstatus = 'Failed' and startdate > getDate()-1" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk08' in check_list or 'Failed restore jobs in last 24 hours' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Failed restore jobs in last 24 hours" "SELECT [jobid]
+					,[destclientname]
+					,[idataagent]
+					,[instance]
+					,[backupset]
+					,[jobstatus]
+					,[jobfailedreason]
+					,[starttime]
+				FROM [CommServ].[dbo].[CommCellRestoreInfo] where jobstatus = 'Failed' and starttime > getDate()-1" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk09' in check_list or 'Active admin jobs view' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Active admin jobs view" "SELECT [JobID]
+					,[StatusID]
+					,[OpType]
+					,[ClientName]
+					,[InstanceName]
+					,[CurrentPhaseNum]
+					,[CurrentPhaseName]
+					,[TotalNumOfPhases]
+					,[StartTime]
+					,[EndTime]
+					,[ElapsedTime]
+					,[Progress]
+					,[Priority]
+					,[UserName]
+					,[FailureReason]
+					,[BkpLevel]
+					,[SPName]
+					,[MAName]
+					,[NumStreams]
+					,[CopyID]
+					,[CopyName]
+					,[InventoryType]
+					,[LibraryName]
+					,[Modified]
+					,[Preemptable]
+					,[GUIAlertColorLevel]
+					,[TimeToComplete]
+				FROM [CommServ].[dbo].[CNJobsAdminView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk10' in check_list or 'Disabled Admin schedule' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Disabled Admin schedule" "SELECT [scheduleId]
+					,[scheduleTask]
+					,[schedtype]
+					,[schedday]
+				FROM [CommServ].[dbo].[CommCellAdminSchedule] where schedday = ' '" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk11' in check_list or 'Active Backup Jobs' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Active Backup Jobs" "SELECT [JobID]
+					,[StatusID]
+					,[OpType]
+					,[AppID]
+					,[BkpLevel]
+					,[EntityID]
+					,[AppTypeID]
+					,[ClientName]
+					,[InstanceName]
+					,[BackupSetName]
+					,[SubClientName]
+					,[SPName]
+					,[MAName]
+					,[CurrentPhaseNum]
+					,[CurrentPhaseName]
+					,[TotalNumOfPhases]
+					,[StartTime]
+					,[EndTime]
+					,[ElapsedTime]
+					,[Progress]
+					,[Priority]
+					,[UserName]
+					,[FailureReason]
+					,[Modified]
+					,[Preemptable]
+					,[GUIAlertColorLevel]
+					,[TimeToComplete]
+				FROM [CommServ].[dbo].[CNJobsBackupView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk12' in check_list or 'Time Zone' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Time Zone" "SELECT [Now]
+				FROM [CommServ].[dbo].[CNGetTimeNow]
+				" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk13' in check_list or 'DB and other instances created modified info' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "DB and other instances created modified info" "SELECT [ID]
+					,[Name]
+					,[Created]
+					,[Modified]
+				FROM [CommServ].[dbo].[CNInstanceView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk14' in check_list or 'Drive Pool State' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Drive Pool State" "SELECT [DrivePoolID]
+					,[DrivePoolName]
+					,[DrivePoolType]
+					,[DrivePoolSoftState]
+					,[DrivePoolEnabled]
+				FROM [CommServ].[dbo].[CNMMDrivePoolView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk15' in check_list or 'Capacity View' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Capacity View" "SELECT [MountPathID]
+					,[FreeSpace]
+					,[MaxSizeAllowed]
+					,[SpaceReserved]
+				FROM [CommServ].[dbo].[CNMMMPCapacityView]
+				" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk16' in check_list or 'CNSPToMAView' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "CNSPToMAView" "SELECT [AppTypeID]
+					,[AppTypeName]
+					,[SPID]
+					,[SPName]
+					,[MAName]
+				FROM [CommServ].[dbo].[CNSPToMAView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk17' in check_list or 'Total data backed up in 24 hours' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Total data backed up in 24 hours" "SELECT [ClientID]
+					,[ClientName]
+					,[AgentTypeID]
+					,[AgentTypeName]
+					,[InstanceID]
+					,[InstanceName]
+					,[BackupsetID]
+					,[BackupsetName]
+					,[SubclientID]
+					,[SubclientName]
+					,[DataProtected]
+					,[DataWritten]
+				FROM [CommServ].[dbo].[DataWrittenInPreviousDayView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk18' in check_list or 'NT Notification' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "NT Notification" "SELECT [NTnotificationID]
+					,[notificationName]
+					,[revision]
+					,[lastModified]
+					,[description]
+					,[notifOwner]
+					,[locale]
+					,[reportingOptions]
+					,[delayTimeSeconds]
+					,[persistTimeSeconds]
+					,[reportingOptions2]
+					,[delayTimeSeconds2]
+					,[persistTimeSeconds2]
+					,[EmailEnable]
+					,[pagerEnable]
+					,[SnmpEnable]
+					,[appLogEnable]
+					,[saveAlertEnable]
+					,[rssFeedEnable]
+					,[ROMSenable]
+					,[actionEnable]
+					,[hasAttachments]
+					,[hasAttachments2]
+				FROM [CommServ].[dbo].[NTnotification]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk19' in check_list or 'Total data backed up in last 24 hours' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Total data backed up in last 24 hours" "SELECT Sum(totalBackupSize)
+				FROM [CommServ].[dbo].[CommcellBackupInfoStats] where startdate > getDate()-1" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk20' in check_list or 'Mount Path pending deletes' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Mount Path pending deletes" "IF (OBJECT_ID('DATroubleshootingInfo') > 0)
+                BEGIN
+                    SELECT [mountPathId]
+					    ,[libraryId]
+					    ,[pendingDeletes]
+					    ,[problemFlags]
+					    ,[jobRetentionFlags]
+					    ,[modified]
+				   	    ,[infoXml]
+				    FROM [CommServ].[dbo].[DATroubleshootingInfo]
+                END" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk21' in check_list or 'Groups Password Expiration' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Password Expiration" "SELECT
+					[attrName]
+					,[attrVal]
+					,dbo.UMGroups.name as Groupname
+				FROM [CommServ].[dbo].[UMGroupsProp] Left outer Join dbo.UMGroups  on componentNameId = dbo.UMGroups.id
+				   where attrName='Age Password in Days'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk22' in check_list or 'Users Password Expiration' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Users Password Expiration" "SELECT [id]
+					,[name]
+					,[login]
+					,[policy] as 'age password in days'
+					,[enabled]
+				FROM [CommServ].[dbo].[UMUsers]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk23' in check_list or 'Subclients with no schedule' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Subclients with no schedule" "SELECT [appid]
+					,[clientid]
+					,[clientname]
+					,[idataagent]
+					,[idataagentstatus]
+					,[idagentbkenable]
+					,[idagentrstenable]
+					,[instance]
+					,[backupset]
+					,[subclient]
+					,[subclientstatus]
+					,[schedjobpattern]
+					,[schedbackupday]
+					,[schedbackuptime]
+					,[schednextbackuptime]
+					,[data_sp]
+					,[log_sp]
+					,[QDisplayName]
+					,[xmlDisplayName]
+				FROM [CommServ].[dbo].[CommCellSubClientConfig] where schedbackuptime = ''" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk24' in check_list or 'Password History' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Password History" "SELECT [dbo].[UMGroupsProp].[id]
+					,[componentNameId]
+					,[attrName]
+					,[attrVal]
+					,dbo.UMGroups.name
+				FROM [CommServ].[dbo].[UMGroupsProp] Left outer Join dbo.UMGroups  on componentNameId = dbo.UMGroups.id
+				   where attrName='Password History Count'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk25' in check_list or 'Password Maximum Failed Signon Attempts' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Password Maximum Failed Signon Attempts" "SELECT [id]
+					,[name]
+					,[value]
+					,[created]
+					,[modified]
+				FROM [CommServ].[dbo].[GXGlobalParam] where name = 'FailedLoginAttemptLimit'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk26' in check_list or 'Client Server Software Level' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Client Server Software Level" "SELECT  [dbo].[CommCellClientConfig].Client
+                ,[OS [Version]]]
+                ,[Hardware]
+                ,[GalaxyRelease]
+                ,[InstallTime]
+                ,[dbo].[CommCellClientVersion].[Version]
+                ,[ClientStatus]
+                    FROM [dbo].[CommCellClientConfig]
+	            INNER JOIN [dbo].[CommCellClientVersion] ON [dbo].[CommCellClientVersion].[Name]=[dbo].[CommCellClientConfig].Client where ClientStatus='installed' and GalaxyRelease!='NULL'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk27' in check_list or 'Database backup less than 24 hours or more' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Database backup less than 24 hours or more" "SELECT bs.database_name,
+					bs.backup_start_date,
+					bs.backup_finish_date,
+					bs.server_name,
+					bs.user_name,
+					bs.type,
+					bm.physical_device_name
+				FROM msdb.dbo.backupset AS bs
+				INNER JOIN msdb.dbo.backupmediafamily AS bm on bs.media_set_id = bm.media_set_id where database_name='CommServ' and backup_finish_date >= DATEADD(day, -1, CAST(GETDATE() AS date))" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk28' in check_list or 'Number of unavailable destroyed and error volumes' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Number of unavailable destroyed and error volumes" "SELECT [mediaid]
+					,[mediabarcode]
+					,[type]
+					,[format]
+					,[sidename]
+					,[mediaCreationTime]
+					,[volumeid]
+					,[volumename]
+					,[blocksizeKB]
+					,[mediastatus]
+					,[volumestatus]
+					,[location]
+					,[slotname]
+					,[drivename]
+					,[exportlocation]
+					,[drivepoolname]
+					,[library]
+					,[LabelErrors]
+					,[ReadWriteErrors]
+				FROM [CommServ].[dbo].[CommCellMediaInfo] where mediastatus!='Good'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk29' in check_list or 'GUI time out setting' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "GUI time out setting" "SELECT [id]
+					,[name]
+					,[value]
+					,[created]
+					,[modified]
+				FROM [CommServ].[dbo].[GXGlobalParam] where name = 'GuiLockTimeout'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk30' in check_list or 'Admin Schedules check' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Admin Schedules check" "SELECT [scheduleId]
+					,[scheduleTask]
+					,[schedtype]
+					,[sp_id]
+					,[sp]
+					,[sp_dest_copy_id]
+					,[sp_dest_copy]
+					,[sp_src_copy_id]
+					,[sp_src_copy]
+					,[streams]
+					,[schedpattern]
+					,[schedinterval]
+					,[schedday]
+					,[schedTime]
+					,[schednexttime]
+				FROM [CommServ].[dbo].[CommCellAdminSchedule]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk31' in check_list or 'Library Status' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Library Status" "SELECT [LibName]
+					,[LibAliasName]
+					,[LibStatus]
+					,[LibBroken]
+					,[LibStatusReason]
+					,[OfflineTimeStamp]
+				FROM [CommServ].[dbo].[CommCellLibraryInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk32' in check_list or 'Active Job check' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Active Job check" "SELECT [jobID]
+					,[operation]
+					,[clientComputer]
+					,[agentType]
+					,[subclient]
+					,[jobType]
+					,[phase]
+					,[storagePolicy]
+					,[mediaAgent]
+					,[status]
+					,[progress]
+					,[errors]
+					,[delayReason]
+					,[description]
+					,[scheduleId]
+					,[instanceName]
+				FROM [CommServ].[dbo].[CommCellJobController]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk33' in check_list or 'CDR Status' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "CDR Status" "SELECT [jobId]
+					,[pairId]
+					,[currentStatus]
+					,[lastStateChangeTime]
+					,[lastUpdateTime]
+					,[clientStatusChangeTime]
+					,[unverifiable]
+					,[currentThroughput]
+					,[currentPhase]
+					,[currentSourceLogNumber]
+					,[currentDestinationLogNumber]
+					,[lastLoggedPlayedNumber]
+					,[lastLogPlayedTime]
+					,[bytesToTransfer]
+					,[bytesTransfered]
+					,[abortReason]
+					,[numberOfFilesToTransfer]
+					,[numberOfFilesTransfered]
+					,[currentFileBeingTransfered]
+				FROM [CommServ].[dbo].[CDRJobStateInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk34' in check_list or 'Oracle Job status check' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Oracle Job status check" "SELECT [jobid]
+					,[appid]
+					,[jobinitfrom]
+					,[clientname]
+					,[idataagent]
+					,[instance]
+					,[backupset]
+					,[subclient]
+					,[storagePolicy]
+					,[backuplevelInt]
+					,[backuplevel]
+					,[incrlevel]
+					,[jobstatusInt]
+					,[jobstatus]
+					,[jobfailedreason]
+					,[startdateunixsec]
+					,[enddateunixsec]
+					,[startdate]
+					,[enddate]
+					,[durationunixsec]
+					,[duration]
+					,[numstreams]
+					,[numbytesuncomp]
+					,[numbytescomp]
+					,[numobjects]
+					,[isAged]
+					,[isAgedStr]
+					,[xmlJobOptions]
+					,[retentionDays]
+					,[systemStateBackup]
+					,[nextSCN]
+					,[CopyName]
+					,[CopyPrecedence]
+					,[dataOrLog]
+				FROM [CommServ].[dbo].[CommCellOracleBackupInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk35' in check_list or 'Get Active Jobs' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Get Active Jobs" "SELECT [jobId]
+					,[opType]
+					,[combPriority]
+					,[jobStartTime]
+				FROM [commserv].[dbo].[RunningJobs]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk36' in check_list or 'VM Backup check' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "VM Backup check" "SELECT [vmname]
+                  ,[vmclientid]
+                  ,[virtualizationclient]
+                  ,[virtualizationclientid]
+                  ,[jobid]
+                  ,[vmGUID]
+                  ,[vmstatus]
+                  ,[vmhost]
+                  ,[proxy]
+                  ,[startdateunixsec]
+                  ,[enddateunixsec]
+                  ,[startdate]
+                  ,[enddate]
+                  ,[failureReason]
+                  ,[vmbackupsizebytes]
+                  ,[vmguestsizebytes]
+                  ,[vmsizebytes]
+                  ,[vmcbtstatus]
+                  ,[vmtransportmode]
+                  ,[subclient]
+                  ,[backupset]
+                  ,[data_sp]
+                  ,[backuplevelInt]
+                  ,[backuplevel]
+                  FROM [CommServ].[dbo].[CommCellVMBackupInfo] where enddate >= DATEADD(day, -1, CAST(GETDATE() AS date)) and vmstatus='Failed'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk37' in check_list or 'Snap info' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Snap info" "SELECT	[ClientId]
+					,[ClientName]
+					,[JobId]
+					,[SnapId]
+					,[SnapUniqueId]
+					,[Mount Status]
+					,[FilerId]
+					,[FilerName]
+					,[EngineName]
+					,[SourcePath]
+					,[StoragePolicyId]
+					,[StoragePolicyName]
+					,[CopyId]
+					,[CopyName]
+					,[CopyType]
+				FROM [CommServ].[dbo].[CommCellSnapInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk38' in check_list or 'Schedule backups info' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Schedule backups info" "SELECT [CommCell Name]
+					,[Client Name]
+					,[Agent Name]
+					,[Instance Name]
+					,[Backupset Name]
+					,[Subclient Name]
+					,[Backup Type]
+					,[Schedule Pattern]
+					,[Scheduled Date]
+					,[Storage Policy]
+					,[Retention Days]
+				FROM [CommServ].[dbo].[CommCellScheduledBackupInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk39' in check_list or 'Retention info' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "NameOfSection" "SELECT
+					  [CommCellName]
+					  ,[SpName]
+					  ,[CopyName]
+					  ,[RetentionDays]
+					  ,[Cycles]
+					  ,[ArchiverRetention]
+					  ,[IsDataAgingEnabled]
+					  ,[IsManagedDiskSpaceEnabled]
+					  ,[IsExtendedRetentionEnabled]
+					  ,[ExtendedRetentionRule1]
+					  ,[RetentionDaysForRule1]
+					  ,[GraceDaysForRule1]
+					  ,[ExtendedRetentionRule2]
+					  ,[RetentionDaysForRule2]
+					  ,[GraceDaysForRule2]
+					  ,[ExtendedRetentionRule3]
+					  ,[RetentionDaysForRule3]
+					  ,[GraceDaysForRule3]
+					  ,[BackupSelectionTimePeriod]
+					  ,[WeeklyRuleStartDay]
+					  ,[MonthlyRuleStartDate]
+					  ,[SelectJobsFromPreviousTier]
+					  ,[CalendarName]
+				FROM [CommServ].[dbo].[CommCellRetentionInfo]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk40' in check_list or 'Active Jobs and Media reservation' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Active Jobs and Media reservation" "SELECT [ReservationId]
+      ,[RequestId]
+      ,[JobId]
+      ,[Priority]
+      ,[ReservationType]
+      ,[ReservationTime]
+      ,[CopyId]
+      ,[StreamId]
+      ,[VolumeId]
+      ,[MediaId]
+      ,[MountPathId]
+      ,[DriveId]
+      ,[ClientId]
+      ,[DrivePoolId]
+      ,[MasterPoolId]
+      ,[LibraryId]
+      ,[LibraryTypeId]
+      ,[MediaGroupId]
+         ,[DriveInUseByMM]
+      ,[Released]
+        FROM [CommServ].[dbo].[RMReservations]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk41' in check_list or 'Aux copy backlog info' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "Aux copy backlog info" "SELECT [PolicyName]
+					,[CopyName]
+					,[CopyType]
+					,[IsDashCopy]
+					,[NumOfJobsBehind]
+					,[OldestJobToCopy]
+				FROM [CommServ].[dbo].[AuxCopyBehindView]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk42' in check_list or 'List all commcell users' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "List all commcell users" "SELECT [userId]
+					,[login]
+					,[UserName]
+					,[email]
+					,[Pager]
+					,[userFlags]
+				FROM [CommServ].[dbo].[USusers]" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+				{% if 'chk43' in check_list or 'CommCellClientConfig' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "CommCellClientConfig" "SELECT
+	            [dbo].[CommCellClientConfig].Client
+	            ,[OS [Version]]]
+	            ,[Hardware]
+	            ,[GalaxyRelease]
+	            ,[InstallTime]
+	            ,[dbo].[CommCellClientVersion].[Version]
+	            ,[ClientStatus]
+                FROM [dbo].[CommCellClientConfig]
+                INNER JOIN [dbo].[CommCellClientVersion] ON [dbo].[CommCellClientVersion].[Name] = [dbo].[CommCellClientConfig].Client WHERE ClientStatus = 'installed' AND GalaxyRelease != 'NULL'" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %}
+
+
+                {% if 'chk44' in check_list or 'CommVault_License' in check_list or 'all' in check_list %}
+				##########################################################################################################>
+				$output = Execute-SQL "CommVault_License" ";WITH getLicense AS (
+                SELECT CAST([licXML] AS XML) AS X FROM [CommServ].[dbo].[SimLicenses] A WHERE licType = 64 OR licType = 1
+                )
+                SELECT DISTINCT
+                H.ep.value('@CommCellId', 'nvarchar(64)') AS [CommCellId]
+                FROM
+                getLicense
+                CROSS APPLY X.nodes('CommVaultOEMOrder/LAServerInfo') AS h(ep)
+                WHERE
+                H.ep.value('@CommCellId', 'nvarchar(64)') IS NOT NULL" $dbName
+				$output | Out-File $logpath -encoding UTF8 -append
+				<# {% endif %} #>
+
+
+                $script:status = "OK"
+
+
+                $sqlConn.Close()
+                return
+            }
+        }
+        catch [System.Data.SqlClient.SqlException] {
+            $script:status_code = 1
+            $output = $_
+            Write-Host $output -ForegroundColor Red
+            MsgPrint "error" $output
+            #$output | Out-File $logpath -encoding UTF8 -append
+            $sqlConn.Close()
+            return
+        }
+
+        if ($status -eq $True) {
+            $sqlConn.Close()
+        }
+        else {
+            $script:status_code = 255
+            $script:status = "FAILED"
+            $output = "A network-related or instance-specific error occurred while establishing a connection to SQL Server." +
+            " The server was not found or was not accessible. Verify that the instance name is correct and that SQL Server is configured to allow remote connections."
+            write-host $output
+            MsgPrint "error" "error A network-related or instance-specific error occurred while establishing a connection to SQL Server."
+            #$output | Out-File $logpath -encoding UTF8 -append
+            $sqlConn.Close()
+            return
+        }
+    }
+    catch {
+        $script:status = "FAILED"
+        $script:status_code = 10
+        $output = $_
+        Write-Host $output -ForegroundColor Red
+        MsgPrint "error" $_
+        #$output | Out-File $logpath -encoding UTF8 -append
+        $sqlConn.Close()
+        return
+    }
+    finally {
+        $sqlConn.Close()
+        MsgPrint "info" "SQL Connection Closed."
+    }
+}
+
+
+###############################################################################
+# Getting SQL instances on local computer.
+###############################################################################
+function Get-SqlInstances {
+    Param($ServerName = '.')
+    $localInstances = @()
+
+    try{
+        Import-Module FailoverClusters -ErrorAction Stop
+        $arrINST = Get-Clusterresource | Where-Object {$_.resourcetype -like 'sql server'} | Get-Clusterparameter "instancename" | Sort-Object objectname | Select-Object -ExpandProperty value
+        $arrSVN = Get-Clusterresource | Where-Object {$_.resourcetype -like 'sql server'} | Get-Clusterparameter "virtualservername" | Sort-Object objectname | Select-Object -ExpandProperty value
+
+        foreach($item in $arrSVN) {
+            $localInstances += $item
+        }
+
+        $i = 0
+
+        foreach($item in $arrINST) {
+            if ($item.Length -gt 1) {
+                $localInstances[$i] += ("\" + $item)
+            }
+
+            $i++
+        }
+    }
+    catch{
+        [array]$captions = gwmi win32_service -computerName $ServerName | ?{$_.Name -match "mssql*" -and $_.PathName -match "sqlservr.exe"} | %{$_.Caption}
+
+        foreach ($caption in $captions) {
+            if ($caption -eq "MSSQLSERVER") {
+                $localInstances = "."
+            }
+            else {
+                $temp = $caption | %{$_.split(" ")[-1]} | %{$_.trimStart("(")} | %{$_.trimEnd(")")}
+                if ($temp -eq "MSSQLSERVER") {
+                    $localInstances += "$env:COMPUTERNAME"
+                }
+                else {
+                    $localInstances += "$env:COMPUTERNAME\$temp"
+                }
+            }
+        }
+    }
+    if ($localInstances.Count -eq 0) {
+        MsgPrint "warning" "info No SQL instances"
+        $script:status_code = 16
+    }
+    else {
+        MsgPrint "info" "info Local SQL instances: $localInstances"
+    }
+    $localInstances
+}
+
+
+###############################################################################
+# Get the SQL instances then executing the same query on all the local SQL instances
+###############################################################################
+function Get-Data {
+    $instances = Get-SqlInstances
+    $cnt = $instances.Count
+    $i = 1
+    if ($cnt -gt 0) {
+        foreach($instance in $instances) {
+            # when explicitly defined SQL instance is available, execute only on that.
+            if (($SqlInstance) -and ($SqlInstance -eq $instance)) {
+                Get-SQLData $instance
+            }
+            else{
+                Get-SQLData $instance
+            }
+        }
+    }
+    else {
+        $script:status_code = 16
+    }
+}
+
+
+###############################################################################
+# Calling the main function
+###############################################################################
+Get-Data
+
+$date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+if ($status_code -eq 0) {
+    Write-Output "$date - DATA COLLECTION ON $($env:COMPUTERNAME) FINISHED SUCCESSFULLY (0)" | Out-File $LogFile -encoding UTF8 -Append
+}
+else {
+    Write-Output "$date - DATA COLLECTION ON $($env:COMPUTERNAME) FINISHED WITH ERRORS($status_code)" | Out-File $LogFile -encoding UTF8 -Append
+}
+
+
+Write-Output $date": Data collection status: "$status | Out-File $LogFile -encoding UTF8 -Append

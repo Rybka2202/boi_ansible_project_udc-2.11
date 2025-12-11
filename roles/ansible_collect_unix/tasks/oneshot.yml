@@ -1,0 +1,51 @@
+---
+- name: Collect required facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - 'distribution'
+      - 'python'
+      - 'env'
+      - 'architecture'
+    gather_timeout: 120
+  no_log: true
+
+- name: Data collection prepare block
+  delegate_to: localhost
+  block:
+    # This should only find global templates.
+    # Local remediation not supported
+    - name: Find the variable templates
+      ansible.builtin.find:
+        paths: '{{ role_path }}/templates'
+        patterns: '{{ namebase }}.global.j2'
+        use_regex: true
+      register: vars_list
+
+    - name: Generate the check_list files from templates
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "/tmp/{{ item[:-3] | basename }}.yml"
+        force: true
+        mode: "0600"
+      loop: "{{ vars_list.files | map(attribute='path') | list }}"
+
+    - name: Load global checks to run
+      ansible.builtin.include_vars:
+        file: "/tmp/{{ namebase }}.global.yml"
+      no_log: true
+
+    - name: Initialize settings_global
+      ansible.builtin.set_fact:
+        settings: "{{ settings_global }}"
+
+- name: Block for gathering data
+  environment:
+    PATH: "/usr/sbin:/sbin:{{ ansible_env.PATH }}"
+  block:
+    - name: Gather data
+      ansible.builtin.include_tasks: tasks/oneshot_cmd.yml
+      loop: "{{ settings }}"
+      loop_control:
+        loop_var: commands

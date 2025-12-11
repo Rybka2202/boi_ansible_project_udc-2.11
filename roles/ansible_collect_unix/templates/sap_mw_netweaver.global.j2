@@ -1,0 +1,526 @@
+---
+devicetype: 'SAP_MW_NETWEAWER'
+
+settings_global:
+  - header: '#### <vendor>'
+    command: >
+      echo "SAP"
+    footer: '#### </vendor>'
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+  - header: '#### <os_info>'
+    command: |
+      echo "\"HOSTNAME\";\"OS_DETAILS\";\"RELEASE_NUMBER\";\"KERNEL\";\"SERIAL\""
+      HOSTNAME=$(hostname)
+      OS_DETAILS={{ ansible_facts['distribution'] }}
+      VERSION_ID={{ ansible_facts['distribution_version'] }}
+      KERNEL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/bin/oslevel -s){% else %}$(/usr/bin/uname -r){% endif %}{{ '' }}
+      SERIAL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/sbin/prtconf | grep 'Machine Serial Number' | awk '{print $NF}'){% 
+              elif ansible_facts.os_family == 'RedHat' %}{% if ansible_facts["architecture"] == "ppc64le" %}$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'SN unreadable'){%
+              else %}$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo "SN unreadable"){% endif %}{%
+              else %}{% if ansible_facts["architecture"] == "ppc64le" %}$(/usr/bin/grep serial_number /proc/powerpc/lparcfg | cut -d ',' -f 2 | cut -c 3- || echo "SN unreadable"){%
+              else %}$(/usr/sbin/dmidecode -s system-serial-number || echo "SN unreadable"){% endif %}{% endif %}{{ '' }}
+      echo "\"$HOSTNAME\";\"$OS_DETAILS\";\"$VERSION_ID\";\"$KERNEL\";\"$SERIAL\""
+    become: true
+    become_user: "{{ become_user | default('root') }}"
+    footer: >
+      #### </os_info>
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+  - header: '#### <sap_version>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=')
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"KERNEL_RELEASE"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        value=$(su - "${sid}adm" -c "disp+work -v | tail -1" 2> /dev/null)
+        echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${value}\""
+        unset IFS
+      done
+    become: true
+    footer: '#### </sap_version>'
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('sap_parameters' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_parameters' not in check_list %}
+  - header: '#### <sap_parameters>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=' | grep -E "^\s*.{3}\|\s*[0-9]+\|\s*(ASCS|D|J|SCS).*")
+      if [ -z "$apps_str" ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"PARAMETER_NAME";"PARAMETER_VALUE"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        IFS=$'\n'
+        params=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue | grep -v '^$' | grep '=' " ))
+        for param in "${params[@]}"
+        do
+          unset IFS
+          IFS=$'='
+          param_value=($param)
+          name="${param_value[0]}"
+          value="${param_value[@]:1}"
+          value=($(echo "$value" | tr -d '\r' | sed 's/"/\\"/g'))
+          echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\""
+        done
+        unset IFS
+      done
+    become: true
+    footer: >
+      #### </sap_parameters>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('abap_sap_parameters' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-abap_sap_parameters' not in check_list %}
+  - header: '#### <abap_sap_parameters>'
+    command: |
+      # filter out non-abap apps
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=' | grep -E "^\s*.{3}\|\s*[0-9]+\|\s*(ASCS|D).*")
+      if [ -z "$apps_str" ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"PARAMETER_NAME";"PARAMETER_VALUE"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        IFS=$'\n'
+        params=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue | grep -v '^$' | grep '=' " ))
+        for param in "${params[@]}"
+        do
+          unset IFS
+          IFS=$'='
+          param_value=($param)
+          name="${param_value[0]}"
+          value="${param_value[@]:1}"
+          value=($(echo "$value" | tr -d '\r' | sed 's/"/\\"/g'))
+          echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\""
+        done
+        unset IFS
+      done
+    become: true
+    footer: >
+      #### </abap_sap_parameters>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sapinit_permissions' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sapinit_permissions' not in check_list %}
+  - header: '#### <sapinit_permissions>'
+    command: |
+      echo '"FILE";"OWNER";"GROUP";"PERMISSIONS"'
+      file="/etc/rc.d/init.d/sapinit"
+      RESULT=`ls -ld "$file"`
+      if [[ $? -ne 0 ]]; then
+        file="/etc/rc.d/sapinit"
+        RESULT=`ls -ld "$file"`
+        if [[ $? -ne 0 ]];then
+          exit 1
+        fi
+      fi
+      RESULT=($(echo "$RESULT" | awk '{k=0;for(i=0;i<=8;i++)k+=((substr($1,i+2,1)~/[rwx]/) *2^(8-i));if(k)printf("%0o ",k);print}'))
+      permissions="${RESULT[0]}"
+      owner="${RESULT[3]}"
+      group="${RESULT[4]}"
+      echo "\"${file}\";\"${owner}\";\"${group}\";\"${permissions}\""
+    become: true
+    footer: >
+      #### </sapinit_permissions>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('dir_trans' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-dir_trans' not in check_list %}
+  - header: '#### <dir_trans>'
+    command: |
+      apps=($(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2}' | grep  -v "sidNr" | grep -v "-" | grep -v '='))
+      echo '"SID";"NR";"DIR_TRANS";"EXISTS"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        unset IFS
+        IFS=$'\n'
+        params=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue | grep 'DIR_TRANS' " ))
+        for param in "${params[@]}"
+        do
+          unset IFS
+          IFS=$'='
+          param_value=($param)
+          name="${param_value[0]}"
+          value="${param_value[@]:1}"
+          value=($(echo "$value" | tr -d '\r' | sed 's/"/\\"/g'))
+          ls -ld "${value}/log" &> /dev/null
+          if [[ $? -eq 0 ]]; then
+            exists=1
+          else
+            exists=0
+          fi
+          echo "\"${sid}\";\"${nr}\";\"${value}\";\"${exists}\""
+        done
+        unset IFS
+      done
+    become: true
+    footer: >
+      #### </dir_trans>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('protectedwebmethods_hostagent' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-protectedwebmethods_hostagent' not in check_list %}
+  - header: '#### <protectedwebmethods_hostagent>'
+    command: >
+      cat /usr/sap/hostctrl/exe/host_profile | grep service/protectedwebmethods || echo "no match found"
+    become: true
+    footer: >
+      #### </protectedwebmethods_hostagent>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_java_ume_parameters' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_java_ume_parameters' not in check_list %}
+  - header: '#### <sap_java_ume_parameters>'
+    command: |
+      #!/bin/sh
+      # Captures the instance name
+      java_instance_names=$(/usr/sap/hostctrl/exe/lssap | awk '{print $3}' | tr -d "|" | grep "^J")
+      if [ -z "$java_instance_names" ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+
+      echo '"SID";"NR";"INSTANCE";"PARAMETER_NAME";"PARAMETER_VALUE"'
+      # Start a loop for each instance name found
+      for java_instance_name in $java_instance_names;
+      do
+          
+      # Captures Java System SID
+      java_sid=$(/usr/sap/hostctrl/exe/lssap | grep -i $java_instance_name | awk '{print $1}' | tr -d "|")
+
+      nr=$(/usr/sap/hostctrl/exe/lssap | grep -i $java_instance_name | awk '{print $2}' | tr -d "|")
+
+      # SAP system username based on naming convention <sid>adm
+      java_username=$(/usr/sap/hostctrl/exe/lssap | grep -i $java_instance_name | awk '{print $1}' | tr -d "|" | tr '[:upper:]' '[:lower:]')"adm"
+
+      # Set the configtool directory 
+      configtool_dir="/usr/sap/$java_sid/$java_instance_name/j2ee/configtool"
+
+      # Set the java base directory 
+      java_base_dir="/usr/sap/$java_sid/$java_instance_name/exe"
+
+      # Find the highest sapjvm_* directory
+      sapjvm_dir=$(find ${java_base_dir} -type d -name 'sapjvm_*' 2>/dev/null | sed 's/.*sapjvm_//' | sort -n | tail -n 1)
+
+      # Set the java path
+      java_path="${java_base_dir}/sapjvm_${sapjvm_dir}/bin/java"
+
+      # Change to the configtool directory
+      cd $configtool_dir
+
+
+      cat <<EOT > ~/script.sh
+      #!/usr/bin/expect
+
+      spawn $java_path -Duser.language=en -classpath ".:$configtool_dir/lib/sap.com~tc~bl~offline_launcher~impl.jar" com.sap.engine.offline.OfflineToolStart com.sap.engine.configtool.console.ConsoleConfigTool $configtool_dir/lib/
+
+      expect "Your choice"
+      set output \$expect_out(buffer)
+      foreach line [split \$output "\n"] {
+          if {[string match "*Instance*" \$line]} {
+              regsub {[[:blank:]]*} \$line "" line
+              regsub {\) .*} \$line "" line
+              set selection \$line
+          }
+      }
+      send -- "\$selection\\r"
+
+      expect "Your choice"
+      set output \$expect_out(buffer)
+      foreach line [split \$output "\n"] {
+          if {[string match "*Services*" \$line]} {
+              regsub {[[:blank:]]*} \$line "" line
+              regsub {\) .*} \$line "" line
+              set selection \$line
+          }
+      }
+      send -- "\$selection\\r"
+
+      expect "Your choice"
+      set output \$expect_out(buffer)
+      foreach line [split \$output "\n"] {
+          if {[string match "*Get Service info*" \$line]} {
+              regsub {[[:blank:]]*} \$line "" line
+              regsub {\) .*} \$line "" line
+              set selection \$line
+          }
+      }
+      send -- "\$selection\\r"
+
+      expect "Show*:"
+      send -- "com.sap.security.core.ume.service\\r"
+
+      expect "Your choice"
+      set output \$expect_out(buffer)
+      foreach line [split \$output "\n"] {
+          if {[string match "*com.sap.security.core.ume.service*" \$line]} {
+              regsub {[[:blank:]]*} \$line "" line
+              regsub {\) .*} \$line "" line
+              set selection \$line
+          }
+      }
+      send -- "\$selection\\r"
+
+      expect "Press Enter to continue"
+      send -- "\\r"
+
+      expect "Your choice"
+      set output \$expect_out(buffer)
+      foreach line [split \$output "\n"] {
+          if {[string match "*Exit*" \$line]} {
+              regsub {[[:blank:]]*} \$line "" line
+              regsub {\) .*} \$line "" line
+              set selection \$line
+          }
+      }
+      send -- "\$selection\\r"
+      EOT
+
+      chmod 770 ~/script.sh
+
+      ~/script.sh | grep -E "^(login\.|com\.|ume\.)" | tr '\r' '\n' | sed 's/ *= */;/g' | sed '/^$/d' | sed 's/"/\\"/g' | awk -F';' -v sid="$java_sid" -v instance="$java_instance_name" -v nr="$nr" '{print "\"" sid "\";\"" nr "\";\"" instance "\";\"" $1 "\";\"" $2 "\""}'
+
+      rm ~/script.sh
+      done
+    become: true
+    footer: >
+      #### </sap_java_ume_parameters>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_world_writable' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_world_writable' not in check_list %}
+  - header: '#### <sap_world_writable>'
+    command: |
+      function get_ww_files() {
+        local DIR="$1"
+        w_777_files=$(find "$DIR" -perm 777 \( -type f -o -type d \) -printf '"%p";"%m"\n')
+        w_666_files=$(find "$DIR" -perm 666 \( -type f -o -type d \) -printf '"%p";"%m"\n')
+        w_777_count=$(echo "$w_777_files" | wc -l)
+        w_666_count=$(echo "$w_666_files" | wc -l)
+        echo "$w_777_files"
+        echo "$w_666_files"
+      }
+      echo '"FILE";"PERMISSIONS"'
+      sapmnt_ww=$(get_ww_files '/sapmnt')
+      usr_sap_ww=$(get_ww_files '/usr/sap')
+      sid_user_ww_count=0
+      apps=($(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1)}' | grep  -v "sid" | grep -v "-" | grep -v '='))
+      for app in "${apps[@]}"
+      do
+        app_arr=($app)
+        sid=`echo "${app_arr[0]}" | tr -d '|'`
+        if [ -d "/home/${sid}adm" ]
+        then
+          app_ww=$(get_ww_files "/home/${sid}adm")
+          app_ww_count=$(echo "$app_ww" | grep -v '^$' | wc -l)
+          sid_user_ww_count=$(( sid_user_ww_count + app_ww_count ))
+          echo "$app_ww" | grep -v "^$"
+        fi
+      done
+      sapmnt_ww_count=$(echo "$sapmnt_ww" | grep -v '^$' | wc -l)
+      usr_sap_ww_count=$(echo "$usr_sap_ww" | grep -v '^$' | wc -l)
+      echo "$sapmnt_ww" | grep -v '^$'
+      echo "$usr_sap_ww" | grep -v '^$'
+      ww_count=$(( sapmnt_ww_count + usr_sap_ww_count + sid_user_ww_count ))
+      echo "${ww_count} world-writable files found"
+    become: true
+    footer: >
+      #### </sap_world_writable>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_min_password_settings' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_min_password_settings' not in check_list %}
+  - header: '#### <sap_min_password_settings>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=' | grep -E "^\s*.{3}\|\s*[0-9]+\|\s*(ASCS|D).*")
+      if [ -z "$apps_str" ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"MIN_PASSWORD_LETTERS";"MIN_PASSWORD_DIGITS";"MIN_PASSWORD_SPECIALS";"MIN_PASSWORD_LOWER";"MIN_PASSWORD_UPPER";"MIN_PASSWORD_BIT_MAP"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1")
+        min_letters=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue 'login/min_password_letters' | tail -1 " )
+        min_digits=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue 'login/min_password_digits' | tail -1 " )
+        min_specials=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue 'login/min_password_specials' | tail -1 " )
+        min_lower=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue 'login/min_password_lowercase' | tail -1 " )
+        min_upper=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue 'login/min_password_uppercase' | tail -1 " )
+        min_letters_bit="0"
+        min_digits_bit="0"
+        min_specials_bit="0"
+        if [[ "$min_letters" -gt 0 ]]; then
+          min_letters_bit="1"
+        fi
+        if [[ "$min_digits" -gt 0 ]]; then
+          min_digits_bit="1"
+        fi
+        if [[ "$min_specials" -gt 0 ]]; then
+          min_specials_bit="1"
+        fi
+        bit_map="${min_letters_bit}${min_digits_bit}${min_specials_bit}"
+        echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${min_letters}\";\"${min_digits}\";\"${min_specials}\";\"${min_lower}\";\"${min_upper}\";\"${bit_map}\""
+      done
+    become: true
+    footer: >
+      #### </sap_min_password_settings>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('icm_server_port' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-icm_server_port' not in check_list %}
+  - header: '#### <icm_server_port>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=')
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"PARAMETER_NAME";"PARAMETER_VALUE"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        IFS=$'\n'
+        params=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue | grep 'icm/server_port_' " ))
+        for param in "${params[@]}"
+        do
+          unset IFS
+          IFS=$'='
+          param_value=($param)
+          name="${param_value[0]}"
+          value="${param_value[@]:1}"
+          value=($(echo "$value" | tr -d '\r' | sed 's/"/\\"/g'))
+          echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\""
+        done
+        unset IFS
+      done
+    become: true
+    footer: '#### </icm_server_port>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_sec_info' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_sec_info' not in check_list %}
+  - header: '#### <sap_sec_info>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=')
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"PARAMETER_NAME";"PARAMETER_VALUE";"ENTRY"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        value=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue gw/sec_info | tail -1 " ))
+        name="gw/sec_info"
+        IFS=$'\n'
+        if [ -f "$value" ];then
+          entries=($(cat "$value" | grep -v "^#" ))
+          for entry in "${entries[@]}"
+          do
+            echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\";\"${entry}\""
+          done
+        else
+          echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\";\"\""
+        fi
+        unset IFS
+      done
+    become: true
+    footer: '#### </sap_sec_info>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_reg_info' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_reg_info' not in check_list %}
+  - header: '#### <sap_reg_info>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=')
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"FILE";"PARAMETER_NAME";"PARAMETER_VALUE";"ENTRY"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        value=($(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue gw/reg_info | tail -1 " ))
+        name="gw/reg_info"
+        IFS=$'\n'
+        if [ -f "$value" ];then
+          entries=($(cat "$value" | grep -v "^#" ))
+          for entry in "${entries[@]}"
+          do
+            echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\";\"${entry}\""
+          done
+        else
+          echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${file}\";\"${name}\";\"${value}\";\"\""
+        fi
+        unset IFS
+      done
+    become: true
+    footer: '#### </sap_reg_info>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_msg_server' in check_list or 'sap_netweaver_techspecs' in check_list or 'all' in check_list) and '-sap_msg_server' not in check_list %}
+  - header: '#### <sap_msg_server>'
+    command: |
+      apps_str=$(/usr/sap/hostctrl/exe/lssap | awk '{print tolower($1) $2 $3}' | grep  -v "sidNr" | grep -v "-" | grep -v '=')
+      apps=($apps_str)
+      echo '"SID";"NR";"INSTANCE";"MSSERV_PORT";"MSSERV_INTERNAL_PORT";"ACL_INFO_FILE";"ACL_INFO_FILE_EXISTS"'
+      for app in "${apps[@]}"
+      do
+        IFS=$'|'
+        app_arr=($app)
+        sid="${app_arr[0]}"
+        nr="${app_arr[1]}"
+        instance="${app_arr[2]}"
+        unset IFS
+        file=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue SAPPROFILE | tail -1 ")
+        port=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue rdisp/msserv | tail -1 ")
+        msserv_port=$(grep -E "^$port" /etc/services | awk '{print $2}' | tr -d '/tcp' )
+        msserv_internal_port=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue rdisp/msserv_internal | tail -1 ")
+        acl_info_path=$(su - "${sid}adm" -c " sapcontrol -nr $nr -function ParameterValue ms/acl_info | tail -1 ")
+        exists=0
+        ls -ld "$acl_info_path" &> /dev/null
+        if [[ $? -eq 0 ]]; then
+          exists=1
+        else
+          exists=0
+        fi
+        echo "\"${sid}\";\"${nr}\";\"${instance}\";\"${msserv_port}\";\"${msserv_internal_port}\";\"${acl_info_path}\";\"${exists}\""
+      done
+    become: true
+    footer: '#### </sap_msg_server>'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

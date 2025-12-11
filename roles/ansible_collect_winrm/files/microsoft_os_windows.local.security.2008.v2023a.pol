@@ -1,0 +1,2737 @@
+id:microsoft_os_windows_2008.1.00001
+checkname:C.1.1.1 - Account Policies - Enforce password history is set to '24 or more password(s)
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.1 - Password Requirements - Enforce Password History from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"PasswordHistorySize"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:min:24
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.1 - Password Requirements - Enforce Password History from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){9}"(\d+)
+            criteria:min:24
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00002
+checkname:C.1.1.2 - Account Policies - Maximum password age
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.2 - Password Requirements - Maximum Password Age from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"MaximumPasswordAge"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:range:1-90
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.2 - Password Requirements - Maximum Password Age from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){6}"(\d+)
+            criteria:range:1-90
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00003
+checkname:C.1.1.3 - Account Policies - Minimum password age
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.3 - Password Requirements - Minimum Password Age from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"MinimumPasswordAge"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:min:1
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.3 - Password Requirements - Minimum Password Age from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){7}"(\d+)
+            criteria:min:1
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00004
+checkname:C.1.1.4 - Account Policies - Minimum password length
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.4 - Password Requirements - Minimum Password length from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"MinimumPasswordLength"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria: min:14
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.4 - Password Requirements - Minimum Password length from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){8}"(\d+)
+            criteria:min:14
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00005
+checkname:C.1.1.5 - Account Policies - Password must meet complexity requirements
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.5 - Password Requirements - Password Must Meet Complexity Requirement from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"PasswordComplexity"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.5 - Password Requirements - Password Must Meet Complexity Requirement from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:alwayspassed
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            stanzacriteria:include:^(?:[^\;]*\;){2}"True
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:alwayspassed
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00006
+checkname:C.1.1.6 - Account Policies - Store passwords using reversible encryption
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IIP.1.1.6 - Password Requirements - Store password using reversible encryption from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"ClearTextPassword"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.6 - Password Requirements - Store password using reversible encryption from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:match
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            stanzacriteria:include:^(?:[^\;]*\;){10}"False
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00007
+checkname:C.1.2.1 - Account Policies - Account lockout duration
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.7 - Password Requirements - Account Lockout duration from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type: alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"LockoutDuration"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:15
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.7 - Password Requirements - Account Lockout duration from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){3}"00:(\d+):00"
+            criteria:equal:15
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00008
+checkname:C.1.2.2 - Account Policies - Account lockout threshold
+checkname:C.1.2.2 - Password Policy - Account Lockout Threshold
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.8 - Password Requirements - Account Lockout Threshold from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"LockoutBadCount"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:5
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.8 - Password Requirements - Account Lockout Threshold from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){5}"(\d+)
+            criteria:equal:5
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00009
+checkname:C.1.2.3 - Account Policies - Reset account lockout counter after
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.9 - Password Requirements - Reset account lockout counter after from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"ResetLockoutCount"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:15
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.9 - Password Requirements - Reset account lockout counter after from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:alwayspassed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){4}"00:(\d+):00"
+            criteria:equal:15
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:alwayspassed
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2008.1.00010
+checkname:C.2.2.1 - Local Policies - Access Credential Manager as a trusted caller
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTrustedCredManAccessPrivilege"
+
+id:microsoft_os_windows_2008.1.00011
+checkname:C.2.2.2 - Local Policies - Access this computer from the network...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTrustedCredManAccessPrivilege"
+
+id:microsoft_os_windows_2008.1.00012
+checkname:C.2.2.3 - Local Policies - Act as part of the operating system
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTcbPrivilege"
+
+id:microsoft_os_windows_2008.1.00013
+checkname:C.2.2.4 - Local Policies - Add workstations to domain
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeIncreaseQuotaPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|\3);?){3}"
+
+id:microsoft_os_windows_2008.1.00014
+checkname:C.2.2.5 - Local Policies - Adjust memory quotas for a process
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeIncreaseQuotaPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|\3);?){3}"
+
+id:microsoft_os_windows_2008.1.00015
+checkname:C.2.2.6 - Local Policies - Allow log on locally
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeInteractiveLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+#id:microsoft_os_windows_2008.1.00016
+#checkname:C.2.2.6 - Local Policies
+
+id:microsoft_os_windows_2008.1.00017
+checkname:C.2.2.7 - Local Policies - Allow log on through Remote Desktop Services...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeRemoteLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00018
+checkname:C.2.2.8 - Local Policies - Back up files and directories
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeBackupPrivilege"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00019
+checkname:C.2.2.9 - Local Policies - Change the system time
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemtimePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2008.1.00020
+checkname:C.2.2.10 - Local Policies - Change the time zone
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTimeZonePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2008.1.00021
+checkname:C.2.2.11 - Local Policies - Create a pagefile
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeCreatePagefilePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00022
+checkname:C.2.2.12 - Local Policies - Create a token object
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeCreateTokenPrivilege"
+
+id:microsoft_os_windows_2008.1.00023
+checkname:C.2.2.13 - Local Policies - Create global objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeCreateGlobalPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-6,?))(?=.*?(\*S-1-5-20,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|\3|\4);?){4}"
+
+id:microsoft_os_windows_2008.1.00024
+checkname:C.2.2.14 - Local Policies - Create permanent shared objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeCreatePermanentPrivilege"
+
+id:microsoft_os_windows_2008.1.00025
+checkname:C.2.2.15 - Local Policies - Create symbolic links...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeCreateSymLinksPrivilege"
+
+id:microsoft_os_windows_2008.1.00026
+checkname:C.2.2.16 - Local Policies - Debug programs
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDebugPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00027
+checkname:C.2.2.17 - Local Policies - Deny access to this computer from the network...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeAccessRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2008.1.00028
+checkname:C.2.2.18 - Local Policies - Deny log on as a batch job
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyBatchLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2008.1.00029
+checkname:C.2.2.19 - Local Policies - Deny log on as a service
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyServiceLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2008.1.00030
+checkname:C.2.2.20 - Local Policies - Deny log on locally
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyInteractiveLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2008.1.00031
+checkname:C.2.2.21 - Local Policies - Deny log on through Remote Desktop Services...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyRempteLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+#id:microsoft_os_windows_2008.1.00032
+#checkname:C.2.2.22 - Local Policies - Enable computer and user accounts to be trusted for delegation
+
+id:microsoft_os_windows_2008.1.00033
+checkname:C.2.2.23 - Local Policies - Force shutdown from a remote system
+severity:Critical
+stanzaempty:Passed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeRemoteShutdownPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00034
+checkname:C.2.2.24 - Local Policies - Generate security audits
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeAuditPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2008.1.00035
+checkname:C.2.2.25 - Local Policies - Impersonate a client after authentication...
+severity:Critical
+stanzaempty:Passed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeImpersonatePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00036
+checkname:C.2.2.26 - Local Policies - Increase scheduling priority
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeIncreaseBasePriorityPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(\*S-1-5-32-544|\*S-1-5-90-0,\*S-1-5-32-544|\*S-1-5-32-544,\*S-1-5-90-0)"
+
+id:microsoft_os_windows_2008.1.00037
+checkname:C.2.2.27 - Local Policies - Load and unload device drivers
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeLoadDriverPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00038
+checkname:C.2.2.28 - Local Policies - Lock pages in memory
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeLockMemoryPrivilege"
+
+id:microsoft_os_windows_2008.1.00039
+checkname:C.2.2.30 - Local Policies - Manage auditing and security log...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeLocAuditPrivilege"
+
+id:microsoft_os_windows_2008.1.00040
+checkname:C.2.2.31 - Local Policies - Modify an object label
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeRelabelPrivilege"
+
+id:microsoft_os_windows_2008.1.00041
+checkname:C.2.2.32 - Local Policies - Modify firmware environment values
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemEnvironmentPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00042
+checkname:C.2.2.33 - Local Policies - Perform volume maintenance tasks
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeManageVolumePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00043
+checkname:C.2.2.34 - Local Policies - Profile single process
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeProfileSingleProcessPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00044
+checkname:C.2.2.35 - Local Policies - Profile system performance
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemProfilePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-32-544,?))(?=.*?(\*S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2008.1.00045
+checkname:C.2.2.36 - Local Policies - Replace a process level token...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemProcesLevelPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-32-544,?))(?=.*?(\*S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2008.1.00046
+checkname:C.2.2.37 - Local Policies - Restore files and directories
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeRestorePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00047
+checkname:C.2.2.38 - Local Policies - Shut down the system
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeShutdownPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+#id:microsoft_os_windows_2008.1.00048
+#checkname:C.2.2.39 - Local Policies
+
+id:microsoft_os_windows_2008.1.00049
+checkname:C.2.2.40 - Local Policies - Take ownership of files or other objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTakeOwnershipPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00050
+checkname:C.2.3.1.1 - Local Policies - Accounts: Administrator account status...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTakeAdminAccountPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00051
+checkname:C.2.3.1.2 - Local Policies - Accounts: Guest account status...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTakeGuestAccountPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2008.1.00052
+checkname:C.2.3.1.3 - Local Policies - Accounts: Limit local account use of blank passwords to console logon only
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:LimitBlankPasswordUse
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00053
+checkname:C.2.3.1.4 - Local Policies - Accounts: Rename administrator account
+severity:Critical
+stanzaempty:Failed
+type: alwayspassed
+segment: Windows_Lcl_Users
+stanzastart:^([^\;]*\;){6}(?=(?:"S-1-5-21-(?:\d+-){3}500))
+stanzastop: $
+stanzacriteria: include:(?im)^(?:[^\;]*\;){3}\"Kyndryl_Admin\";(?:[^\;]*\;){2}(?:"S-1-5-21-(?:\d+-){3}500)
+
+id:microsoft_os_windows_2008.1.00054
+checkname:C.2.3.1.5 - Local Policies - Accounts: Rename guest account
+severity:Critical
+stanzaempty:Failed
+type: alwayspassed
+segment: Windows_Lcl_Users
+stanzastart:^([^\;]*\;){6}(?=(?:"S-1-5-21-(?:\d+-){3}501))
+stanzastop: $
+stanzacriteria: include:(?im)^(?:[^\;]*\;){3}\"Kyndryl_Guest\";(?:[^\;]*\;){2}(?:"S-1-5-21-(?:\d+-){3}501)
+
+id:microsoft_os_windows_2008.1.00055
+checkname:C.2.3.2.1 - Local Policies - Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:SCENoApplyLegacyAuditPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"(1|registry\skey\snot\sfound)"
+
+id:microsoft_os_windows_2008.1.00056
+checkname:C.2.3.2.2 - Local Policies - Audit: Shut down system immediately if unable to log security audits
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:CrashOnAuditFail
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00057
+checkname:C.2.3.4.1 - Local Policies - Devices: Allowed to format and eject removable media
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:AllocateDASD
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00058
+checkname:C.2.3.4.2 - Local Policies - Devices: Prevent users from installing printer drivers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Servers:AddPrinterDrivers
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+#id:microsoft_os_windows_2008.1.00059
+#checkname:C.2.3.5.1 - Domain Controllers
+
+#id:microsoft_os_windows_2008.1.00060
+#checkname:C.2.3.5.2 - Domain Controllers
+
+#id:microsoft_os_windows_2008.1.00061
+#checkname:C.2.3.5.3 - Domain Controllers
+
+id:microsoft_os_windows_2008.1.00062
+checkname:C.2.3.6.1 - Local Policies - Domain member: Digitally encrypt or sign secure channel data (always)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:RequireSignOrSeal
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00063
+checkname:C.2.3.6.2 - Local Policies - Domain member: Digitally encrypt secure channel data (when possible)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:SealSecureChannel
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00064
+checkname:C.2.3.6.3 - Local Policies - Domain member: Digitally sign secure channel data (when possible)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:SignSecureChannel
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00066
+checkname:C.2.3.6.4 - Local Policies - Domain member: Disable machine account password changes
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria: include:^(?:[^\;]*\;){21}\"Member\sServer\"
+Conditions {
+    if_passed {
+        # Server is member server therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:DisablePasswordChange
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:0
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00067
+checkname:C.2.3.6.5 - Local Policies - Domain member: Maximum machine account password age
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:MaximumPasswordAge
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:range:1-30
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00068
+checkname:C.2.3.6.6 - Local Policies - Domain member: Require strong (Windows 2000 or later) session key
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:RequireStrongKey
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00069
+checkname:C.2.3.7.1 - Local Policies - Interactive logon: Do not display last user name
+checkname:C.2.3.7.1 - Interactive logon: Don't display last signed-in
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:dontdisplaylastusername
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00070
+checkname:C.2.3.7.2 - Local Policies - Interactive logon: Do not require CTRL+ALT+DEL
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:disablecad
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00071
+checkname:C.2.3.7.3 - Local Policies - Interactive logon: Message text for users attempting to log on
+severity:Critical
+stanzaempty:Failed
+type: match
+segment:Windows_Reg_System:legalNoticeText
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}".*?Business\sUse\sNotice.*?"
+
+id:microsoft_os_windows_2008.1.00072
+checkname:C.2.3.7.4 - Local Policies - Interactive logon: Message title for users attempting to log on
+severity:Critical
+stanzaempty:Failed
+type: match
+segment:Windows_Reg_System:legalnoticecaption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}".*?Business\sUse\sNotice.*?"
+
+id:microsoft_os_windows_2008.1.00073
+checkname:C.2.3.7.6 - Local Policies - Interactive logon: Prompt user to change password before expiration
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:PasswordExpiryWarning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:5-14
+
+id:microsoft_os_windows_2008.1.00074
+checkname:C.2.3.7.9 - Local Policies - Interactive logon: Smart card removal behavior
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:SCRemoveOption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-3
+
+id:microsoft_os_windows_2008.1.00075
+checkname:C.2.3.11.4 - Local Policies - Network Security: Configure encryption types allowed for Kerberos
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:SupportedEncryptionTypes
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:2147483640
+
+id:microsoft_os_windows_2008.1.00076
+checkname:C.17.1.1 - Advanced Audit Policy Configuration - Audit Credential Validation
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Credential Validation\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00077
+checkname:C.17.2.1 - Advanced Audit Policy Configuration - Audit Application Group Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Application Group Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00078
+checkname:C.17.2.2 - Advanced Audit Policy Configuration - Audit Computer Account Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"User Account Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+#id:microsoft_os_windows_2008.1.00079
+#checkname:C.17.2.3 - Advanced Audit Policy Configuration
+
+id:microsoft_os_windows_2008.1.00080
+checkname:C.17.2.4 - Advanced Audit Policy Configuration - Audit Other Account Management Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other Account Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00081
+checkname:C.17.2.5 - Advanced Audit Policy Configuration - Audit Security Group Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security Group Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00082
+checkname:C.17.3.1 - Advanced Audit Policy Configuration - Audit Process Creation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!"MachineName")(?:[^\;]*\;)
+stanzastop:$
+match:^(?:[^\;]*\;){2}\"(\d+)\"
+criteria: equal:1
+
+id:microsoft_os_windows_2008.1.00083
+checkname:C.17.5.1 - Advanced Audit Policy Configuration - Audit Account Lockout
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Account Lockout\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Failure\"
+
+id:microsoft_os_windows_2008.1.00084
+checkname:C.17.5.2 - Advanced Audit Policy Configuration - Audit Logoff
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Logoff\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00085
+checkname:C.17.5.3 - Advanced Audit Policy Configuration - Audit Logon
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Logon\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00086
+checkname:C.17.5.4 - Advanced Audit Policy Configuration - Logoff Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other Logon/Logoff Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00087
+checkname:C.17.5.5 - Advanced Audit Policy Configuration - Audit Special Logon
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Special Logon\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00088
+checkname:C.17.7.1 - Advanced Audit Policy Configuration - Audit Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Audit Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00065
+checkname:C.17.7.2 - Advanced Audit Policy Configuration - Audit Authentication Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Authentication Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00089
+checkname:C.17.8.1 - Advanced Audit Policy Configuration - Audit Sensitive Privilege Use
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Sensitive Privilege Use\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00090
+checkname:C.17.9.1 - Advanced Audit Policy Configuration - Audit IPsec Driver
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"IPsec Driver\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00091
+checkname:C.17.9.2 - Advanced Audit Policy Configuration - Audit Other System Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other System Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00092
+checkname:C.17.9.3 - Advanced Audit Policy Configuration - Audit Security State Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security State Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00093
+checkname:C.17.9.4 - Advanced Audit Policy Configuration - Audit Security System Extension
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security System Extension\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2008.1.00094
+checkname:C.17.9.5 - Advanced Audit Policy Configuration - Audit System Integrity
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"System Integrity\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00095
+checkname:C.18.3.1 - Non Standard Policy - MSS: (AutoAdminLogon) Enable Automatic Logon (not recommended)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Winlogon:AutoAdminLogon
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00096
+checkname:C.18.3.2 - Non Standard Policy - MSS: (DisableIPSourceRouting IPv6) IP source routing protection level (protects against packet spoofing)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip6:DisableIPSourceRouting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2008.1.00097
+checkname:C.18.3.3 - Non Standard Policy - MSS: (DisableIPSourceRouting) IP source routing protection level (protects against packet spoofing)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:DisableIPSourceRouting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2008.1.00099
+checkname:C.18.3.4 - Non Standard Policy - MSS: (EnableICMPRedirect) Allow ICMP redirects to override OSPF generated routes
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:EnableICMPRedirect
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00100
+checkname:C.18.3.6 - Non Standard Policy - MSS: (NoNameReleaseOnDemand) Allow the computer to ignore NetBIOS name release requests except from WINS servers
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_NetBT:NoNameReleaseOnDemand
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00101
+checkname:C.18.3.8 - Non Standard Policy - MSS: (SafeDllSearchMode) Enable Safe DLL search mode (recommended)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_SM:SafeDllSearchMode
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00102
+checkname:C.18.3.9 - Non Standard Policy - MSS: (ScreenSaverGracePeriod) The time in seconds before the screen saver grace period expires (0 recommended)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:ScreenSaverGracePeriod
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:0-5
+
+id:microsoft_os_windows_2008.1.00103
+checkname:C.18.3.12 - Non Standard Policy - MSS: (WarningLevel) Percentage threshold for the security event log at which the system will generate a warning
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Evnt_Security:WarningLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:50-90
+
+id:microsoft_os_windows_2008.1.00104
+checkname:C.18.9.8.2 - Local Policies - Set the default behavior for AutoRun
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoAutorun
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00105
+checkname:C.2.3.8.1 - Local Policies - Microsoft network client: Digitally sign communications (always)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:RequireSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00106
+checkname:C.2.3.8.2 - Local Policies - Microsoft network client: Digitally sign communications (if server agrees)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:EnableSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00107
+checkname:C.2.3.8.3 - Local Policies - Microsoft network client: Send unencrypted password to third-party SMB servers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:EnablePlainTextPassword
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00108
+checkname:C.2.3.9.1 - Local Policies - Microsoft network server: Amount of idle time required before suspending session
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:AutoDisconnect
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:0-15
+
+id:microsoft_os_windows_2008.1.00109
+checkname:C.2.3.9.2 - Local Policies - Microsoft network server: Digitally sign communications (always)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManS:RequireSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00110
+checkname:C.2.3.9.3 - Local Policies - Microsoft network server: Digitally sign communications (if client agrees)...
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:enableforcedlogoff
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00111
+checkname:C.2.3.9.4 - Local Policies - Microsoft network server: Disconnect clients when logon hours expire
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:enableforcedlogoff
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00112
+checkname:C.2.3.10.1 - Local Policies - Network access: Allow anonymous SID/Name translation
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:TurnOffAnonymousBlock
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00113
+checkname:C.2.3.10.5 - Local Policies - Network access: Let Everyone permissions apply to anonymous users
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:EveryoneIncludesAnonymous
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00114
+checkname:C.2.3.10.6 - Local Policies - Network access: Named Pipes that can be accessed anonymously...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedExactPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"System\\CurrentControlSet\\Control\\(ProductOptions|Server\sApplications)|Software\\Microsoft\\Windows\sNT\\Named"
+
+id:microsoft_os_windows_2008.1.00115
+checkname:C.2.3.10.7 - Local Policies - Network access: Remotely accessible registry paths
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedExactPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"System\\CurrentControlSet\\Control\\(ProductOptions|Server\sApplications)|Software\\Microsoft\\Windows\sNT\\CurrentVersion"
+
+id:microsoft_os_windows_2008.1.00116
+checkname:C.2.3.10.8 - Local Policies - Network access: Remotely accessible registry paths and sub-paths
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"Software\\Microsoft\\OLAP\sServer"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Perflib"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Print"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Windows"|System\\CurrentControlSet\\Control\\ContentIndex"|System\\CurrentControlSet\\Control\\Print\\Printers"|System\\CurrentControlSet\\Control\\Terminal\sServer"|System\\CurrentControlSet\\Control\\Terminal\sServer\\DefaultUserConfiguration"|System\\CurrentControlSet\\Control\\Terminal\sServer\\UserConfig"|System\\CurrentControlSet\\Services\\Eventlog"|System\\CurrentControlSet\\Services\\SysmonLog"|System\\CurrentControlSet\\Services\\CertSvc"|System\\CurrentControlSet\\Services\\WINS"
+
+id:microsoft_os_windows_2008.1.00117
+checkname:C.2.3.10.9 - Local Policies - Network access: Restrict anonymous access to Named Pipes and Shares...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedExactPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"System\\CurrentControlSet\\Control\\(ProductOptions|Server\sApplications)|Software\\Microsoft\\Windows\sNT\\Named"
+
+id:microsoft_os_windows_2008.1.00118
+checkname:C.2.3.10.10 - Local Policies - Network access: Shares that can be accessed anonymously...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedExactPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"System\\CurrentControlSet\\Control\\(ProductOptions|Server\sApplications)|Software\\Microsoft\\Windows\sNT\\Named"
+
+id:microsoft_os_windows_2008.1.00119
+checkname:C.2.3.10.11 - Local Policies - Network access: Sharing and security model for local accounts
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:ForceGuest
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00120
+checkname:C.2.3.11.1 - Local Policies - Network security: Allow Local System to use computer identity for NTLM
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:UseMachineId
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00121
+checkname:C.2.3.11.2 - Local Policies - Network security: Allow LocalSystem NULL session fallback
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:AllowNullSessionFallback
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00122
+checkname:C.2.3.11.3 - Local Policies - Network Security: Allow PKU2U authentication requests to this computer to use online identities
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_pku2u:AllowOnlineID
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00123
+checkname:C.2.3.11.5 - Local Policies - Network security: Do not store LAN Manager hash value on next password change
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:NoLMHash
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00124
+checkname:C.2.3.11.6 - Local Policies - Network security: Force logoff when logon hours expire
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_secedit_System_Access
+stanzastart:^(?!"MachineName")[^\;]*\;"ForceLogoffWhenHourExpire"
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00125
+checkname:C.2.3.11.7 - Local Policies - Network security: LAN Manager authentication level
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:LmCompatibilityLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:5
+
+id:microsoft_os_windows_2008.1.00126
+checkname:C.2.3.11.8 - Local Policies - Network security: LDAP client signing requirements
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LDAP:LDAPClientIntegrity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00127
+checkname:C.2.3.11.9 - Local Policies - Network security: Minimum session security for NTLM SSP based (including secure RPC) clients
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:NTLMMinClientSec
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:537395200
+
+id:microsoft_os_windows_2008.1.00128
+checkname:C.2.3.11.10 - Local Policies - Network security: Minimum session security for NTLM SSP based (including secure RPC) servers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:NTLMMinServerSec
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:537395200
+
+id:microsoft_os_windows_2008.1.00129
+checkname:C.2.3.13.1 - Local Policies - Shutdown: Allow system to be shut down without having to log on
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ShutdownWithoutLogon
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00130
+checkname:C.2.3.15.1 - Local Policies - System objects: Require case insensitivity for non-Windows subsystems
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SM_Kernel:ObCaseInsensitive
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00131
+checkname:C.2.3.15.2 - Local Policies - System objects: Strengthen default permissions of internal system objects (e.g. Symbolic Links)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SM:ProtectionMode
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00132
+checkname:C.2.3.16.1 - Local Policies - System settings: Optional subsystems...
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SM:ProtectionMode
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00133
+checkname:C.2.3.17.1 - Local Policies - User Account Control: Admin Approval Mode for the Built-in Administrator account
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:FilterAdministratorToken
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00134
+checkname:C.2.3.17.2 - Local Policies - User Account Control: Allow UIAccess applications to prompt for elevation without using the secure desktop...
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ConsentPromptBehaviorAdmin
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-2
+
+id:microsoft_os_windows_2008.1.00135
+checkname:C.2.3.17.3 - Local Policies - User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ConsentPromptBehaviorAdmin
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-2
+
+id:microsoft_os_windows_2008.1.00136
+checkname:C.2.3.17.4 - Local Policies - User Account Control: Behavior of the elevation prompt for standard users
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_System:ConsentPromptBehaviorUser
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00137
+checkname:C.2.3.17.5 - Local Policies - User Account Control: Detect application installations and prompt for elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableInstallerDetection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00138
+checkname:C.2.3.17.6 - Local Policies - User Account Control: Only elevate UIAccess applications that are installed in secure locations
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableSecureUIAPaths
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00139
+checkname:C.2.3.17.7 - Local Policies - User Account Control: Run all administrators in Admin Approval Mode
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableLUA
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00140
+checkname:C.2.3.17.8 - Local Policies - User Account Control: Switch to the secure desktop when prompting for elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:PromptOnSecureDesktop
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00141
+checkname:C.2.3.17.9 - Local Policies - User Account Control: Virtualize file and registry write failures to per-user locations
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableVirtualization
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00142
+checkname:C.17.2.6 - Advanced Audit Policy Configuration - Audit User Account Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"User Account Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2008.1.00143
+checkname:C.18.4.11.2 - Local Policies - Prohibit installation and configuration of Network Bridge on your DNS domain network
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NC:NC_AllowNetBridge_NLA
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00144
+checkname:C.18.4.11.3 - Local Policies - Require domain users to elevate when setting a network's location
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NC:NC_StdDomainUserSetLocation
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00145
+checkname:C.18.4.14 - Non Standard Policy - Hardened UNC Paths
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:NETLOGON hardening
+    checkname:IP.C.5.9.1 - Administrative Templates (Computer) - Network - Network Provider - Hardened UNC Paths - NETLOGON
+    severity:Critical
+    stanzaempty:Failed
+    type:match
+    segment:Windows_Reg_HardenedPaths:\\*\NETLOGON
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*RequireMutualAuthentication=1)(?=.*RequireIntegrity=1).*
+  }
+  check2 {
+    id:SYSVOL hardening
+    checkname:IP.C.5.9.1 - Administrative Templates (Computer) - Network - Network Provider - Hardened UNC Paths - SYSVOL
+    severity:Critical
+    stanzaempty:Failed
+    type:match
+    segment:Windows_Reg_HardenedPaths:\\*\SYSVOL
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*RequireMutualAuthentication=1)(?=.*RequireIntegrity=1).*
+  }
+}
+
+id:microsoft_os_windows_2008.1.00146
+checkname:C.18.6.2 - Non Standard Policy - WDigest Authentication (disabling may require KB2871997)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WDigest:UseLogonCredential
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00147
+checkname:C.18.8.3.1- Local Policies - Include command line in process creation events
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!"MachineName")(?:[^\;]*\;)
+stanzastop:$
+match:^(?:[^\;]*\;){2}\"(\d+)\"
+criteria: equal:1
+
+id:microsoft_os_windows_2008.1.00148
+checkname:C.18.8.6.2 - Local Policies - Allow remote access to the Plug and Play interface...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!\"PlugPlay\")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:microsoft_os_windows_2008.1.00149
+checkname:C.18.8.19.2 - Local Policies - Configure registry policy processing > Do not apply during periodic background processing...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!\"Process\")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:microsoft_os_windows_2008.1.00150
+checkname:C.18.8.19.3 - Local Policies - Configure registry policy processing > Process even if the Group Policy objects have not changed...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!\"GroupPolicy\")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:microsoft_os_windows_2008.1.00151
+checkname:C.18.8.19.4 - Local Policies - Turn off background refresh of Group Policy
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_System:DisableBkGndGroupPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}\"registry\skey\snot\sfound\"
+
+id:microsoft_os_windows_2008.1.00152
+checkname:C.18.8.31.1 - Local Policies - Configure Offer Remote Assistance
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:fAllowUnsolicited
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00153
+checkname:C.18.8.31.2 - Local Policies - Configure Solicited Remote Assistance
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fAllowToGetHelp
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00154
+checkname:C.18.9.8.1 - Local Policies - Disallow Autoplay for non-volume devices
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoAutoplayfornonVolume
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00155
+checkname:C.18.9.8.3 - Local Policies - Turn off Autoplay
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoAutorun
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00156
+checkname:C.18.9.15.1 - Local Policies - Do not display the password reveal button
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CredUI:DisablePasswordReveal
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00157
+checkname:C.18.9.15.2 - Local Policies - Enumerate administrator accounts on elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CredUI:EnumerateAdministrators
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00158
+checkname:C.18.9.18.1 - Local Policies - Turn off desktop gadgets...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!\"DesktopGadget\")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:microsoft_os_windows_2008.1.00159
+checkname:C.18.9.18.2 - Local Policies - Turn Off user-installed desktop gadgets...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!\"DesktopGadgetOff\")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:microsoft_os_windows_2008.1.00160
+checkname:C.18.9.24.1 - EMET - Programs and Features...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00161
+checkname:C.18.9.24.2 - EMET - Default Action and Mitigation Settings...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:DEP]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00162
+checkname:C.18.9.24.3 - EMET - Default Protections for Internet Explorer...
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00163
+checkname:C.18.9.24.4 - EMET - Default Protections for Popular Software...
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00164
+checkname:C.18.9.24.5 - EMET - Default Protections for Recommended Software...
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00165
+checkname:C.18.9.24.6 - EMET - System ASLR
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:ASLR]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00166
+checkname:C.18.9.24.7 - EMET - System DEP
+checkname:C.18.9.25.7 - System DEP is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:DEP]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00167
+checkname:C.18.9.24.8 - EMET - System SEHOP
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\EMET\SysSettings:SEHOP]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00168
+checkname:C.18.9.30.2 - Local Policies - Turn off Data Execution Prevention for Explorer
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:NoDataExecutionPrevention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00169
+checkname:C.18.9.30.3 - Local Policies - Turn off heap termination on corruption
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:NoHeapTerminationOnCorruption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00170
+checkname:C.18.9.30.4 - Local Policies - Turn off shell protocol protected mode
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:PreXPSP2ShellProtocolBehavior
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00171
+checkname:C.18.9.47.1 - Non Standard Policy - Prevent the usage of OneDrive for file storage
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_OneDrive:DisableFileSyncNGSC
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00172
+checkname:C.18.9.47.2 - Non Standard Policy - Prevent the usage of OneDrive for file storage on Windows 8.1
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive:DisableFileSync]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00173
+checkname:C.18.9.53.1 - Non Standard Policy - Prevent downloading of enclosures
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Feeds:DisableEnclosureDownload
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00174
+checkname:C.18.9.54.2 - Non Standard Policy - Allow indexing of encrypted files
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WSearch:AllowIndexingEncryptedStoresOrItems
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00175
+checkname:C.18.9.74.1 - Local Policies - Allow user control over installs
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Installer:EnableUserControl
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00176
+checkname:C.18.9.74.2 - Local Policies - Always install with elevated privileges
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Installer:AlwaysInstallElevated
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00177
+checkname:C.18.9.84.1 - Non Standard Policy - Turn on PowerShell Script Block Logging
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_ScriptBlockLogging:EnableScriptBlockLogging
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00178
+checkname:C.18.9.84.2 - Non Standard Policy - Turn on PowerShell Transcription
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Transcription:EnableTranscripting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00179
+checkname:C.18.9.90.2 - Local Policies - Configure Automatic Updates
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_AU:NoAutoUpdate
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00180
+checkname:C.18.9.90.3 - Local Policies - Configure Automatic Updates: Scheduled install day
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_AU:ScheduledInstallDay
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00181
+checkname:C.18.9.90.4 - Local Policies - Do not adjust default option to 'Install Updates and Shut Down' in Shut Down Windows dialog box...
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_AU:ScheduledInstallDay
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00182
+checkname:C.18.9.90.5 - Local Policies - Do not display 'Install Updates and Shut Down' option in Shut Down Windows dialog box...
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_AU:ScheduledInstallDay
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2008.1.00183
+checkname:C. 18.9.90.6- Local Policies - No auto-restart with logged on users for scheduled automatic updates installations
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AU:NoAutoRebootWithLoggedOnUsers
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00184
+checkname:C.18.9.90.7 - Local Policies - Reschedule Automatic Updates scheduled installations...
+severity:Critical
+stanzaempty:Failed
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00185
+checkname:C.18.9.26.1.1 - Local Policies - Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00186
+checkname:C.18.9.26.2.1 - Local Policies - Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00187
+checkname:C.18.9.26.2.2 - Local Policies - Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Setup:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2008.1.00188
+checkname:C.18.9.26.3.1 - Local Policies - Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00189
+checkname:C.18.9.26.3.2 - Local Policies - Setup\Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Setup:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2008.1.00190
+checkname:C.18.9.26.4.1 - Local Policies - Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00191
+checkname:C.18.9.26.4.2 - Local Policies - System\Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Setup:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2008.1.00192
+checkname:C.18.9.52.2.2 - Local Policies - Remote Desktop Connection Client\Do not allow passwords to be saved
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:DisablePasswordSaving
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00193
+checkname:C.18.9.52.3.3.2 - Local Policies - Device and Resource Redirection\Do not allow drive redirection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Terminal Services:fDisableCdm
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00194
+checkname:C.18.9.52.3.9.1 - Local Policies - Always prompt for password upon connection
+severity:Critical
+stanzaempty:Failed
+type:alwayspassed
+segment:Windows_Reg_TS:fPromptForPassword
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2008.1.00212
+checkname:C.18.9.52.3.9.2 - Local Policies - Require secure RPC communication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:fEncryptRPCTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00213
+checkname:C.18.9.52.3.9.3 - Local Policies - Set client connection encryption level
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:MinEncryptionLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"3|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00195
+checkname:C.18.9.52.3.11.1 - Local Policies - Do not delete temp folders upon exit
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:DeleteTempDirsOnExit
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00196
+checkname:C.18.9.52.3.11.2 - Local Policies - Do not use temporary folders per session
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:PerSessionTempDir
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00197
+checkname:C.19.1.3.1 - Local Policies - Enable screen saver
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:alwayspassed
+        segment:Windows_Reg_Users_Desktop:ScreenSaveActive
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){4}"(\d+)
+        criteria:equal:1
+    }
+    if_failed {
+	# Server is not domain joined therefore requirement not relevant
+        type: alwayspassed
+    }
+}
+
+id:microsoft_os_windows_2008.1.00198
+checkname:C.19.1.3.2 - Local Policies - Force specific screen saver...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+
+id:microsoft_os_windows_2008.1.00199
+checkname:C.19.1.3.3 - Local Policies - Password protect the screen saver
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:alwayspassed
+        segment:Windows_Reg_Users_Desktop:ScreenSaverIsSecure
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){4}"(\d+)
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: alwayspassed
+    }
+}
+
+id:microsoft_os_windows_2008.1.00200
+checkname:C.19.1.3.4 - Local Policies - Screen saver timeout
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_Desktop:ScreenSaveTimeOut
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:range:1-900
+
+id:microsoft_os_windows_2008.1.00201
+checkname:C.19.7.4.1 - Local Policies - Do not preserve zone information in file attachments
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:match
+        segment:Windows_Reg_Users_Attachments:SaveZoneInformation
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        stanzacriteria:include:^(?:[^\;]*\;){4}"2|registry\skey\snot\sfound"
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00202
+checkname:C.19.7.4.2 - Local Policies - Notify antivirus programs when opening attachments
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:match
+        segment:Windows_Reg_Users_Attachments:ScanWithAntiVirus
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        stanzacriteria:include:^(?:[^\;]*\;){4}"3|registry\skey\snot\sfound"
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: notapplicable
+    }
+}
+
+id:microsoft_os_windows_2008.1.00203
+checkname:C.19.7.26.1 - Local Policies - Prevent users from sharing files within their profile
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:alwayspassed
+        segment:Windows_Reg_Users_Explorer:NoInplaceSharing
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){4}"(\d+)
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: alwayspassed
+    }
+}
+
+id:microsoft_os_windows_2008.1.00204
+checkname:C.19.7.39.1 - Local Policies - Always install with elevated privileges
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:alwayspassed
+        segment:Windows_Reg_Users_Installer:AlwaysInstallElevated
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){4}"(\d+)
+        criteria:equal:0
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: alwayspassed
+    }
+}
+
+id:microsoft_os_windows_2008.1.00205
+checkname:C.18.9.70.2.1 - Local Policies - Configure Default consent
+severity: critical
+stanzaempty: Failed
+type: match
+segment: [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\Consent:DefaultConsent]
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2008.1.00206
+checkname:C.18.9.86.1.1 - Local Policies - Allow Basic authentication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowBasic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00207
+checkname:C.18.9.86.1.2 - Local Policies - Allow unencrypted traffic
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowUnencryptedTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00208
+checkname:C.18.9.86.1.3 - Local Policies - Disallow Digest authentication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowDigest
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00209
+checkname:C.18.9.86.2.1 - Local Policies - Allow Basic authentication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Service:AllowBasic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00210
+checkname:C.18.9.86.2.3 - Local Policies - Allow unencrypted traffic
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Service:AllowUnencryptedTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2008.1.00211
+checkname:C.18.9.86.2.4 - Local Policies - Disallow WinRM from storing RunAs credentials...
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Service:AllowUnencryptedTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"

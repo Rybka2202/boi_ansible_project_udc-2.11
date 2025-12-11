@@ -1,0 +1,4721 @@
+id:microsoft_os_windows_2022.1.00001
+checkname:C.1.1.1 - Password Policy - Enforce password history is set to '24 or more password(s)
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.1 - Password Requirements - Enforce Password History from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"PasswordHistorySize"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:min:1
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.1 - Password Requirements - Enforce Password History from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){9}"(\d+)
+            criteria:min:24
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.00002
+checkname:C.1.1.2 - Password Policy - Maximum Password Age
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00003
+checkname:C.1.1.3 - Password Policy - Minimum Password Age
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00004
+checkname:C.1.1.4 - Password Policy - Minimum Password length
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.4 - Password Requirements - Minimum Password length from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"MinimumPasswordLength"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria: min:14
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.4 - Password Requirements - Minimum Password length from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){8}"(\d+)
+            criteria:min:14
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.00005
+checkname:C.1.1.5 - Password Policy - Password Complexity
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.5 - Password Requirements - Password Must Meet Complexity Requirement from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"PasswordComplexity"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.5 - Password Requirements - Password Must Meet Complexity Requirement from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:alwayspassed
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            stanzacriteria:include:^(?:[^\;]*\;){2}"True
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:alwayspassed
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.000066
+checkname:C.1.1.6 - Password Policy - Relax minimum password length limits
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_SAM:relaxminimumpasswordlengthlimits
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTrustedCredManAccessPrivilege"
+
+id:microsoft_os_windows_2022.1.00006
+checkname:C.1.1.7 - Password Policy - Store password using reversible encryption
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IIP.1.1.6 - Password Requirements - Store password using reversible encryption from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"ClearTextPassword"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.6 - Password Requirements - Store password using reversible encryption from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:match
+            stanzaempty:Failed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            stanzacriteria:include:^(?:[^\;]*\;){10}"False
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.00007
+checkname:C.1.2.1 - Password Policy - Account Lockout duration
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.7 - Password Requirements - Account Lockout duration from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type: alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"LockoutDuration"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:30
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.7 - Password Requirements - Account Lockout duration from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){3}"00:(\d+):00"
+            criteria:equal:15
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.00008
+checkname:C.1.2.2 - Password Policy - Account Lockout Threshold
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.8 - Password Requirements - Account Lockout Threshold from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"LockoutBadCount"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:max:5
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.8 - Password Requirements - Account Lockout Threshold from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:matchvalue
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){5}"(\d+)
+            criteria:equal:5
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:notapplicable
+        }
+    }
+  }
+}
+
+# INSERT 1.2.3 #
+
+
+
+id:microsoft_os_windows_2022.1.00009
+checkname:C.1.2.4 - Reset account lockout counter after
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule secedit
+    checkname:IP.1.1.9 - Password Requirements - Reset account lockout counter after from secedit
+    stanzaempty:Failed
+    severity:Critical
+    type:alwayspassed
+    segment:Windows_secedit_System_Access
+    stanzastart:^(?!"MachineName")[^\;]*\;"ResetLockoutCount"
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:30
+  }
+  rule2 {
+    id:rule finegrainedpolicy
+    checkname:IP.1.1.9 - Password Requirements - Reset account lockout counter after from FGPP
+    severity:Critical
+    stanzaempty:Failed
+    conditional:ifelse::match
+    # Check for server domain role
+    # Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    segment:Windows_SystemInfo
+    stanzastart:^(?!\"MachineName\")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:^(?:[^\;]*\;){21}\"\w+\sDomain\sController\"
+    Conditions {
+        if_passed {
+            # Server is a Domain Controller
+            stanzaempty:Failed
+            severity:Critical
+            type:alwayspassed
+            segment:Windows_fgpp
+            stanzastart:^(?!"DomainName")[^\;]*\;
+            stanzastop:$
+            match:^(?:[^\;]*\;){4}"00:(\d+):00"
+            criteria:equal:15
+            }
+        if_failed {
+            # Server is not domain controller therefore requirement not relevant
+            type:alwayspassed
+        }
+    }
+  }
+}
+
+id:microsoft_os_windows_2022.1.00010
+checkname:C.2.2.1 User Rights Assignment - Access Credential Manager as a trusted caller
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTrustedCredManAccessPrivilege"
+
+id:microsoft_os_windows_2022.1.00011
+checkname:C.2.2.4 - Act as part of the operating system
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeTcbPrivilege"
+
+id:microsoft_os_windows_2022.1.00012
+checkname:C.2.2.6 - Adjust memory quotas for a process
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeIncreaseQuotaPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|\3);?){3}"
+
+id:microsoft_os_windows_2022.1.00013
+checkname:C.2.2.8 - User Right Assignment - Allow log on locally
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeInteractiveLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00014
+checkname:C.2.2.11 - Back up files and directories
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeBackupPrivilege"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00015
+checkname:C.2.2.12 - Change the system time
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemtimePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2022.1.00016
+checkname:C.2.2.13 - Change the time zone
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTimeZonePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2022.1.00017
+checkname:C.2.2.14 - Create a pagefile
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeCreatePagefilePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00018
+checkname:C.2.2.15 - Create a token object
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeCreateTokenPrivilege"
+
+id:microsoft_os_windows_2022.1.00019
+checkname:C.2.2.16 - Create global objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeCreateGlobalPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-6,?))(?=.*?(\*S-1-5-20,?))(?=.*?(\*S-1-5-32-544,?))(?:(?:\1|\2|\3|\4);?){4}"
+
+id:microsoft_os_windows_2022.1.00020
+checkname:C.2.2.17 - Create permanent shared objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeCreatePermanentPrivilege"
+
+id:microsoft_os_windows_2022.1.00021
+checkname:C.2.2.20 - User Right Assignment - Debug programs
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDebugPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00022
+checkname:C.2.2.23 - Deny log on as a batch job
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyBatchLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2022.1.00023
+checkname:C.2.2.24 - User Right Assignment - Deny log on as a service
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyServiceLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2022.1.00024
+checkname:C.2.2.25 - Deny log on locally
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeDenyInteractiveLogonRight"
+stanzastop:$
+stanzacriteria: include:(?im)^(?:[^\;]*\;){2}"(?=.*(\*S-1-5-32-546))
+
+id:microsoft_os_windows_2022.1.00025
+checkname:C.2.2.30 - User Right Assignment - Force shutdown from a remote system
+severity:Critical
+stanzaempty:Passed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeRemoteShutdownPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00026
+checkname:C.2.2.31 - Generate security audits
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeAuditPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?:(?:\1|\2|);?){2}"
+
+# INSERT 2.2.33 #
+
+id:microsoft_os_windows_2022.1.00027
+checkname:C.2.2.34 - Increase scheduling priority
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeIncreaseBasePriorityPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(\*S-1-5-32-544|\*S-1-5-90-0,\*S-1-5-32-544|\*S-1-5-32-544,\*S-1-5-90-0)"
+
+id:microsoft_os_windows_2022.1.00028
+checkname:C.2.2.35 - Load and unload device drivers
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeLoadDriverPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00029
+checkname:C.2.2.36 - Lock pages in memory
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeLockMemoryPrivilege"
+
+id:microsoft_os_windows_2022.1.00030
+checkname:C.2.2.40 - Modify an object label
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:exclude:(?im)^(?:[^\;]*\;)"SeRelabelPrivilege"
+
+id:microsoft_os_windows_2022.1.00031
+checkname:C.2.2.41 - Modify firmware environment values
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemEnvironmentPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00032
+checkname:C.2.2.42 - Perform volume maintenance tasks
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeManageVolumePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00033
+checkname:C.2.2.43 - Profile single process
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeProfileSingleProcessPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00034
+checkname:C.2.2.44 - Profile system performance
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeSystemProfilePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-32-544,?))(?=.*?(\*S-1-5-80-3139157870-2983391045-3678747466-658725712-1809340420,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2022.1.000334
+checkname:C.2.2.45 - Replace a process level token
+severity:Critical
+stanzaempty:Failed
+type:match
+segment: Windows_secedit_Privilege_Rights
+stanzastart:^(?!\"MachineName\")[^\;]*\;\"SeAssignPrimaryTokenPrivilege\"
+stanzastop: $
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*?(\*S-1-5-19,?))(?=.*?(\*S-1-5-20,?))(?:(?:\1|\2|);?){2}"
+
+id:microsoft_os_windows_2022.1.00035
+checkname:C.2.2.46 - Restore files and directories
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeRestorePrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00036
+checkname:C.2.2.47 - Shut down the system
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeShutdownPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00037
+checkname:C.2.2.49 - Take ownership of files or other objects
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_secedit_Privilege_Rights
+stanzastart:^(?!"MachineName")[^\;]*\;"SeTakeOwnershipPrivilege"
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"\*S-1-5-32-544"
+
+id:microsoft_os_windows_2022.1.00038
+checkname:C.2.3.1.1 - Accounts: Block Microsoft accounts
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:NoConnectedUser
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.00039
+checkname:C.2.3.1.3 - Accounts: Limit local account use of blank passwords to console logon only
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:LimitBlankPasswordUse
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00040
+checkname:C.2.3.1.4 - Rename administrator account
+severity:Critical
+stanzaempty:Failed
+type: alwayspassed
+segment: Windows_Lcl_Users
+stanzastart:^([^\;]*\;){6}(?=(?:"S-1-5-21-(?:\d+-){3}500))
+stanzastop: $
+stanzacriteria: include:(?im)^(?:[^\;]*\;){3}\"Kyndryl_Admin\";(?:[^\;]*\;){2}(?:"S-1-5-21-(?:\d+-){3}500)
+
+id:microsoft_os_windows_2022.1.00041
+checkname:C.2.3.1.5 - Rename guest account
+severity:Critical
+stanzaempty:Failed
+type: alwayspassed
+segment: Windows_Lcl_Users
+stanzastart:^([^\;]*\;){6}(?=(?:"S-1-5-21-(?:\d+-){3}501))
+stanzastop: $
+stanzacriteria: include:(?im)^(?:[^\;]*\;){3}\"Kyndryl_Guest\";(?:[^\;]*\;){2}(?:"S-1-5-21-(?:\d+-){3}501)
+
+id:microsoft_os_windows_2022.1.00042
+checkname:C.2.3.2.1 - Audit: Force audit policy subcategory settings
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:SCENoApplyLegacyAuditPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"(1|registry\skey\snot\sfound)"
+
+id:microsoft_os_windows_2022.1.00043
+checkname:C.2.3.2.2 - Audit: Shut down system immediately if unable to log security audits
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:CrashOnAuditFail
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00045
+checkname:C.2.3.4.1 - Devices: Prevent users from installing printer drivers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Servers:AddPrinterDrivers
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00046
+checkname:C.2.3.6.1 - Domain member: Digitally encrypt or sign secure channel data (always)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:RequireSignOrSeal
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00047
+checkname:C.2.3.6.2 - Domain member: Digitally encrypt secure channel data (when possible)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:SealSecureChannel
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00048
+checkname:C.2.3.6.3 - Domain member: Digitally sign secure channel data (when possible)
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:SignSecureChannel
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00049
+checkname:C.2.3.6.4 - Domain member: Disable machine account password changes
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria: include:^(?:[^\;]*\;){21}\"Member\sServer\"
+Conditions {
+    if_passed {
+        # Server is member server therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:DisablePasswordChange
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:0
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00050
+checkname:C.2.3.6.5 - Domain member: Maximum machine account password age
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:MaximumPasswordAge
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:range:1-30
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00051
+checkname:C.2.3.6.6 - Domain member: Require strong (Windows 2000 or later) session key
+severity:Critical
+stanzaempty:Failed
+conditional:ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment:Windows_SystemInfo
+stanzastart:^(?!\"MachineName\")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){21}(?:\"Member\s\w+")
+Conditions {
+    if_passed {
+        # Server is a domain member therefore key must exist with specific value
+        stanzaempty:Failed
+        type:matchvalue
+        segment:Windows_Reg_Parameters:RequireStrongKey
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)"
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is a domain controller therefore requirement not relevant
+        type:notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00052
+checkname:C.2.3.7.1 - Interactive logon: Do not require CTRL+ALT+DEL
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:disablecad
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00053
+checkname:C.2.3.7.2 - Interactive logon: Don't display last signed-in
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:dontdisplaylastusername
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00054
+checkname:C.2.3.7.3 - Interactive logon: Machine inactivity limit
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:InactivityTimeoutSecs
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-900
+
+id:microsoft_os_windows_2022.1.00055
+checkname:C.2.3.7.4 - Interactive logon: Message text for users attempting to log on
+severity:Critical
+stanzaempty:Failed
+type: match
+segment:Windows_Reg_System:legalNoticeText
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria: exclude:^(?:[^;]*;){2}(?:(?=\"\s*\")|(?=\"registry key empty\")|$)
+
+id:microsoft_os_windows_2022.1.00056
+checkname:C.2.3.7.5 - Interactive logon: Message title for users attempting to log on
+severity:Critical
+stanzaempty:Failed
+type: match
+segment:Windows_Reg_System:legalnoticecaption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria: exclude:^(?:[^;]*;){2}(?:(?=\"\s*\")|(?=\"registry key empty\")|$)
+
+id:microsoft_os_windows_2022.1.00057
+checkname:C.2.3.7.7 - Interactive logon: Prompt user to change password before expiration
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:PasswordExpiryWarning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:5-14
+
+id:microsoft_os_windows_2022.1.00058
+checkname:C.2.3.7.9 - Interactive logon: Smart card removal behavior
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:SCRemoveOption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-3
+
+id:microsoft_os_windows_2022.1.00059
+checkname:C.2.3.8.1 - Microsoft network client: Digitally sign communications (always)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:RequireSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00060
+checkname:C.2.3.8.2 - Microsoft network client: Digitally sign communications (if server agrees)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:EnableSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00061
+checkname:C.2.3.8.3 - Microsoft network client: Send unencrypted password to third-party SMB servers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManW:EnablePlainTextPassword
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00062
+checkname:C.2.3.9.1 - Microsoft network server: Amount of idle time required before suspending session
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:AutoDisconnect
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:0-15
+
+id:microsoft_os_windows_2022.1.00063
+checkname:C.2.3.9.2 - Microsoft network server: Digitally sign communications (always)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManS:RequireSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00064
+checkname:C.2.3.9.3 - Microsoft network server: Digitally sign communications (always)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanManS:RequireSecuritySignature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00065
+checkname:C.2.3.9.4 - Microsoft network server: Disconnect clients when logon hours expire
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:enableforcedlogoff
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00066
+checkname:C.2.3.10.1 - Allow anonymous SID/Name translation
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:TurnOffAnonymousBlock
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00067
+checkname:C.2.3.10.4 - Do not allow storage of passwords and credentials for network authentication
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:DisableDomainCreds
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00068
+checkname:C.2.3.10.5 - Network access: Let Everyone permissions apply to anonymous users
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:EveryoneIncludesAnonymous
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00069
+checkname:C.2.3.10.8 - Network access: Remotely accessible registry paths
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedExactPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"System\\CurrentControlSet\\Control\\(ProductOptions|Server\sApplications)|Software\\Microsoft\\Windows\sNT\\CurrentVersion"
+
+id:microsoft_os_windows_2022.1.00070
+checkname:C.2.3.10.9 - Remotely accessible registry paths and sub-paths
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AllowedPaths:Machine
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"Software\\Microsoft\\OLAP\sServer"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Perflib"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Print"|Software\\Microsoft\\Windows\sNT\\CurrentVersion\\Windows"|System\\CurrentControlSet\\Control\\ContentIndex"|System\\CurrentControlSet\\Control\\Print\\Printers"|System\\CurrentControlSet\\Control\\Terminal\sServer"|System\\CurrentControlSet\\Control\\Terminal\sServer\\DefaultUserConfiguration"|System\\CurrentControlSet\\Control\\Terminal\sServer\\UserConfig"|System\\CurrentControlSet\\Services\\Eventlog"|System\\CurrentControlSet\\Services\\SysmonLog"|System\\CurrentControlSet\\Services\\CertSvc"|System\\CurrentControlSet\\Services\\WINS"
+
+id:microsoft_os_windows_2022.1.000771
+checkname:C.2.3.10.10 - Restrict anonymous access to Named Pipes and Shares
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:RestrictNullSessAccess
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00071
+checkname:C.2.3.10.12 - Shares that can be accessed anonymously
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Parameters:NullSessionShares
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+stanzacriteria:include:(?im)^(?:[^;]*;){2}"registry\skey\sempty"
+
+id:microsoft_os_windows_2022.1.00072
+checkname:C.2.3.10.13 - Sharing and security model for local accounts
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:ForceGuest
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00073
+checkname:C.2.3.11.1 - Allow Local System to use computer identity for NTLM
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Lsa:UseMachineId
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00074
+checkname:C.2.3.11.2 - Network security: Allow LocalSystem NULL session fallback
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:AllowNullSessionFallback
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00075
+checkname:C.2.3.11.3 - Network Security: Allow PKU2U authentication requests to this computer to use online identities
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_pku2u:AllowOnlineID
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00076
+checkname:C.2.3.11.4 - Network security: Configure encryption types allowed for Kerberos
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:SupportedEncryptionTypes
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:2147483640
+
+id:microsoft_os_windows_2022.1.00077
+checkname:C.2.3.11.5 - Network security: Do not store LAN Manager hash value on next password change
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:NoLMHash
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00078
+checkname:C.2.3.11.6 - Network security: Force logoff when logon hours expire
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_secedit_System_Access
+stanzastart:^(?!"MachineName")[^\;]*\;"ForceLogoffWhenHourExpire"
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00079
+checkname:C.2.3.11.7 - Network security: LAN Manager authentication level
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Lsa:LmCompatibilityLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:5
+
+id:microsoft_os_windows_2022.1.00080
+checkname:C.2.3.11.8 - Network security: LDAP client signing requirements
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LDAP:LDAPClientIntegrity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00081
+checkname:C.2.3.11.9 - Minimum session security for NTLM SSP based (including secure RPC) clients.
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:NTLMMinClientSec
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:537395200
+
+id:microsoft_os_windows_2022.1.00082
+checkname:C.2.3.11.10 - Minimum session security for NTLM SSP based (including secure RPC) servers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:NTLMMinServerSec
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:537395200
+
+id:microsoft_os_windows_2022.1.000883
+checkname:C.2.3.11.11 - Local Policies / Security Options / Network security - Network security: Restrict NTLM: AuditIncoming NTLM Traffic
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:AuditReceivingNTLMTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.000884
+checkname:C.2.3.11.13 - Local Policies / Security Options / Network security - Network security: Restrict NTLM: OutgoingNTLM traffic to remote servers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MSV1_0:RestrictSendingNTLMTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00083
+checkname:C.2.3.13.1 - Shutdown: Allow system to be shut down without having to log on
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ShutdownWithoutLogon
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00084
+checkname:C.2.3.15.1 - Require case insensitivity for non-Windows subsystems
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SM_Kernel:ObCaseInsensitive
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00085
+checkname:C.2.3.15.2 - Strengthen default permissions of internal system objects (e.g. Symbolic Links)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SM:ProtectionMode
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00086
+checkname:C.2.3.17.1 - User Account Control: Admin Approval Mode for the Built-in Administrator account
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:FilterAdministratorToken
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00087
+checkname:C.2.3.17.2 - User Account Control: Behavior of the elevation prompt for administrators
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ConsentPromptBehaviorAdmin
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-2
+
+id:microsoft_os_windows_2022.1.00088
+checkname:C.2.3.17.3 - User Account Control: Behavior of the elevation prompt for standard users
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:ConsentPromptBehaviorUser
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00089
+checkname:C.2.3.17.4 - Detect application installations and prompt for elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableInstallerDetection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00090
+checkname:C.2.3.17.5 - Only elevate UIAccess applications that are installed in secure locations
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableSecureUIAPaths
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00091
+checkname:C.2.3.17.6 - Run all administrators in Admin Approval Mode
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableLUA
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00092
+checkname:C.2.3.17.7 - Switch to the secure desktop when prompting for elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:PromptOnSecureDesktop
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00093
+checkname:C.2.3.17.8 - Virtualize file and registry write failures to per-user locations
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableVirtualization
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00094
+checkname:C.9.1.1 - Windows Firewall: Domain: Firewall state
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_FWDomain:EnableFirewall
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00095
+checkname:C.9.1.2 - Windows Firewall: Domain: Inbound connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00097
+checkname:C.9.1.3 - Windows Firewall: Domain: Settings: Display a notification
+severity:Critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00098
+checkname:C.9.1.4 - Windows Firewall: Domain: Logging: Name
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00099
+checkname:C.9.1.5 - Windows Firewall: Domain: Logging: Size limit (KB)
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00100
+checkname:C.9.1.6 - Windows Firewall: Domain: Logging: Log dropped packets
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00101
+checkname:C.9.1.7 - Windows Firewall: Domain: Logging: Log successful connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00102
+checkname:C.9.2.1 - Windows Firewall: Private: Firewall state
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00104
+checkname:C.9.2.2 - Windows Firewall: Private: Inbound connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00106
+checkname:C.9.2.3 - Windows Firewall: Private: Settings: Display a notification
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00107
+checkname:C.9.2.4 - Windows Firewall: Private: Logging: Name
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00108
+checkname:C.9.2.5 - Windows Firewall: Private: Logging: Size limit (KB)
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00109
+checkname:C.9.2.6 - Windows Firewall: Private: Logging: Log dropped packets
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00110
+checkname:C.9.2.7 - Windows Firewall: Private: Logging: Log successful connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00111
+checkname:C.9.3.1 - Windows Firewall: Public: Firewall state
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00112
+checkname:C.9.3.2 - Windows Firewall: Public: Inbound connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00114
+checkname:C.9.3.3 - Windows Firewall: Public: Settings: Display a notification
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00115
+checkname:C.9.3.4 - Windows Firewall: Public: Settings: Apply local firewall rules
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00116
+checkname:C.9.3.5 - Windows Firewall: Public: Settings: Apply local connection security rules
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00117
+checkname:C.9.3.6 - Windows Firewall: Public: Logging: Name
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00118
+checkname:C.9.3.7 - Windows Firewall: Public: Logging: Size limit (KB)
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00119
+checkname:C.9.3.8 - Windows Firewall: Public: Logging: Log dropped packets
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00120
+checkname:C.9.3.9 - Windows Firewall: Public: Logging: Log successful connections
+severity:critical
+stanzaempty:Passed
+type: notapplicable
+
+id:microsoft_os_windows_2022.1.00121
+checkname:C.17.1.1 - Audit Credential Validation
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Credential Validation\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00122
+checkname:C.17.2.1 - Audit Application Group Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Application Group Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00123
+checkname:C.17.2.5 - Audit Security Group Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security Group Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00124
+checkname:C.17.2.6 - Audit User Account Management
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"User Account Management\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00125
+checkname:C.17.3.1 - Audit PNP Activity
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Plug and Play Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.001225
+checkname:C.17.3.2 - Audit Process Creation
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Process Creation\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00126
+checkname:C.17.5.1 - Audit Account Lockout
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Account Lockout\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Failure\"
+
+id:microsoft_os_windows_2022.1.001226
+checkname:C.17.5.2 - Audit Group Membership
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Group Membership\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00127
+checkname:C.17.5.3 - Audit Logoff
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Logoff\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00128
+checkname:C.17.5.4 - Audit Logon
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Logon\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00129
+checkname:C.17.5.5 - Audit Other Logon/Logoff Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other Logon/Logoff Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00130
+checkname:C.17.5.6 - Audit Special Logon
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Special Logon\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00131
+checkname:C.17.6.1 - Audit Detailed File Share
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Detailed File Share\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Failure\"
+
+id:microsoft_os_windows_2022.1.00132
+checkname:C.17.6.2 - Audit File Share
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"File Share\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00133
+checkname:C.17.6.3 - Audit Other Object Access Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other Object Access Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00134
+checkname:C.17.6.4 - Audit Removable Storage
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Removable Storage\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00135
+checkname:C.17.7.1 - Audit Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Audit Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00136
+checkname:C.17.7.2 - Audit Authentication Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Authentication Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00137
+checkname:C.17.7.3 - Audit Authorization Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Authorization Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00138
+checkname:C.17.7.4 - Audit MPSSVC Rule-Level Policy Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"MPSSVC Rule-Level Policy Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00139
+checkname:C.17.7.5 - Audit Other Policy Change Events
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other Policy Change Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Failure\"
+
+id:microsoft_os_windows_2022.1.00140
+checkname:C.17.8.1 - Audit Sensitive Privilege Use
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Sensitive Privilege Use\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00141
+checkname:C.17.9.1 - Audit IPsec Driver
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"IPsec Driver\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00142
+checkname:C.17.9.2 - Audit Other System Events
+severity:Critical
+stanzaempty:Failed
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Other System Events\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.00143
+checkname:C.17.9.3 - Audit Security State Change
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security State Change\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00144
+checkname:C.17.9.4 - Audit Security System Extension
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"Security System Extension\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success\"
+
+id:microsoft_os_windows_2022.1.00145
+checkname:C.17.9.5 - Audit System Integrity
+severity:Critical
+stanzaempty:Failed
+segment: Windows_auditpol
+type: match
+stanzastart:^(?!\"MachineName\")(?:[^\;]*\;)\"System Integrity\"
+stanzastop: $
+stanzacriteria:include:^(?:[^\;]*\;){2}\"Success and Failure\"
+
+id:microsoft_os_windows_2022.1.001446
+checkname:C.18.1.3 - Allow Online Tips
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:AllowOnlineTips
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00146
+checkname:C.18.1.1.1 - Prevent enabling lock screen camera
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Pers:NoLockScreenCamera
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00147
+checkname:C.18.1.1.2 - Prevent enabling lock screen slide show
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Pers:NoLockScreenSlideshow
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001447
+checkname:C.18.1.2.2 - Allow users to enable online speech recognition services
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_InputPers:AllowInputPersonalization
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001448
+checkname:C.18.4.2 - Configure RPC packet level privacy setting for incoming connections
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Print:RpcAuthnLevelPrivacyEnabled
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00148
+checkname:C.18.4.3 - Configure SMB v1 client driver
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_mrxsmb10:Start
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:4
+
+id:microsoft_os_windows_2022.1.00149
+checkname:C.18.4.4 - Configure SMB v1 server
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_LanManS:SMB1
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.001449
+checkname:C.18.4.5 - Enable Certificate Padding
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Config:EnableCertPaddingCheck
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00150
+checkname:C.18.4.6 - Enable Structured Exception Handling Overwrite Protection (SEHOP)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_kernel:DisableExceptionChainValidation
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00152
+checkname:C.18.4.7 - NetBT NodeType configuration
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NetBT:NodeType
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00153
+checkname:C.18.4.8 - WDigest Authentication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WDigest:UseLogonCredential
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00154
+checkname:C.18.5.1 - MSS: (AutoAdminLogon) Enable Automatic Logon (not recommended)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Winlogon:AutoAdminLogon
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00155
+checkname:C.18.5.2 - MSS: (DisableIPSourceRouting IPv6) IP source routing protection level (protects against packet spoofing)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip6:DisableIPSourceRouting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00156
+checkname:C.18.5.3 - MSS: (DisableIPSourceRouting) IP source routing protection level (protects against packet spoofing)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:DisableIPSourceRouting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00157
+checkname:C.18.5.4 - MSS: (EnableICMPRedirect) Allow ICMP redirects to override OSPF generated routes
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:EnableICMPRedirect
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001557
+checkname:C.18.5.5 - MSS: (KeepAliveTime) How often keep-alive packets are sent in milliseconds
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:KeepAliveTime
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:300000
+
+id:microsoft_os_windows_2022.1.00158
+checkname:C.18.5.6 - MSS: (NoNameReleaseOnDemand) Allow the computer to ignore NetBIOS name release requests except from WINS servers
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_NetBT:NoNameReleaseOnDemand
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.001558
+checkname:C.18.5.7 - MSS: (PerformRouterDiscovery) Allow IRDP to detect and configure Default Gateway addresses
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Tcpip:PerformRouterDiscovery
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00159
+checkname:C.18.5.8 - MSS: (SafeDllSearchMode) Enable Safe DLL search mode (recommended)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_SM:SafeDllSearchMode
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00160
+checkname:C.18.5.9 - MSS: (ScreenSaverGracePeriod) The time in seconds before the screen saver grace period expires
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Winlogon:ScreenSaverGracePeriod
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:0-5
+
+id:microsoft_os_windows_2022.1.001660
+checkname:C.18.5.10 - MSS: (TcpMaxDataRetransmissions IPv6) How many times unacknowledged data is retransmitted
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TCPIP6:TcpMaxDataRetransmissions
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.001661
+checkname:C.18.5.11 - MSS: (TcpMaxDataRetransmissions) How many times unacknowledged data is retransmitted
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Tcpip:TcpMaxDataRetransmissions
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.00161
+checkname:C.18.5.12 - MSS: (WarningLevel) Percentage threshold for the security event log at which the system will generate a warning
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Evnt_Security:WarningLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:0-90
+
+id:microsoft_os_windows_2022.1.00162
+checkname:C.18.6.4.1 - Configure DNS over HTTPS (DoH) name resolution
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_DNSClient:DoHPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"2|3"
+
+id:microsoft_os_windows_2022.1.001662
+checkname:C.18.6.4.2 - Configure NetBIOS settings
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DNSClient:EnableNetbios
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^;]*;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00163
+checkname:C.18.6.4.3 - Turn off multicast name resolution
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DNSClient:EnableMulticast
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001663
+checkname:C.18.6.5.1 - Enable Font Providers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableFontProviders
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001664
+checkname:C.18.6.8.1 - Enable insecure guest logons
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LanmanW:AllowInsecureGuestAuth
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00164
+checkname:C.18.6.9.1 -  Turn on Mapper I/O (LLTDIO) driver
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:AllowRspndrOnDomain
+    checkname:C.18.6.9.1.1 - AllowLLTDIOOnDomain
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:AllowLLTDIOOnDomain
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check2 {
+    id:AllowRspndrOnPublicNet
+    checkname:C.18.6.9.1.2 - AllowLLTDIOOnPublicNet
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:AllowLLTDIOOnPublicNet
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check3 {
+    id:EnableRspndr
+    checkname:C.18.6.9.1.3 - EnableLLTDIO
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:EnableLLTDIO
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check4 {
+    id:ProhibitRspndrOnPrivateNet
+    checkname:C.18.6.9.1.4 - ProhibitLLTDIOOnPrivateNet
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:ProhibitLLTDIOOnPrivateNet
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+}
+
+id:microsoft_os_windows_2022.1.00165
+checkname:C.18.6.9.2 - Turn on Responder (RSPNDR) driver
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:AllowRspndrOnDomain
+    checkname:C.18.6.9.2.1 - AllowRspndrOnDomain
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:AllowRspndrOnDomain
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check2 {
+    id:AllowRspndrOnPublicNet
+    checkname:C.18.6.9.2.2 - AllowRspndrOnPublicNet
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:AllowRspndrOnPublicNet
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check3 {
+    id:EnableRspndr
+    checkname:C.18.6.9.2.3 - EnableRspndr
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:EnableRspndr
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+  check4 {
+    id:ProhibitRspndrOnPrivateNet
+    checkname:C.18.6.9.2.4 - ProhibitRspndrOnPrivateNet
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_LLTD:ProhibitRspndrOnPrivateNet
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+	match:^(?:[^\;]*\;){2}"(\d+)
+	criteria:equal:0
+  }
+}
+
+id:microsoft_os_windows_2022.1.00166
+checkname:C.18.6.10.2 - Turn off Microsoft Peer-to-Peer Networking Services
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Microsoft_Reg_Peernet:Disabled
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00167
+checkname:C.18.6.11.2 - Prohibit installation and configuration of Network Bridge on your DNS domain network
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NC:NC_AllowNetBridge_NLA
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001667
+checkname:C.18.6.11.3 - Prohibit use of Internet Connection Sharing on your DNS domain network
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NC:NC_ShowSharedAccessUI
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00168
+checkname:C.18.6.11.4 - Require domain users to elevate when setting a network's location
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NC:NC_StdDomainUserSetLocation
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00169
+checkname:C.18.6.14.1 - Hardened UNC Paths
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:NETLOGON hardening
+    checkname:C.18.6.14.1.1 - Administrative Templates (Computer) - Network - Network Provider - Hardened UNC Paths - NETLOGON
+    severity:Critical
+    stanzaempty:Failed
+    type:match
+    segment:Windows_Reg_HardenedPaths:\\*\NETLOGON
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*RequireMutualAuthentication=1)(?=.*RequireIntegrity=1).*
+  }
+  check2 {
+    id:SYSVOL hardening
+    checkname:C.18.6.14.1.2 - Administrative Templates (Computer) - Network - Network Provider - Hardened UNC Paths - SYSVOL
+    severity:Critical
+    stanzaempty:Failed
+    type:match
+    segment:Windows_Reg_HardenedPaths:\\*\SYSVOL
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"(?=.*RequireMutualAuthentication=1)(?=.*RequireIntegrity=1).*
+  }
+}
+
+id:microsoft_os_windows_2022.1.00170
+checkname:C.18.6.19.2.1 - Disable IPv6
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TCPIP6:DisabledComponents
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:255
+
+id:microsoft_os_windows_2022.1.00171
+checkname:C.18.6.20.1 - Configuration of wireless settings using Windows Connect Now
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:EnableRegistrars
+    checkname:C.18.6.20.1.1 - EnableRegistrars
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:WCN_Reg_Registrars:EnableRegistrars
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  check2 {
+    id:DisableUPnPRegistrar
+    checkname:C.18.6.20.1.2 - DisableUPnPRegistrar
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:WCN_Reg_Registrars:DisableUPnPRegistrar
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  check3 {
+    id:DisableInBand802DOT11Registrar
+    checkname:C.18.6.20.1.3 - DisableInBand802DOT11Registrar
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:WCN_Reg_Registrars:DisableInBand802DOT11Registrar
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  check4 {
+    id:DisableFlashConfigRegistrar
+    checkname:C.18.6.20.1.4 - DisableFlashConfigRegistrar
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:WCN_Reg_Registrars:DisableFlashConfigRegistrar
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  check5 {
+    id:DisableWPDRegistrar
+    checkname:C.18.6.20.1.5 - DisableWPDRegistrar
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:WCN_Reg_Registrars:DisableWPDRegistrar
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+}
+
+id:microsoft_os_windows_2022.1.00172
+checkname:C.18.6.20.2 - Prohibit access of the Windows Connect Now wizards
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:WCN_Reg_UI:DisableWcnUi
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00173
+checkname:C.18.6.21.1 - Minimize the number of simultaneous connections to the Internet or a Windows Domain
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_GroupPolicy:fMinimizeConnections
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.00174
+checkname:C.18.7.1 - Allow Print Spooler to accept client connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Printers:RegisterSpoolerRemoteRpcEndPoint
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.001775
+checkname:C.18.7.2 - Configure Redirection Guard
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Printers:RedirectionguardPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001776
+checkname:C.18.7.3 - Configure RPC connection settings: Protocol to use for outgoing RPC connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RPC:RpcUseNamedPipeProtocol
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001777
+checkname:C.18.7.4 - Configure RPC connection settings: Use authentication for outgoing RPC connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RPC:RpcAuthentication
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001778
+checkname:C.18.7.5 - Configure RPC listener settings: Protocols to allow for incoming RPC connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RPC:RpcProtocols
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:5
+
+id:microsoft_os_windows_2022.1.0017779
+checkname:C.18.7.6 - Configure RPC listener settings: Authentication protocol to use for incoming RPC connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RPC:ForceKerberosForRpc
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:0-1
+
+id:microsoft_os_windows_2022.1.0017880
+checkname:C.18.7.7 - Configure RPC over TCP port
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RPC:RpcTcpPort
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.0017881
+checkname:C.18.7.8 - Limits print driver installation to Administrators
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_PointAndPrint:RestrictDriverInstallationToAdministrators
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001782
+checkname:C.18.7.9 - Manage processing of Queue-specific files
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Printers:CopyFilesPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00175
+checkname:C.18.7.10 - Printers - Point and Print Restrictions: When installing drivers for a new connection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_PointAndPrint:NoWarningNoElevationOnInstall
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00176
+checkname:C.18.7.11 - Printers - Point and Print Restrictions: When updating drivers for an existing connection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_PointAndPrint:UpdatePromptSettings
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00177
+checkname:C.18.8.1.1 - Turn off notifications network usage
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_PushNotifications:NoCloudApplicationNotification
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00178
+checkname:C.18.9.3.1 - Include command line in process creation events
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment: Windows_Reg_Audit:ProcessCreationIncludeCmdLine_Enabled
+stanzastart:^(?!"MachineName")(?:[^\;]*\;)
+stanzastop:$
+match:^(?:[^\;]*\;){2}\"(\d+)\"
+criteria: equal:1
+
+id:microsoft_os_windows_2022.1.00179
+checkname:C.18.9.4.1 - Encryption Oracle Remediation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Parameters:AllowEncryptionOracle
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001779
+checkname:C.18.9.4.2 - Remote host allows delegation of non-exportable credentials
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CredentialsDelegation:AllowProtectedCreds
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001780
+checkname:C.18.9.5.1 - Turn On Virtualization Based Security
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DeviceGuard:EnableVirtualizationBasedSecurity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001781
+checkname:C.18.9.5.2 - Turn On Virtualization Based Security: Select Platform Security Level
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_DeviceGuard:RequirePlatformSecurityFeatures
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|3"
+
+id:microsoft_os_windows_2022.1.0017882
+checkname:C.18.9.5.3 - Turn On Virtualization Based Security: Virtualization Based Protection of Code Integrity
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DeviceGuard:HypervisorEnforcedCodeIntegrity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001783
+checkname:C.18.9.5.4 - Turn On Virtualization Based Security: Require UEFI Memory Attributes Table
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DeviceGuard:HVCIMATRequired
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.001784
+checkname:C.18.9.5.7 - Turn On Virtualization Based Security: Secure Launch Configuration
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DeviceGuard:ConfigureSystemGuardLaunch
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00180
+checkname:C.18.9.7.2 - Prevent device metadata retrieval from the Internet
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DeviceMetadata:PreventDeviceMetadataFromNetwork
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00181
+checkname:C.18.9.13.1 - Boot-Start Driver Initialization Policy
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_EarlyLaunch:DriverLoadPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.00182
+checkname:C.18.9.19.2 - Configure registry policy processing: Do not apply during periodic background processing
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_GP:NoBackgroundPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00183
+checkname:C.18.9.19.3 - Configure registry policy processing: Process even if the Group Policy objects have not changed
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_GP:NoGPOListChanges
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001883
+checkname:C.18.9.19.4 - Configure registry policy processing: Do not apply during periodic background processing.
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_GP:NoBackgroundPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001884
+checkname:C.18.9.19.5 - Configure registry policy processing: Process even if the Group Policy objects have not changed.
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_GP:NoGPOListChanges
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001885
+checkname:C.18.9.19.6 - Continue experiences on this device
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableCdp
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00184
+checkname:C.18.9.19.7 - Turn off background refresh of Group Policy
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_System:DisableBkGndGroupPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}\"registry\skey\snot\sfound\"
+
+id:microsoft_os_windows_2022.1.00185
+checkname:C.18.9.20.1.1 - Turn off downloading of print drivers over HTTP
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Printers:DisableWebPnPDownload
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00186
+checkname:C.18.9.20.1.2 - Turn off handwriting personalization data sharing
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TabletPC:PreventHandwritingDataSharing
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00187
+checkname:C.18.9.20.1.3 - Turn off handwriting recognition error reporting
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_HandwritingErrorReports:PreventHandwritingErrorReports
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00188
+checkname:C.18.9.20.1.4 - Turn off Internet Connection Wizard if URL connection is referring to Microsoft.com
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_InternetConnectionWizard:ExitOnMSICW
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00189
+checkname:C.18.9.20.1.5 - Turn off Internet download for Web publishing and online ordering wizards
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoWebServices
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00190
+checkname:C.18.9.20.1.6 - Turn off printing over HTTP
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Printers:DisableHTTPPrinting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00191
+checkname:C.18.9.20.1.7 - Turn off Registration if URL connection is referring to Microsoft.com
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RWC:NoRegistration
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00192
+checkname:C.18.9.20.1.8 - Turn off Search Companion content file updates
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Microsoft_Reg_SearchCompanion:DisableContentFileUpdates
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00193
+checkname:C.18.9.20.1.9 - Turn off the "Order Prints" picture task
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoOnlinePrintsWizard
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00194
+checkname:C.18.9.20.1.10 - Turn off the "Publish to Web" task for files and folders
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoPublishingWizard
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00195
+checkname:C.18.9.20.1.11 - Turn off the Windows Messenger Customer Experience Improvement Program
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Messenger_Reg_Client:CEIP
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00196
+checkname:C.18.9.20.1.12 - Turn off Windows Customer Experience Improvement Program
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:SQMClient_Reg_Windows:CEIPEnable
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00197
+checkname:C.18.9.20.1.13 - Turn off Windows Error Reporting
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:Disabled
+    checkname:C.18.9.20.1.13.1 - Disabled
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_WEP:Disabled
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check2 {
+    id:DoReport
+    checkname:C.18.9.20.1.13.2 - DoReport
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:PCHealth_Reg_ErrorReporting:DoReport
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+}
+
+id:microsoft_os_windows_2022.1.001997
+checkname:C.18.9.23.1 - Support device authentication using certificate
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:DevicePKInitBehavior
+    checkname:C.18.9.23.1.1 - DevicePKInitBehavior
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Kerberos:DevicePKInitBehavior
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+  check2 {
+    id:DoReport
+    checkname:C.18.9.23.1.2 - DoReport
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Kerberos:DevicePKInitEnabled
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+}
+
+id:microsoft_os_windows_2022.1.001998
+checkname:C.18.9.24.1 - Enumeration policy for external devices incompatible with Kernel DMA Protection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_KernelDMAProtection:DeviceEnumerationPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.001999
+checkname:C.18.9.25.1 - Configure password backup directory
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:BackupDirectory
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:min:1
+
+id:microsoft_os_windows_2022.1.0019100
+checkname:C.18.9.25.2 - Do not allow password expiration time longer than required by policy
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}\"Member Server\"
+Conditions {
+    if_passed {
+        # Server is a member server therefore key must exist
+        stanzaempty: Failed
+        type:matchvalue
+        segment:Windows_Reg_AdmPwd:PwdExpirationProtectionEnabled
+        stanzastart:^(?!"MachineName")[^\;]*\;
+        stanzastop:$
+        match:^(?:[^\;]*\;){2}"(\d+)
+        criteria:equal:1
+    }
+    if_failed {
+        # Server is not member server therefore requirement not relevant
+        type: notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.0019101
+checkname:C.18.9.25.3 - Enable password encryption
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:ADPasswordEncryptionEnabled
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.0019102
+checkname:C.18.9.25.4 - Password Settings: Password Complexity
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:PasswordComplexity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:4
+
+id:microsoft_os_windows_2022.1.0019103
+checkname:C.18.9.25.5 - Password Settings: Password Length
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:PasswordComplexity
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:15
+
+id:microsoft_os_windows_2022.1.0019104
+checkname:C.18.9.25.6 - Password Settings: Password Age (Days)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:PasswordAgeDays
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:max:30
+
+id:microsoft_os_windows_2022.1.0019105
+checkname:C.18.9.25.7 - Post-authentication actions: Grace period (hours)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_LAPS:PostAuthenticationResetDelay
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:1-8
+
+id:microsoft_os_windows_2022.1.0019106
+checkname:C.18.9.25.8 - Post-authentication actions: Actions
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_LAPS:PostAuthenticationActions
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"3|5"
+
+id:microsoft_os_windows_2022.1.0019107
+checkname:C.18.9.26.1 - Allow Custom SSPs and APs to be loaded into LSASS
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:AllowCustomSSPsAPs
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.0019108
+checkname:C.18.9.26.2 - Configures LSASS to run as a protected process
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:AllowCustomSSPsAPs
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.0019109
+checkname:C.18.9.27.1 - Disallow copying of user input methods to the system account for sign-in
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Microsoft_Reg_CP:BlockUserInputMethodsForSignIn
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.0019110
+checkname:C.18.9.28.1 - Block user from showing account details on sign-in
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:BlockUserFromShowingAccountDetailsOnSignin
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00199
+checkname:C.18.9.28.2 - Do not display network selection UI
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:DontDisplayNetworkSelectionUI
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00200
+checkname:C.18.9.28.3 - Do not enumerate connected users on domain-joined computers
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:DontEnumerateConnectedUsers
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00201
+checkname:C.18.9.28.5 - Turn off app notifications on the lock screen
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:DisableLockScreenAppNotifications
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00202
+checkname:C.18.9.28.6 - Turn off picture password sign-in
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:BlockDomainPicturePassword
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00203
+checkname:C.18.9.28.7 - Turn on convenience PIN sign-in
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_System:AllowDomainPINLogon
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002003
+checkname:C.18.9.31.1 - Allow Clipboard synchronization across devices
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:AllowCrossDeviceClipboard
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.002004
+checkname:C.18.9.31.2 - Allow upload of User Activities
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:AllowCrossDeviceClipboard
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.002005
+checkname:C.18.9.33.6.1 - Allow network connectivity during connected-standby (on battery)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_PowerNET:DCSettingIndex
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002006
+checkname:C.18.9.33.6.2 - Allow network connectivity during connected-standby (plugged in)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_PowerNET:ACSettingIndex
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00204
+checkname:C.18.9.33.6.3 - Require a password when a computer wakes (on battery)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Power:DCSettingIndex
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00205
+checkname:C.18.9.33.6.4 - Require a password when a computer wakes (plugged in)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Power:ACSettingIndex
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00206
+checkname:C.18.9.35.1 - Configure Offer Remote Assistance
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fAllowUnsolicited
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00207
+checkname:C.18.9.35.2 - Configure Solicited Remote Assistance
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fAllowToGetHelp
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00208
+checkname:C.18.9.47.5.1 - Microsoft Support Diagnostic Tool: Turn on MSDT interactive communication with support provider
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_SDP:DisableQueryRemoteServer
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00209
+checkname:C.18.9.47.11.1 - Enable/Disable PerfTrack
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WDI:ScenarioExecutionEnabled
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00210
+checkname:C.18.9.49.1 - Turn off the advertising ID
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_AdvertisingInfo:DisabledByGroupPolicy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00211
+checkname:C.18.9.51.1.1 - Enable Windows NTP Client
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NtpClient:Enabled
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002111
+checkname:C.18.10.3.1 - Allow a Windows app to share application data between users
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_StateManager:AllowSharedLocalAppData
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00212
+checkname:C.18.10.5.1 - Allow Microsoft accounts to be optional
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:MSAOptional
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00213
+checkname:C.18.10.7.1 - Disallow Autoplay for non-volume devices
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoAutoplayfornonVolume
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00214
+checkname:C.18.10.7.2 - Set the default behavior for AutoRun
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoAutorun
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002114
+checkname:C.18.10.7.3 - Turn off Autoplay
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Explorer:NoDriveTypeAutoRun
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:255
+
+id:microsoft_os_windows_2022.1.002115
+checkname:C.18.10.8.1.1 - Configure enhanced anti-spoofing
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_FacialFeatures:EnhancedAntiSpoofing
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002116
+checkname:C.18.10.10.1 - Allow Use of Camera
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Microsoft_Reg_Camera:AllowCamera
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.002117
+checkname:C.18.10.12.1 - Turn off cloud consumer account state content
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CloudContent:DisableConsumerAccountStateContent
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.0021118
+checkname:C.18.10.12.2 - Turn off cloud optimized content
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CloudContent:DisableCloudOptimizedContent
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002119
+checkname:C.18.10.12.3 - Turn off Microsoft consumer experiences
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CloudContent:DisableWindowsConsumerFeatures
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002120
+checkname:C.18.10.13.1 - Require pin for pairing
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Connect:RequirePinForPairing
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:1-2
+
+id:microsoft_os_windows_2022.1.00215
+checkname:C.18.10.14.1 - Do not display the password reveal button
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CredUI:DisablePasswordReveal
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00216
+checkname:C.18.10.14.2 - Enumerate administrator accounts on elevation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_CredUI:EnumerateAdministrators
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00217
+checkname:C.18.10.15.1 - Allow Diagnostic Data
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:AllowTelemetry
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:range:0-1
+
+id:microsoft_os_windows_2022.1.002118
+checkname:C.18.10.15.2 - Configure Authenticated Proxy usage for the Connected User Experience and Telemetry service
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:DisableEnterpriseAuthProxy
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00218
+checkname:C.18.10.15.3 - Disable OneSettings Downloads
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:DisableOneSettingsDownloads
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00219
+checkname:C.18.10.15.4 - Do not show feedback notifications
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:DoNotShowFeedbackNotifications
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00220
+checkname:C.18.10.15.5 - Enable OneSettings Auditing
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:EnableOneSettingsAuditing
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00221
+checkname:C.18.10.15.6 - Limit Diagnostic Log Collection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:LimitDiagnosticLogCollection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00222
+checkname:C.18.10.15.7 - Limit Dump Collection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_DataCollection:LimitDumpCollection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00223
+checkname:C.18.10.15.8 - Toggle user control over Insider builds
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_PreviewBuilds:AllowBuildPreview
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00224
+checkname:C.18.10.17.1 - Enable App Installer
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AppInstaller:EnableAppInstaller
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002224
+checkname:C.18.10.17.2 - Enable App Installer Experimental Features
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AppInstaller:EnableExperimentalFeature
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002225
+checkname:C.18.10.17.3 - Enable App Installer Hash Override
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AppInstaller:EnableHashOverride
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002226
+checkname:C.18.10.17.4 - Enable App Installer ms-appinstaller protocol
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AppInstaller:EnableMSAppInstallerProtocol
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00225
+checkname:C.18.10.25.1.1 - Application: Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Application:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00226
+checkname:C.18.10.25.1.2 - Application: Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Application:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2022.1.00227
+checkname:C.18.10.25.2.1 - Security: Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Security:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00228
+checkname:C.18.10.25.2.2 - Security: Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Security:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2022.1.00229
+checkname:C.18.10.25.3.1 - Setup: Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00230
+checkname:C.18.10.25.3.2 - Setup: Specify the maximum log file size (KB)
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Setup:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2022.1.00231
+checkname:C.18.10.25.4.1 - System: Control Event Log behavior when the log file reaches its maximum size
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Setup:Retention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00232
+checkname:C.18.10.25.4.2 - System: Specify the maximum log file size (KB).
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Setup:MaxSize
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:min:32768
+
+id:microsoft_os_windows_2022.1.00233
+checkname:C.18.10.28.2 - Turn off Data Execution Prevention for Explorer
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:NoDataExecutionPrevention
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00234
+checkname:C.18.10.28.3 - Turn off heap termination on corruption
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:NoHeapTerminationOnCorruption
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00235
+checkname:C.18.10.28.4 - Turn off shell protocol protected mode
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Explorer:PreXPSP2ShellProtocolBehavior
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00237
+checkname:C.18.10.36.1 - Turn off location is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_LocationAndSensors:DisableLocation
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002337
+checkname:C.18.10.40.1 - Allow Message Service Cloud Sync
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Messaging:AllowMessageSync
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002338
+checkname:C.18.10.41.1 - Block all consumer Microsoft account user authentication
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MicrosoftAccount:DisableUserAuth
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002339
+checkname:C.18.10.42.16 - Configure detection for potentially unwanted applications
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Windows Defender:PUAProtection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00238
+checkname:C.18.10.42.17 - Turn off Microsoft Defender AntiVirus
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Windows Defender:DisableAntiSpyware
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00239
+checkname:C.18.10.42.5.1 - Configure local setting override for reporting to Microsoft MAPS
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Spynet:LocalSettingOverrideSpynetReporting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00240
+checkname:C.18.10.42.5.2 - Join Microsoft MAPS is set to Disabled
+severity: critical
+stanzaempty: Failed
+type: match
+segment:Windows_Reg_Spynet:SpynetReporting
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2022.1.002440
+checkname:C.18.10.42.6.1.1 - Configure Attack Surface Reduction rules
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_ASR:ExploitGuard_ASR_Rules
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002441
+checkname:C.18.10.42.6.1.2 - Configure Attack Surface Reduction rules: Set the state for each ASR rule
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  check1 {
+    id:Rules:26190899-1602-49e8-8b27-eb1d0a1ce869
+    checkname:C.18.10.42.6.1.2.1 - Rules:26190899-1602-49e8-8b27-eb1d0a1ce869
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:26190899-1602-49e8-8b27-eb1d0a1ce869
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check2 {
+    id:Rules:3b576869-a4ec-4529-8536-b80a7769e899
+    checkname:C.18.10.42.6.1.2.2 - Rules:3b576869-a4ec-4529-8536-b80a7769e899
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:3b576869-a4ec-4529-8536-b80a7769e899
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check3 {
+    id:Rules:56a863a9-875e-4185-98a7-b882c64b5ce5
+    checkname:C.18.10.42.6.1.2.3 - Rules:56a863a9-875e-4185-98a7-b882c64b5ce5
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:56a863a9-875e-4185-98a7-b882c64b5ce5
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check4 {
+    id:Rules:5beb7efe-fd9a-4556-801d-275e5ffc04cc
+    checkname:C.18.10.42.6.1.2.4 - Rules:5beb7efe-fd9a-4556-801d-275e5ffc04cc
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:5beb7efe-fd9a-4556-801d-275e5ffc04cc
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check5 {
+    id:Rules:75668c1f-73b5-4cf0-bb93-3ecf5cb7cc84
+    checkname:C.18.10.42.6.1.2.5 - Rules:75668c1f-73b5-4cf0-bb93-3ecf5cb7cc84
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:75668c1f-73b5-4cf0-bb93-3ecf5cb7cc84
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check6 {
+    id:Rules:7674ba52-37eb-4a4f-a9a1-f0f9a1619a2c
+    checkname:C.18.10.42.6.1.2.6 - Rules:7674ba52-37eb-4a4f-a9a1-f0f9a1619a2c
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:7674ba52-37eb-4a4f-a9a1-f0f9a1619a2c
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check7 {
+    id:Rules:92e97fa1-2edf-4476-bdd6-9dd0b4dddc7b
+    checkname:C.18.10.42.6.1.2.7 - Rules:92e97fa1-2edf-4476-bdd6-9dd0b4dddc7b
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:92e97fa1-2edf-4476-bdd6-9dd0b4dddc7b
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check8 {
+    id:Rules:9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2
+    checkname:C.18.10.42.6.1.2.8 - Rules:9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check9 {
+    id:Rules:b2b3f03d-6a65-4f7b-a9c7-1c7ef74a9ba4
+    checkname:C.18.10.42.6.1.2.9 - Rules:b2b3f03d-6a65-4f7b-a9c7-1c7ef74a9ba4
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:b2b3f03d-6a65-4f7b-a9c7-1c7ef74a9ba4
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check10 {
+    id:Rules:be9ba2d9-53ea-4cdc-84e5-9b1eeee46550
+    checkname:C.18.10.42.6.1.2.10 - Rules:be9ba2d9-53ea-4cdc-84e5-9b1eeee46550
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:be9ba2d9-53ea-4cdc-84e5-9b1eeee46550
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check11 {
+    id:Rules:d3e037e1-3eb8-44c8-a917-57927947596d
+    checkname:C.18.10.42.6.1.2.11 - Rules:d3e037e1-3eb8-44c8-a917-57927947596d
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:d3e037e1-3eb8-44c8-a917-57927947596d
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check12 {
+    id:Rules:d4f940ab-401b-4efc-aadc-ad5f3c50688a
+    checkname:C.18.10.42.6.1.2.12 - Rules:d4f940ab-401b-4efc-aadc-ad5f3c50688a
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:d4f940ab-401b-4efc-aadc-ad5f3c50688a
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  check13 {
+    id:Rules:e6db77e5-3df2-4cf1-b95a-636979351e5b
+    checkname:C.18.10.42.6.1.2.13 - Rules:e6db77e5-3df2-4cf1-b95a-636979351e5b
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_Rules:e6db77e5-3df2-4cf1-b95a-636979351e5b
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+}
+
+id:microsoft_os_windows_2022.1.002442
+checkname:C.18.10.42.6.3.1 - Prevent users and apps from accessing dangerous websites
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_NetworkProtection:EnableNetworkProtection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002443
+checkname:C.18.10.42.7.1 - Enable file hash computation feature
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_MpEngine:EnableFileHashComputation
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00241
+checkname:C.18.10.42.10.1 - Scan all downloaded files and attachments
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_RTProtection:DisableIOAVProtection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00242
+checkname:C.18.10.42.10.2 - Turn off real-time protection
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_RTProtection:DisableRealtimeMonitoring
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00243
+checkname:C.18.10.42.10.3 - Turn on behavior monitoring
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RTProtection:DisableBehaviorMonitoring
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00244
+checkname:C.18.10.42.10.4 - Turn on script scanning
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_RTProtection:DisableScriptScanning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00245
+checkname:C.18.10.42.12.1 - Configure Watson Events
+severity: critical
+stanzaempty: Failed
+type: match
+segment:Windows_Reg_Defender:DisableGenericRePorts
+stanzastart:^\S+
+stanzastop: $
+stanzacriteria: include:^1\s*$
+
+id:microsoft_os_windows_2022.1.002445
+checkname:C.18.10.42.13.1 - Scan packed executables
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Scan:DisablePackedExeScanning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00246
+checkname:C.18.10.42.13.2 - Scan removable drives
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Scan:DisableRemovableDriveScanning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00247
+checkname:C.18.10.42.13.3 - Turn on e-mail scanning
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Scan:DisableEmailScanning
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00248
+checkname:C.18.10.50.1 - Prevent the usage of OneDrive for file storage
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_OneDrive:DisableFileSyncNGSC
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002448
+checkname:C.18.10.55.1 - Turn off Push To Install service
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Microsoft_Reg_PushToInstall:DisablePushToInstall
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002449
+checkname:C.18.10.56.2.2 - Do not allow passwords to be saved
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:DisablePasswordSaving
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00261
+checkname:C.18.10.56.3.2.1 - Restrict RDS users to a single RDS session is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_TS:fSingleSessionPerUser
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00250
+checkname:C.18.10.56.3.3.1 - Allow UI Automation redirection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:EnableUiaRedirection
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00262
+checkname:C.18.10.56.3.3.2 - Do not allow COM port redirection is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_TS:fDisableCcm
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00263
+checkname:C.18.10.56.3.3.3 - Do not allow drive redirection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Terminal Services:fDisableCdm
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002663
+checkname:C.18.10.56.3.3.4 - Do not allow location redirection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fDisableLocationRedir
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00264
+checkname:C.18.10.56.3.3.5 - Do not allow LPT port redirection is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_TS:fDisableLPT
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00265
+checkname:C.18.10.56.3.3.6 - Do not allow supported Plug and Play device redirection is set to Enabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_TS:fDisablePNPRedir
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002656
+checkname:C.18.10.56.3.3.7 - Do not allow WebAuthn redirection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fDisableWebAuthn
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00266
+checkname:C.18.10.56.3.9.1 - Always prompt for password upon connection
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fPromptForPassword
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00267
+checkname:C.18.10.56.3.9.2 - Require secure RPC communication
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:fEncryptRPCTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00268
+checkname:C.18.10.56.3.9.3 - Require use of specific security layer for remote (RDP) connections
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:SecurityLayer
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00269
+checkname:C.18.10.56.3.9.4 - Require user authentication for remote connections by using Network Level Authentication
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:UserAuthentication
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00270
+checkname:C.18.10.56.3.9.5 - Set client connection encryption level
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:MinEncryptionLevel
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.002770
+checkname:C.18.10.56.3.10.1 - Set time limit for active but idle Remote Desktop Services sessions
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:MaxIdleTime
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:range:1-900000
+
+id:microsoft_os_windows_2022.1.002771
+checkname:C.18.10.56.3.10.2 - Set time limit for disconnected sessions
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_TS:MaxDisconnectionTime
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:60000
+
+id:microsoft_os_windows_2022.1.00272
+checkname:C.18.10.56.3.11.1 - Do not delete temp folders upon exit
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:DeleteTempDirsOnExit
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1"
+
+id:microsoft_os_windows_2022.1.00273
+checkname:C.18.10.56.3.11.2 - Do not use temporary folders per session
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_TS:PerSessionTempDir
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"1"
+
+id:microsoft_os_windows_2022.1.00274
+checkname:C.18.10.57.1 - Prevent downloading of enclosures
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Feeds:DisableEnclosureDownload
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002774
+checkname:C.18.10.58.2 - Allow Cloud Search
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WSearch:AllowCloudSearch
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00275
+checkname:C.18.10.58.3 - Allow indexing of encrypted files
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WSearch:AllowIndexingEncryptedStoresOrItems
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00276
+checkname:C.18.10.58.4 - Allow search highlights
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WSearch:EnableDynamicContentInWSB
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2025.1.002776
+checkname:C.18.10.62.1 - Turn off KMS Client Online AVS Validation
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_SPP:NoGenTicket
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00277
+checkname:C.18.10.75.2.1 - Configure Windows Defender SmartScreen
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule EnableSmartScreen
+    checkname:IP.C.18.9.85.1.1.1 - Configure Windows Defender SmartScreen - EnableSmartScreen
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_System:EnableSmartScreen
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  rule2 {
+    id:rule ShellSmartScreenLevel
+    checkname:IP.C.18.9.85.1.1.2 - Configure Windows Defender SmartScreen - ShellSmartScreenLevel
+    severity:Critical
+    stanzaempty:Failed
+    type:match
+    segment:Windows_Reg_System:ShellSmartScreenLevel
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    stanzacriteria:include:(?im)^(?:[^\;]*\;){2}"Block"
+  }
+}
+
+id:microsoft_os_windows_2022.1.002777
+checkname:C.18.10.79.1 - Allow suggested apps in Windows Ink Workspace
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WIWorkspace:AllowSuggestedAppsInWindowsInkWorkspace
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002778
+checkname:C.18.10.79.2 - Allow suggested apps in Windows Ink Workspace
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_WIWorkspace:AllowWindowsInkWorkspace
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00280
+checkname:C.18.10.80.1 - Allow user control over installs
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Installer:EnableUserControl
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00281
+checkname:C.18.10.80.2 - Always install with elevated privileges
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Installer:AlwaysInstallElevated
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00282
+checkname:C.18.10.80.3 - Prevent Internet Explorer security prompt for Windows Installer scripts
+severity: critical
+stanzaempty: Failed
+type:matchvalue
+segment: Windows_Reg_Installer:SafeForScripting
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.002882
+checkname:C.18.10.81.1 - Enable MPR notifications for the system
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:EnableMPR
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00283
+checkname:C.18.10.81.2 - Sign-in and lock last interactive user automatically after a restart
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_System:DisableAutomaticRestartSignOn
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00284
+checkname:C.18.10.86.1 - Turn on PowerShell Script Block Logging
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_ScriptBlockLogging:EnableScriptBlockLogging
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00285
+checkname:C.18.10.86.2 - Turn on PowerShell Transcription
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Transcription:EnableTranscripting
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00286
+checkname:C.18.10.88.1.1 - Allow Basic authentication (client)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowBasic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00287
+checkname:C.18.10.88.1.2 - Allow unencrypted traffic (client)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowUnencryptedTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00288
+checkname:C.18.10.88.1.3 - Disallow Digest authentication
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Client:AllowDigest
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00289
+checkname:C.18.10.88.2.1 - Allow Basic authentication (service)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Service:AllowBasic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00290
+checkname:C.18.10.88.2.2 - Allow remote server management through WinRM
+severity: critical
+stanzaempty: Failed
+type:matchvalue
+segment: Windows_Reg_Service:AllowAutoConfig
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00291
+checkname:C.18.10.88.2.3 - Allow unencrypted traffic (service)
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Service:AllowUnencryptedTraffic
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002991
+checkname:C.18.10.88.2.4 - Disallow WinRM from storing RunAs credentials
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Service:DisableRunAs
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00293
+checkname:C.18.10.89.1 - Allow Remote Shell Access is set to Disabled
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment:Windows_Reg_Service:AllowRemoteShellAccess
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002993
+checkname:C.18.10.91.2.1 - Prevent users from modifying settings
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Def:DisallowExploitProtectionOverride
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00294
+checkname:C.18.10.92.1.1 - No auto-restart with logged on users for scheduled automatic updates installations
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AU:NoAutoRebootWithLoggedOnUsers
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00295
+checkname:C.18.10.92.2.1 - Configure Automatic Updates
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AU:NoAutoUpdate
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.00296
+checkname:C.18.10.92.2.2 - Configure Automatic Updates: Scheduled install day
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_AU:ScheduledInstallDay
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){2}"0|registry\skey\snot\sfound"
+
+id:microsoft_os_windows_2022.1.002996
+checkname:C.18.10.92.4.1 - Manage preview builds
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_WindowsUpdate:ManagePreviewBuildsPolicyValue
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){2}"(\d+)"
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.002997
+checkname:C.18.10.92.4.2 - Select when Preview Builds and Feature Updates are received
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule DeferFeatureUpdates
+    checkname:C.18.10.92.4.2.1 - DeferFeatureUpdates
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_WindowsUpdate:DeferFeatureUpdates
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  rule2 {
+    id:rule DeferFeatureUpdatesPeriodInDays
+    checkname:C.18.10.92.4.2.2 - DeferFeatureUpdatesPeriodInDays
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_WindowsUpdate:DeferFeatureUpdatesPeriodInDays
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:min:180
+  }
+}
+
+id:microsoft_os_windows_2022.1.002998
+checkname:C.18.10.92.4.3 - Select when Quality Updates are received
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+  rule1 {
+    id:rule DeferQualityUpdates
+    checkname:C.18.10.92.4.3.1 - Select when Quality Updates are received - DeferQualityUpdates
+    stanzaempty:Failed
+    severity:Critical
+    type:matchvalue
+    segment:Windows_Reg_WindowsUpdate:DeferQualityUpdates
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:1
+  }
+  rule2 {
+    id:rule DeferQualityUpdatesPeriodInDays
+    checkname:C.18.10.92.4.3.2 - Select when Quality Updates are received - DeferQualityUpdatesPeriodInDays
+    severity:Critical
+    stanzaempty:Failed
+    type:matchvalue
+    segment:Windows_Reg_WindowsUpdate:DeferQualityUpdatesPeriodInDays
+    stanzastart:^(?!"MachineName")[^\;]*\;
+    stanzastop:$
+    match:^(?:[^\;]*\;){2}"(\d+)
+    criteria:equal:0
+  }
+}
+
+id:microsoft_os_windows_2022.1.00300
+checkname:C.19.5.1.1 - Turn off toast notifications on the lock screen
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_PushNotifications:NoToastApplicationNotificationOnLockScreen
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00301
+checkname:C.19.6.6.1.1 - Turn off Help Experience Improvement Program
+severity: critical
+stanzaempty: Failed
+type: matchvalue
+segment: Windows_Reg_Users_Client:NoImplicitFeedback
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00302
+checkname:C.19.7.5.1 - Do not preserve zone information in file attachments
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_Attachments:SaveZoneInformation
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.00303
+checkname:C.19.7.5.2 - Notify antivirus programs when opening attachments
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_Attachments:ScanWithAntiVirus
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:3
+
+id:microsoft_os_windows_2022.1.003003
+checkname:C.19.7.8.1 - Configure Windows spotlight on lock screen
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_CloudContent:ConfigureWindowsSpotlight
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:2
+
+id:microsoft_os_windows_2022.1.003004
+checkname:C.19.7.8.2 - Do not suggest third-party content in Windows spotlight
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_CloudContent:DisableThirdPartySuggestions
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.003005
+checkname:C.19.7.8.3 - Do not use diagnostic data for tailored experiences
+severity:Critical
+stanzaempty:Failed
+type:match
+segment:Windows_Reg_Users_CloudContent:DisableTailoredExperiencesWithDiagnosticData
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){4}"(1|registry\skey\snot\sfound)"
+
+id:microsoft_os_windows_2022.1.003006
+checkname:C.19.7.8.4 - Turn off all Windows spotlight features
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_CloudContent:DisableWindowsSpotlightFeatures
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.003007
+checkname:C.19.7.8.5 - Turn off Spotlight collection on Desktop
+severity:Critical
+stanzaempty:Failed
+conditional: ifelse::match
+# Check for server domain role
+# Valid roles are: ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+segment: Windows_SystemInfo
+stanzastart: ^(?!\"MachineName\")[^\;]*\;
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;){21}(?:\"(?!.*Standalone).*")
+Conditions {
+    if_passed {
+        # Server is domain joined therefore key must exist
+        type:match
+        segment:Windows_Reg_Users_CloudContent:DisableSpotlightCollectionOnDesktop
+        stanzastart:^(?!"MachineName")[^;]*;
+        stanzastop:$
+        match:^(?:[^\;]*\;){4}"(\d+)
+        stanzacriteria:include:^(?:[^\;]*\;){4}"(1|registry\skey\snot\sfound)"
+    }
+    if_failed {
+        # Server is not domain joined therefore requirement not relevant
+        type: notapplicable
+    }
+}
+
+id:microsoft_os_windows_2022.1.00304
+checkname:C.19.7.26.1 - Prevent users from sharing files within their profile
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_Explorer:NoInplaceSharing
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1
+
+id:microsoft_os_windows_2022.1.00305
+checkname:C.19.7.42.1 - Always install with elevated privileges
+severity:Critical
+stanzaempty:Failed
+type:matchvalue
+segment:Windows_Reg_Users_Installer:AlwaysInstallElevated
+stanzastart:^(?!"MachineName")[^\;]*\;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:0
+
+id:microsoft_os_windows_2022.1.00306
+checkname:C.19.7.44.2.1 - Prevent Codec Download is set to Enabled
+severity: critical
+stanzaempty: Failed
+type:matchvalue
+segment:Windows_Reg_Users_WMP:PreventCodecDownload
+stanzastart:^(?!"MachineName")[^;]*;
+stanzastop:$
+match:^(?:[^\;]*\;){4}"(\d+)
+criteria:equal:1

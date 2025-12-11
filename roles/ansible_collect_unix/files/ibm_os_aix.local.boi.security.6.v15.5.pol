@@ -1,0 +1,2304 @@
+# NEW POLICIES BLOCK
+id:ibm_os_aix.1.00053701
+checkname:BOI.3.2.2 - User Access - logininterval in /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_logincfg_default
+stanzastart:^
+stanzastop:$
+match:logininterval\s*=\s*(\d+)
+criteria: equal:300
+
+id:ibm_os_aix.1.00053702
+checkname:BOI.3.2.3 - User Access - logindisable in /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_logincfg_default
+stanzastart:^
+stanzastop:$
+match:logindisable\s*=\s*(\d+)
+criteria: equal:5
+
+id:ibm_os_aix.1.00053703
+checkname:BOI.3.6.17 - IBM AIX - Network Settings - rfc1323 value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^rfc1323\s=\s
+stanzastop:$
+match:=\s*(\d+)
+criteria:equal:1
+
+id:ibm_os_aix.1.00053704
+checkname:BOI.3.6.18 - IBM AIX - Network Settings - tcp_sendspace value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^tcp_sendspace\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:262144
+
+id:ibm_os_aix.1.00053705
+checkname:BOI.3.6.19 - IBM AIX - Network Settings - tcp_recvspace value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^tcp_recvspace\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:262144
+
+id:ibm_os_aix.1.00053706
+checkname:BOI.4.2.14 - SSHD Config - Ensure SSH Idle Timeout Interval is configured
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+Interval {
+   id:ClientAliveInterval
+   checkname:BOI.4.2.14.1 - SSHD Config - ClientAliveInterval is set to 0
+   severity:Critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: aix_cat_sshd_config
+   stanzastart: ^ClientAliveInterval\s+
+   stanzastop: $
+   match: ^ClientAliveInterval\s+(\d+)
+   criteria: equal:0
+   }
+CountMax {
+   id:ClientAliveCountMax
+   checkname:BOI.4.2.14.2 - SSHD Config - ClientAliveCountMax is set to 900
+   severity:Critical
+   stanzaempty: Failed
+   type: matchvalue
+   segment: aix_cat_sshd_config
+   stanzastart: ^ClientAliveCountMax
+   stanzastop: $
+   match: ^ClientAliveCountMax\s+(\d+)
+   criteria: equal:900
+   }
+}
+
+id:ibm_os_aix.1.00053707
+checkname:BOI.4.2.19 - IBM AIX - SSH Config - /etc/ssh/ssh_config permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_ssh_config_perm
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:include:^-rw-(r--){2}\s+
+
+id:ibm_os_aix.1.00053708
+checkname:BOI.4.3.2 - IBM AIX - Sendmail configuration - /etc/mail/sendmail.cf permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_sendmail_cf_perm
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:include:^-rw-(r--){2}\s+
+
+id:ibm_os_aix.1.00053709
+checkname:BOI.4.5.4 - IBM AIX - NFS - Remove any reference to localhost
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_exports
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:localhost
+
+id:ibm_os_aix.1.00053710
+checkname:BOI.4.5.5 - IBM AIX - NFS - Ensure that each NFS export has an explicit access line
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_exports
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:access=
+
+id:ibm_os_aix.1.00053711
+checkname:BOI.4.11.1 - IBM AIX - Permissions - /etc/security permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_security_perm
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:include:^drwxr-x---\s+root\s+security
+
+id:ibm_os_aix.1.00053712
+checkname:BOI.4.12.2 - IBM AIX - Network Settings - i4ls must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_lsitab
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:^\s*i4ls
+
+id:ibm_os_aix.1.00053713
+checkname:BOI.4.12.15 - IBM AIX - Config - all unlocked accounts must have a password
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_all_have_passwords
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:ibm_os_aix.1.00053714
+checkname:BOI.4.12.19 - IBM AIX - Config - removing current working directory from root's PATH
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_root_path_no_dots_doubledots
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:\S+
+
+id:ibm_os_aix.1.00053715
+checkname:BOI.4.12.20 - IBM AIX - Config - removing current working directory from default /etc/environment PATH
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_env_path_no_dots_doubledots
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:\S+
+
+id:ibm_os_aix.1.00053716
+checkname:BOI.4.14.1 - IBM AIX - PCM - sudo is installed
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_sudo_installed
+stanzastart:Sudo
+stanzastop:$
+stanzacriteria:include:.*
+
+id:ibm_os_aix.1.00053717
+checkname:BOI.4.14.2 - IBM AIX - PCM - RBAC is used
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_rbac_installed
+stanzastart:^\/usr\/(bin|sbin)\/lssecattr
+stanzastop:$
+stanzacriteria:include:.*
+
+id:ibm_os_aix.1.00053718
+checkname:BOI.3.2.4 - User Access - loginreenable in /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_logincfg_default
+stanzastart:^
+stanzastop:$
+match:loginreenable\s*=\s*(\d+)
+criteria: equal:1800
+
+id:ibm_os_aix.1.00053719
+checkname:BOI.3.6.20 - IBM AIX - Network Settings - tcp_mssdflt value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^tcp_mssdflt\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:1448
+
+id:ibm_os_aix.1.00053717
+checkname:BOI.3.7.9 - IBM AIX - Auditing - Ensure that the /audit filesystem has been created and mounted
+severity:critical
+stanzaempty:Failed
+type:match
+segment:local_mounted_filesystems
+stanzastart:^\/dev\/auditlv:
+stanzastop:$
+stanzacriteria:include:.*
+
+id:ibm_os_aix.1.00153718
+checkname:BOI.4.2.9 - IBM AIX - SSH Config - UsePrivilegeSeparation must be no
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_sshd_config
+stanzastart:^(?i)UsePrivilegeSeparation
+stanzastop:$
+stanzacriteria: include:^(?i)UsePrivilegeSeparation\s*\:?\s+no$
+
+id:ibm_os_aix.1.00153718
+checkname:BOI.4.2.17 - IBM AIX - SSH Config - Limit access via SSH
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_sshd_config
+stanzastart:^(?i)(AllowUsers|AllowGroups|DenyUsers|DenyGroups)
+stanzastop:$
+stanzacriteria: include:^(AllowUsers|AllowGroups|DenyUsers|DenyGroups)\s+\S+
+
+id:ibm_os_aix.1.00153719
+checkname:BOI.4.3.1 - IBM AIX - Sendmail configuration - SmtpGreetingMessage set to mailerready
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_sendmail_cf
+stanzastart:^\s*O\sSmtpGreetingMessage
+stanzastop:$
+stanzacriteria: include:^\s*O\sSmtpGreetingMessage=mailerready
+
+id:ibm_os_aix.1.00153720
+checkname:BOI.4.5.7 - IBM AIX - NFS - SEC options set in /etc/exports
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_exports
+stanzastart:sec=
+stanzastop:$
+stanzacriteria: include:sec=\S+
+
+id:ibm_os_aix.1.00153721
+checkname:BOI.4.10.1 - IBM AIX - Network Settings - check if the Netsec is installed
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_netsec_installed
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:exclude:^Netsec\sis\snot\sinstalled$
+
+id:ibm_os_aix.1.00153722
+checkname:BOI.4.10.2 - IBM AIX - TCP Wrappers - Validate content of /etc/hosts.deny file
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_cat_hosts_deny
+stanzastart:^ALL
+stanzastop:$
+stanzacriteria:include:^ALL:\s+ALL
+
+id:ibm_os_aix.1.00153723
+checkname:BOI.4.10.4 - IBM AIX - TCP Wrappers - Validate the tcpd wrappers are in place
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_inetd_conf_tcpd
+stanzastart:^\S+
+stanzastop:$
+stanzacriteria:include:tcpd
+
+id:ibm_os_aix.1.00153724
+checkname:BOI.4.11.4 - IBM AIX - Protecting Resources - OSRs - /etc/security/audit permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_security_audit_permissions
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^drwxr-x---(\.|)\s+root\s+audit\s+\/etc\/security\/audit$
+
+id:ibm_os_aix.1.00153725
+checkname:BOI.4.11.5 - IBM AIX - Protecting Resources - OSRs - /audit permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_audit_permissions
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^drwxr-x---(\.|)\s+root\s+audit\s+\/audit$
+
+id:ibm_os_aix.1.00153726
+checkname:BOI.4.12.1 - IBM AIX - Serial port restriction - Disable login
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_lsitab
+stanzastart:^(respawn:|on:)\/usr\/sbin\/getty\s+(?!\/dev\/console)
+stanzastop:$
+stanzacriteria:exclude:.*
+
+id:ibm_os_aix.1.00153727
+checkname:BOI.4.15.1 - IBM AIX - TE implementation - Ensure the TE is enabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment:E1.C.1.1.1_to_E1.C.1.1.3
+stanzastart:^TE=
+stanzastop:$
+stanzacriteria:include:^TE=ON$
+
+id:ibm_os_aix.1.00153728
+checkname:BOI.4.15.1 - IBM AIX - TE implementation - Ensure the TEP is enabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment:E1.C.1.1.1_to_E1.C.1.1.3
+stanzastart:^TEP=
+stanzastop:$
+stanzacriteria:include:^TEP=ON$
+
+id:ibm_os_aix.1.00153729
+checkname:BOI.4.7.5 - IBM AIX - Network Settings - SNMP - Disable community ip settings
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_snmpd_conf_file
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:^\s*community
+
+#id:ibm_os_aix.1.00153730
+#checkname:BOI.4.10.3 - IBM AIX - TCP Wrappers - Validate content of the /etc/hosts.allow file
+#severity:Critical
+#stanzaempty:Failed
+#type:match
+#segment:aix_diff_hosts_allow
+#stanzastart:^
+#stanzastop:$
+# Checking difference between the list from techspec with file. Any additional or missing lines would be reported
+#stanzacriteria:exclude:(missing|additional)
+
+id:ibm_os_aix.1.00153731
+checkname:BOI.4.12.18 - Ensure accounts has account_locked=true
+severity:Critical
+stanzaempty:Failed
+type:multicheck
+checks {
+UUCP {
+   id:UUCP
+   checkname:BOI.4.12.18.1 - uucp account locked
+   severity:critical
+   stanzaempty:Failed
+   type:match
+   segment:lsuser_account_access
+   stanzastart:^uucp\s
+   stanzastop:$
+   stanzacriteria: include:uucp\saccount\_locked=true\s
+   }
+LPD {
+   id:LPD
+   checkname:BOI.4.12.18.2 - lpd account locked
+   severity:critical
+   stanzaempty:Failed
+   type:match
+   segment:lsuser_account_access
+   stanzastart:^lpd\s
+   stanzastop:$
+   stanzacriteria: include:lpd\saccount\_locked=true\s
+   }
+NUUCP {
+   id:NUUCP
+   checkname:BOI.4.12.18.3 - nuucp account locked
+   severity:critical
+   stanzaempty:Failed
+   type:match
+   segment:lsuser_account_access
+   stanzastart:^nuucp\s
+   stanzastop:$
+   stanzacriteria: include:nuucp\saccount\_locked=true\s
+   }
+PRINTQ {
+   id:printq
+   checkname:BOI.4.12.18.4 - printq account locked
+   severity:critical
+   stanzaempty:Failed
+   type:match
+   segment:lsuser_account_access
+   stanzastart:^printq\s
+   stanzastop:$
+   stanzacriteria: include:printq\saccount\_locked=true\s
+   }
+}
+
+# END BLOCK
+
+id:ibm_os_aix.1.00039901
+checkname:BOI.3.1.13 - IBM AIX - Password Requirements - check if the password must contain a digit when it is changed by the user
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:mindigit\s*=\s*(\d+)
+criteria: equal:1
+
+id:ibm_os_aix.1.00040201
+checkname:BOI.3.1.14 - IBM AIX - Password Requirements - check the minimum number of special characters in a password.
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:minspecialchar\s*=\s*(\d+)
+criteria: equal:1
+
+id:ibm_os_aix.1.00037401
+checkname:BOI.3.1.15 - IBM AIX - Password Requirements -  check usw stanza's entry for pwd_algorithm in file /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:match
+segment:pwd_algorithm_login.cfg
+stanzastart:^usw
+stanzastop:$
+stanzacriteria:include:^usw\spwd\_algorithm=(ssha512|ssha256)$
+
+id:ibm_os_aix.1.00037601
+checkname:BOI.3.1.1 - IBM AIX - Password Requirements - check the mindiff that are required in a new password which were not in the old password
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:mindiff\s*=\s*(\d+)
+criteria: equal:4
+
+id:ibm_os_aix.1.00038901
+checkname:BOI.3.1.4 - IBM AIX - Password Requirements - check Minimum password length
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match: minlen\s*=\s*(\d+)
+criteria: min:8
+
+id:ibm_os_aix.1.00038301
+checkname:BOI.3.1.5 - IBM AIX - Password Requirements - Minimum number of alphabetic characters
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:minalpha\s*=\s*(\d+)
+criteria: equal:2
+
+id:ibm_os_aix.1.00038401
+checkname:BOI.3.1.6 - IBM AIX - Password Requirements - check minother as set in default stanza of /etc/security/user
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:minother\s*=\s*(\d+)
+criteria: equal:2
+
+id:ibm_os_aix.1.00039701
+checkname:BOI.3.1.7 - IBM AIX - Password Requirements - check the maximum number of times a character may appear in a password
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:maxrepeats\s*=\s*(\d+)
+criteria: equal:2
+
+id:ibm_os_aix.1.00040301
+checkname:BOI.3.1.11 - IBM AIX - Password Requirements - check the minimum number of lower case alphabetic characters in a password.
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:minloweralpha\s*=\s*(\d+)
+criteria: equal:1
+
+id:ibm_os_aix.1.00040101
+checkname:BOI.3.1.12 - IBM AIX - Password Requirements - check the minimum number of upper case alphabetic characters in a password.
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:minupperalpha\s*=\s*(\d+)
+criteria: equal:1
+
+id:ibm_os_aix.1.00042501
+checkname:BOI.3.2.1.1 - IBM AIX - Privileged Authorizations / Userids - check login access for the `daemon`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^daemon\s
+stanzastop:$
+stanzacriteria: include:daemon\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042601
+checkname:BOI.3.2.1.2 - IBM AIX - Privileged Authorizations / Userids - check login access for the `bin`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^bin\s
+stanzastop:$
+stanzacriteria: include:bin\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00043901
+checkname:BOI.3.2.1.3 - IBM AIX - Privileged Authorizations / Userids - check login access for the `sys`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^sys\s
+stanzastop:$
+stanzacriteria: include:sys\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042701
+checkname:BOI.3.2.1.4 - IBM AIX - Privileged Authorizations / Userids - check login access for the `adm`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^adm\s
+stanzastop:$
+stanzacriteria: include:adm\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042201
+checkname:BOI.3.2.1.5 - IBM AIX - Privileged Authorizations / Userids - check login access for the `nobody`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^nobody\s
+stanzastop:$
+stanzacriteria: include:nobody\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00041001
+checkname:BOI.3.2.1.6 - IBM AIX - Privileged Authorizations / Userids - check login access for the `uucp`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^uucp\s
+stanzastop:$
+stanzacriteria: include:uucp\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042301
+checkname:BOI.3.2.1.7 - IBM AIX - Privileged Authorizations / Userids - check login access for the `lpd`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^lpd\s
+stanzastop:$
+stanzacriteria: include:lpd\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00054301
+checkname:BOI.3.2.5 - IBM AIX - System Settings - logintimeout in /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_logincfg_USW
+stanzastart:^
+stanzastop:$
+match:logintimeout\s*=\s*(\d+)
+criteria: equal:60
+
+id:ibm_os_aix.1.00053701
+checkname:BOI.3.2.6 - IBM AIX - System Settings - logindelay in /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_logincfg_default
+stanzastart:^
+stanzastop:$
+match:logindelay\s*=\s*(\d+)
+criteria: equal:10
+
+id:ibm_os_aix.1.00037101
+checkname:BOI.3.2.7 - IBM AIX - Password Requirements - check loginretries
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:lssec_etc_security_user
+stanzastart:^
+stanzastop:$
+match:loginretries\s*=\s*(\d+)
+criteria: equal:5
+
+id:ibm_os_aix.1.00037201
+checkname:BOI.3.2.8 - IBM AIX - Password Requirements - Login access to account root
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_rlogin_root
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:root\srlogin=false
+
+id:ibm_os_aix.1.00048401
+checkname:BOI.3.2.9 - IBM AIX - Protecting Resources - OSRs - Ensure root access is controlled
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_root_sugroups
+stanzastart:^root
+stanzastop:$
+stanzacriteria: include:^root\ssugroups=suadmin\ssu=true
+
+id:ibm_os_aix.1.00030201
+checkname:BOI.3.3.1 - IBM AIX - Network Settings - qdaemon must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*qdaemon
+
+id:ibm_os_aix.1.00030301
+checkname:BOI.3.3.2 - IBM AIX - Network Settings - lpd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*lpd\:
+
+id:ibm_os_aix.1.00030401
+checkname:BOI.3.3.3 - IBM AIX - Network Settings - piobe must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*piobe\:
+
+id:ibm_os_aix.1.00032601
+checkname:BOI.3.3.4 - IBM AIX - Network Settings - dt must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*dt\:
+
+id:ibm_os_aix.1.00027001
+checkname:BOI.3.3.5 - IBM AIX - Network Settings - rcnfs must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rcnfs\:
+
+id:ibm_os_aix.1.00030101
+checkname:BOI.3.3.6 - IBM AIX - Network Settings - sendmail must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/lib\/sendmail\s"
+
+id:ibm_os_aix.1.00032701
+checkname:BOI.3.3.7 - IBM AIX - Network Settings - snmpd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/snmpd\s
+
+id:ibm_os_aix.1.00032801
+checkname:BOI.3.3.8 - IBM AIX - Network Settings - dhcpcd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/dhcpcd\s
+
+id:ibm_os_aix.1.00032901
+checkname:BOI.3.3.9 - IBM AIX - Network Settings - dhcprd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/dhcprd\s
+
+id:ibm_os_aix.1.00035001
+checkname:BOI.3.3.10 - IBM AIX - Network Settings - dhcpsd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/dhcpsd\s
+
+id:ibm_os_aix.1.00035201
+checkname:BOI.3.3.12 - IBM AIX - Network Settings - gated must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/gated\s
+
+id:ibm_os_aix.1.00035301
+checkname:BOI.3.3.13 - IBM AIX - Network Settings - mrouted must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/mrouted\s
+
+id:ibm_os_aix.1.00035401
+checkname:BOI.3.3.14 - IBM AIX - Network Settings - named must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/named\s
+
+id:ibm_os_aix.1.00035501
+checkname:BOI.3.3.15 - IBM AIX - Network Settings - routed must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/routed\s
+
+id:ibm_os_aix.1.00032401
+checkname:BOI.3.3.16 - IBM AIX - Network Settings - rwhod must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/rwhod\s\"\$src\_running\"
+
+id:ibm_os_aix.1.00029101
+checkname:BOI.3.3.17 - IBM AIX - Network Settings - timed must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/timed\s"
+
+id:ibm_os_aix.1.00035601
+checkname:BOI.3.3.18 - IBM AIX - Network Settings - dpid2 must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/dpid2\s
+
+id:ibm_os_aix.1.00035801
+checkname:BOI.3.3.19 - IBM AIX - Network Settings - hostmibd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/hostmibd\s
+
+id:ibm_os_aix.1.00036701
+checkname:BOI.3.3.20 - IBM AIX - Network Settings - snmpmibd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/snmpmibd\s
+
+id:ibm_os_aix.1.00035901
+checkname:BOI.3.3.21 - IBM AIX - Network Settings - aixmibd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/aixmibd\s
+
+id:ibm_os_aix.1.00036001
+checkname:BOI.3.3.22 - IBM AIX - Network Settings - ndpd-host must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/ndpd\-host\s
+
+id:ibm_os_aix.1.00036101
+checkname:BOI.3.3.23 - IBM AIX - Network Settings - ndpd-router must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/ndpd\-router\s
+
+id:ibm_os_aix.1.00029601
+checkname:BOI.3.3.24 - IBM AIX - Network Settings - telnet must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*telnet\s+
+
+id:ibm_os_aix.1.00029001
+checkname:BOI.3.3.25 - IBM AIX - Network Settings - exec must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*exec\s+
+
+id:ibm_os_aix.1.00031801
+checkname:BOI.3.3.26 - IBM AIX - Network Settings - daytime must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*daytime\s+
+
+id:ibm_os_aix.1.00028101
+checkname:BOI.3.3.27 - IBM AIX - Network Settings - shell must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*shell\s+
+
+id:ibm_os_aix.1.00032501
+checkname:BOI.3.3.28 - IBM AIX - Network Settings - cmsd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*cmsd\s+
+
+id:ibm_os_aix.1.00030701
+checkname:BOI.3.3.29 - IBM AIX - Network Settings - ttdbserver must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*ttdbserver\s+
+
+id:ibm_os_aix.1.00036201
+checkname:BOI.3.3.30 - IBM AIX - Network Settings - uucp must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*uucp\s+
+
+id:ibm_os_aix.1.00029201
+checkname:BOI.3.3.31 - IBM AIX - Network Settings - time must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*time\s+
+
+id:ibm_os_aix.1.00029901
+checkname:BOI.3.3.32 - IBM AIX - Network Settings - rlogin must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rlogin\s+
+
+id:ibm_os_aix.1.00036301
+checkname:BOI.3.3.33 - IBM AIX - Network Settings - talkd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*talk\s+
+
+id:ibm_os_aix.1.00036401
+checkname:BOI.3.3.34 - IBM AIX - Network Settings - ntalk must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*ntalk\s+
+
+id:ibm_os_aix.1.00028901
+checkname:BOI.3.3.35 - IBM AIX - Network Settings - ftp must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*ftp\s+
+
+id:ibm_os_aix.1.00030901
+checkname:BOI.3.3.36 - IBM AIX - Network Settings - chargen must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*chargen\s+
+
+id:ibm_os_aix.1.00031401
+checkname:BOI.3.3.37 - IBM AIX - Network Settings - discard must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*discard\s+
+
+id:ibm_os_aix.1.00030801
+checkname:BOI.3.3.38 - IBM AIX - Network Settings - dtspc must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*dtspc\s+
+
+id:ibm_os_aix.1.00034701
+checkname:BOI.3.3.39 - IBM AIX - Network Settings - echo must be disabled in /etc/inet.d
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*echo\s+
+
+id:ibm_os_aix.1.00032201
+checkname:BOI.3.3.40 - IBM AIX - Network Settings - pcnfsd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*pcnfsd\s+
+
+id:ibm_os_aix.1.00031001
+checkname:BOI.3.3.41 - IBM AIX - Network Settings - rstatd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rstatd\s+
+
+id:ibm_os_aix.1.00031301
+checkname:BOI.3.3.42 - IBM AIX - Network Settings - rusersd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rusersd\s+
+
+id:ibm_os_aix.1.00031201
+checkname:BOI.3.3.43 - IBM AIX - Network Settings - rwalld must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rwalld\s+
+
+id:ibm_os_aix.1.00032101
+checkname:BOI.3.3.44 - IBM AIX - Network Settings - sprayd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*sprayd\s+
+
+id:ibm_os_aix.1.00028701
+checkname:BOI.3.3.45 - IBM AIX - Network Settings - klogin must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*klogin\s+
+
+id:ibm_os_aix.1.00036501
+checkname:BOI.3.3.46 - IBM AIX - Network Settings - kshell must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*kshell\s+
+
+id:ibm_os_aix.1.00036601
+checkname:BOI.3.3.47 - IBM AIX - Network Settings - rquotad must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*rquotad\s+
+
+id:ibm_os_aix.1.00034901
+checkname:BOI.3.3.48 - IBM AIX - Network Settings - tftp must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*tftp\s+
+
+id:ibm_os_aix.1.00035701
+checkname:BOI.3.3.49 - IBM AIX - Network Settings - imap2 must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*imap2\s+
+
+id:ibm_os_aix.1.00034801
+checkname:BOI.3.3.50 - IBM AIX - Network Settings - pop3 must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*pop3\s+
+
+id:ibm_os_aix.1.00032001
+checkname:BOI.3.3.51 - IBM AIX - Network Settings - finger must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*finger\s+
+
+id:ibm_os_aix.1.00033701
+checkname:BOI.3.3.52 - IBM AIX - Network Settings - instsrv must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_conf_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*instsrv\s+
+
+id:ibm_os_aix.1.00048701
+checkname:BOI.3.3.53 - IBM AIX - Protecting Resources - OSRs - etc_inetdconf prevent group/world write
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_etc_inetdconf_invalid_perm
+stanzastart:^(d|\-)
+stanzastop:$
+stanzacriteria:include:^\-rw\-(r\-\-){2}\s+root\s+system\s+\/etc\/inetd\.conf$
+
+id:ibm_os_aix.1.00027601
+checkname:BOI.3.4.1 - IBM AIX - Network Settings - remote services must not have permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_Remote_Access_Services_files
+stanzastart: ^\-
+stanzastop: $
+stanzacriteria:include:^\-{10}\s+
+
+id:ibm_os_aix.1.00026801
+checkname:BOI.3.4.2 - IBM AIX - Network Settings - remote services daemons not have permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_Remote_Services_Daemons_files
+stanzastart: ^\-
+stanzastop: $
+stanzacriteria:include:^\-{10}\s+
+
+id:ibm_os_aix.1.00149601
+checkname:BOI.3.5.2 - SSH Servers AIX CIS Based - Network Settings - remove /etc/shosts.equiv
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_shostsequiv_File
+stanzastart:^
+stanzastop:$
+stanzacriteria: include:^\/etc\/shosts\.equiv\snot\sfound$
+
+id:ibm_os_aix.1.00033801
+checkname:BOI.3.6.1 - IBM AIX - Network Settings - ipsrcrouteforward value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipsrcrouteforward\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:0
+
+id:ibm_os_aix.1.00034601
+checkname:BOI.3.6.2 - IBM AIX - Network Settings - ipignoreredirects value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipignoreredirects\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:1
+
+id:ibm_os_aix.1.00033901
+checkname:BOI.3.6.3 - IBM AIX - Network Settings - clean_partial_conns value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^clean_partial_conns\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:1
+
+id:ibm_os_aix.1.00034001
+checkname:BOI.3.6.4 - IBM AIX - Network Settings - ipsrcroutesend value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipsrcroutesend\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:0
+
+id:ibm_os_aix.1.00034101
+checkname:BOI.3.6.5 - IBM AIX - Network Settings - ipforwarding value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipforwarding\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:0
+
+id:ibm_os_aix.1.00034201
+checkname:BOI.3.6.6 - IBM AIX - Network Settings - ipsendredirects value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipsendredirects\s=\s
+stanzastop:$
+match:\d+
+criteria:equal:0
+
+id:ibm_os_aix.1.00034301
+checkname:BOI.3.6.7 - IBM AIX - Network Settings - ip6srcrouteforward value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ip6srcrouteforward\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027901
+checkname:BOI.3.6.8 - IBM AIX - Network Settings - directed_broadcast value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^directed_broadcast\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027301
+checkname:BOI.3.6.9 - IBM AIX - Network Settings - tcp_pmtu_discover value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^tcp\_pmtu\_discover\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00034501
+checkname:BOI.3.6.10 - IBM AIX - Network Settings - bcastping value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^bcastping\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027801
+checkname:BOI.3.6.11 - IBM AIX - Network Settings - icmpaddressmask value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^icmpaddressmask\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027101
+checkname:BOI.3.6.12 - IBM AIX - Network Settings - udp_pmtu_discover value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^udp\_pmtu\_discover\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00028501
+checkname:BOI.3.6.13 - IBM AIX - Network Settings - ipsrcrouterecv value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^ipsrcrouterecv\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027501
+checkname:BOI.3.6.14 - IBM AIX - Network Settings - nonlocsrcroute value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^nonlocsrcroute\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:0
+
+id:ibm_os_aix.1.00027201
+checkname:BOI.3.6.15 - IBM AIX - Network Settings - tcp_tcpsecure value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^tcp\_tcpsecure\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:7
+
+id:ibm_os_aix.1.00027401
+checkname:BOI.3.6.16 - IBM AIX - Network Settings - sockthresh value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_network_tuning_parameters
+stanzastart:^sockthresh\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:60
+
+id:ibm_os_aix.1.00027701
+checkname:BOI.3.6.21 - IBM AIX - Network Settings - nfs_use_reserved_ports value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_NFS_tuning_parameters
+stanzastart:^nfs\_use\_reserved\_ports\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:1
+
+id:ibm_os_aix.1.00027702
+checkname:BOI.3.6.21 - IBM AIX - Network Settings - portcheck value
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:aix_Net_NFS_tuning_parameters
+stanzastart:^portcheck\s=
+stanzastop:$
+match:=\s+(\d+)$
+criteria:equal:1
+
+id:ibm_os_aix.1.00048001
+checkname:BOI.3.7.1 - IBM AIX - Protecting Resources - OSRs - authorized users in `/var/adm/cron/cron.allow`
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_var_adm_cron_allow_users
+stanzastart: ^
+stanzastop: $
+# If the cron.allow file does not exist (allows root user only).
+stanzacriteria: include:^cat\:\scannot\sopen\s\/var\/adm\/cron\/cron\.allow$
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# If the cron.allow file exists, only users whose login names appear in it can use the crontab command. The root user's log name must appear in the cron.allow file if the file exists. 
+		type: match
+		segment: aix_OSR_var_adm_cron_allow_users
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:^((\s*root\s*)|(\s*sys\s*)|(\s*adm\s*)){3}$
+}
+}
+
+id:ibm_os_aix.1.00049101
+checkname:BOI.3.7.1 - IBM AIX - Protecting Resources - OSRs - file `/var/adm/cron/cron.deny` must be deleted
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cron_deny
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\/var\/adm\/cron\/cron\.deny\snot\sfound$
+
+id:ibm_os_aix.1.00049003
+checkname:BOI.3.7.2 - IBM AIX - Protecting Resources - OSRs - authorized users in `/var/adm/cron/at.allow`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cron_at_allow_users
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^root$
+
+id:ibm_os_aix.1.00049001
+checkname:BOI.3.7.2 - IBM AIX - Protecting Resources - OSRs - file `/var/adm/cron/at.deny` must be deleted
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cron_at_deny
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\/var\/adm\/cron\/at\.deny\snot\sfound$
+
+id:ibm_os_aix.1.00022601
+checkname:BOI.3.7.4 - IBM AIX - Business Use Notice - default login herald to /etc/security/login.cfg
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Business_default_herald
+stanzastart: ^
+stanzastop: $
+stanzacriteria:include:^default\sherald=\"Unauthorized\suse\sof\sthis\ssystem\sis\sprohibited\.\\nlogin\:\"\:$
+
+id:ibm_os_aix.1.00046501
+checkname:BOI.3.7.6 - IBM AIX - Protecting Resources - OSRs - crontab prevent group/world write
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_crontab_active_entries_invalid_perm
+stanzastart:^(d|\-)
+stanzastop:$
+stanzacriteria:include:^[\-d](\-|r|w|x|){3}([\-r]\-[\-x]){2}\s+root
+
+id:ibm_os_aix.1.00047701
+checkname:BOI.3.7.7 - IBM AIX - Protecting Resources - OSRs - check umask
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lssec_etc_security_user
+stanzastart:umask=
+stanzastop:$
+stanzacriteria:include:umask=\s*((27)|(027))\s+
+
+id:ibm_os_aix.1.00033001
+checkname:BOI.3.7.8 - IBM AIX - Network Settings - disable core dumps in /etc/security/limits
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_etc_security_limits_core_dumps
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^default\score=0\score\_hard=0$
+
+id:ibm_os_aix.1.00023102
+checkname:BOI.4.1.1 - IBM AIX - Logging -  check the log file for the auth.info output in /etc/syslog.conf
+severity:critical
+stanzaempty:Failed
+type:match
+segment:auth_info_log_file
+stanzastart:^auth\.info
+stanzastop:$
+stanzacriteria:include:\/var\/log\/syslog\/auth\.log.+\/var\/log\/syslog\/archive$
+
+id:ibm_os_aix.1.00023101
+checkname:BOI.4.1.2 - IBM AIX - Logging -  check the log file for the *.info output in /etc/syslog.conf
+severity:critical
+stanzaempty:Failed
+type:match
+segment:auth_info_log_file
+stanzastart:^\*.info[^\s]
+stanzastop:$
+stanzacriteria:include:\/var\/log\/syslog\/info\.log.+\/var\/log\/syslog\/archive$
+
+id:ibm_os_aix.1.00024701
+checkname:BOI.4.1.3 - IBM AIX - Logging - check syslog process
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_ps_deaf
+stanzastart:^\s*root\s*.+\s*\/usr\/sbin\/syslogd
+stanzastop:$
+stanzacriteria:include:^\s*root\s*.+\s*\/usr\/sbin\/syslogd\s*\-r$
+
+id:ibm_os_aix.1.00156301
+checkname:BOI.4.2.1 - SSH Servers AIX CIS Based - System Settings -OpenSSH_version must be 8 or higher
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:Aix_OpenSSH_version
+stanzastart:^
+stanzastop:$
+match:^(\d+\.\d+)$
+criteria: min:8.0
+
+id:ibm_os_aix.1.00148601
+checkname:BOI.4.2.2 - SSH Servers AIX CIS Based - Identify and Authenticate Users - permitrootlogin must be 'no'
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^(?i)PermitRootLogin
+stanzastop:$
+stanzacriteria: include:^(?i)PermitRootLogin\s*\:?\s+no$
+
+id:ibm_os_aix.1.00149801
+checkname:BOI.4.2.3 - SSH Servers AIX CIS Based - Network Settings - Protocol has to be 2
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:Aix_sshd_t
+stanzastart:^(?i)Protocol
+stanzastop:$
+match:^(?i)Protocol\s*\:?\s+(\d+)$
+criteria: equal:2
+
+id:ibm_os_aix.1.00148001
+checkname:BOI.4.2.5 - SSH Servers AIX CIS Based - Business Use Notice - banner has to be present
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^Banner
+stanzastop:$
+stanzacriteria: include:^Banner\s+\/etc\/ssh\/ssh\_banner$
+
+id:ibm_os_aix.1.00149401
+checkname:BOI.4.2.6 - SSH Servers AIX CIS Based - Network Settings - IgnoreRhosts must be yes
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^(?i)IgnoreRhosts
+stanzastop:$
+stanzacriteria: include:^(?i)IgnoreRhosts\s*\:?\s+yes$
+
+id:ibm_os_aix.1.00150001
+checkname:BOI.4.2.7 - SSH Servers AIX CIS Based - Password Requirements - permitemptypasswords must be 'no'
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^(?i)PermitEmptyPasswords
+stanzastop:$
+stanzacriteria: include:^(?i)permitemptypasswords\s*\:?\s+no$
+
+id:ibm_os_aix.1.00149301
+checkname:BOI.4.2.8 - SSH Servers AIX CIS Based - Network Settings - HostbasedAuthentication must be no
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^(?i)HostbasedAuthentication
+stanzastop:$
+stanzacriteria: include:^(?i)HostbasedAuthentication\s*\:?\s+no$
+
+id:ibm_os_aix.1.00149402
+checkname:BOI.4.2.10 - SSH Servers AIX CIS Based - Network Settings - shosts files will not be used
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_IgnoreRhosts
+stanzastart:^
+stanzastop:$
+stanzacriteria: include:^No\sfiles\sfound$
+
+id:ibm_os_aix.1.00149601
+checkname:BOI.4.2.11 - SSH Servers AIX CIS Based - Network Settings - remove /etc/shosts.equiv
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_shostsequiv_File
+stanzastart:^
+stanzastop:$
+stanzacriteria: include:^\/etc\/shosts\.equiv\snot\sfound$
+
+id:ibm_os_aix.1.00148901
+checkname:BOI.4.2.12 - SSH Servers AIX CIS Based - Logging - Logging level
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^loglevel
+stanzastop:$
+stanzacriteria: include:^loglevel\s*\:?\s+INFO$
+
+id:ibm_os_aix.1.00156701
+checkname:BOI.4.2.13 - SSH Servers AIX CIS Based - System Settings - maxauthtries must be "4" or less
+severity:critical
+stanzaempty:Failed
+type:matchvalue
+segment:Aix_sshd_t
+stanzastart:^(?i)MaxAuthTries
+stanzastop:$
+match:^(?i)MaxAuthTries\s*\:?\s+(\d+)$
+criteria: max:5
+
+id:ibm_os_aix.1.00148301
+checkname:BOI.4.2.15 - SSH Servers AIX CIS Based - Encryption - Ciphers
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment:Aix_sshd_t
+stanzastart:^ciphers
+stanzastop:$
+stanzacriteria: include:^ciphers\s+(?:(?:aes128-ctr|aes192-ctr|aes256-ctr),*){3}
+conditions {
+    if_passed {
+        type:match
+        segment:Aix_sshd_t
+        stanzastart:^ciphers
+        stanzastop:$
+        stanzacriteria: exclude:^ciphers.*(?:3des|arcfour|cast128)
+    }
+    if_failed {
+        type:match
+        segment:Aix_sshd_t
+        stanzastart:^ciphers
+        stanzastop:$
+        stanzacriteria: include:^ciphers\s+(?:(?:aes128-ctr|aes192-ctr|aes256-ctr),*){3}
+    }
+}
+
+id:ibm_os_aix.1.00150101
+checkname:BOI.4.2.16 - SSH Servers AIX CIS Based - Protecting Resources - User Resources - permituserenvironment has to be 'no'
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_sshd_t
+stanzastart:^(?i)permituserenvironment
+stanzastop:$
+stanzacriteria: include:^(?i)permituserenvironment\s*\:?\s+no$
+
+id:ibm_os_aix.1.00151801
+checkname:BOI.4.2.18 - SSH Servers AIX CIS Based - Protecting Resources – OSRs - /etc/ssh/sshd_config
+severity:critical
+stanzaempty:Failed
+type:match
+segment:Aix_SSH_OSRs_Protecting_Resources
+stanzastart:^\/etc\/ssh\/sshd\_config\s+
+stanzastop:$
+stanzacriteria: include:^\/etc\/ssh\/sshd\_config\s+(((adm|bin|daemon|imnadm|invscout|ipsec|ldap|lp|lpd|nuucp|root|snapp|sys|uucp|pconsole|esaadmin|srvproxy)\s+(adm|audit|bin|cron|ecs|hacmp|haemrm|imnadm|ipsec|ldap|lp|mail|pconsole|printq|security|shutdown|snapp|sys|system|uucp)\s+\-rw\-(r\-\-){2}))$
+
+id:ibm_os_aix.1.00051801
+checkname:BOI.4.3.3 - IBM AIX - Protecting Resources - OSRs - Prevent access to others
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_spool_mqueue_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^drwx\-{6}\s+
+
+id:ibm_os_aix.1.00022401
+checkname:BOI.4.4.1 - IBM AIX - Business Use Notice - check if the fileset that has CDE not installed
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_CDE_fileset
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^CDE\snot\sinstalled$
+
+id:ibm_os_aix.1.00029801
+checkname:BOI.4.5.6 - IBM AIX - Network Settings - check if No other value than the value of -2 of the nobody user is set for /etc/exports anon option
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_etc_export_anon_UID
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^A\svalue\sof\s\-2\sis\sthe\snobody\suser$
+
+id:ibm_os_aix.1.00029401
+checkname:BOI.4.6.1 - IBM AIX - Network Settings - check if the fileset that has NIS_client not installed
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_NIS_client_fileset
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^NIS\sclient\snot\sinstalled$
+
+id:ibm_os_aix.1.00029501
+checkname:BOI.4.6.2 - IBM AIX - Network Settings - check if the fileset that has NIS_server not installed
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_NIS_server_fileset
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^NIS\sserver\snot\sinstalled$
+
+id:ibm_os_aix.1.00026701
+checkname:BOI.4.6.3 - IBM AIX - Network Settings - remove NIS markers from password and group files
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_NIS_markers_password_group
+stanzastart: ^
+stanzastop: $
+stanzacriteria:include:^No\sNIS\suser\sor\sgroup\sfound$
+
+id:ibm_os_aix.1.00029301
+checkname:BOI.4.6.4 - IBM AIX - Network Settings - NIS must be disabled
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_Net_NIS_Daemon_yppasswdd
+stanzastart: ^(?!.*Subsystem)[^\;]*\;
+stanzastop: $
+# yppasswdd daemon must be inoperative
+stanzacriteria: include:^(?:[^\;]*\;){1}inoperative
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# if yppasswdd is not inoperative, then it should not exist.
+		type: match
+		segment: aix_Net_NIS_Daemon_yppasswdd
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:yppasswdd\sSubsystem\sis\snot\son\sfile\.
+	}
+}
+
+id:ibm_os_aix.1.00026601
+checkname:BOI.4.7.1 - IBM AIX - Network Settings -  SNMP - disable private community string
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_snmpd_conf_file
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*community\s+private\s+
+
+id:ibm_os_aix.1.00026401
+checkname:BOI.4.7.2 - IBM AIX - Network Settings - SNMP - disable system community string
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_snmpd_conf_file
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*community\s+system\s+
+
+id:ibm_os_aix.1.00025901
+checkname:BOI.4.7.3 - IBM AIX - Network Settings - SNMP - disable public community string
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_snmpd_conf_file
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*community\s+public\s*
+
+id:ibm_os_aix.1.00026001
+checkname:BOI.4.7.4 - IBM AIX - Network Settings - SNMP - disable Readwrite community access
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_snmpd_conf_file
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*community\s+(private|system|public).*$|^\s*community\s+.*\breadWrite\b
+
+id:ibm_os_aix.1.00028301
+checkname:BOI.4.8.1 - IBM AIX - Network Settings - inetd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/inetd\s
+
+id:ibm_os_aix.1.00022301
+checkname:BOI.4.9.1 - IBM AIX - /etc/rc.tcpip - portmap
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment:rc.tcpip_portmap
+stanzastart:^(?!.*Subsystem)[^\;]*\;
+stanzastop:$
+stanzacriteria:include:^(?:[^\;]*\;){3}active
+Conditions {
+    if_passed {
+        #If portmap is running with no active RCP services: Stop (S) and Disable (d) portmap
+                type:match
+                segment:rc.tcpip_portmap_rcpinfo
+				stanzaempty:Passed
+                stanzastart:^\s*program\s*vers\s*proto\s*port\s*service(?!\n*.+)
+                stanzastop:$
+                stanzacriteria:exclude:.*
+        }
+        if_failed {
+                type:match
+                segment:rc.tcpip_portmap
+                stanzastart:^(?!.*Subsystem)[^\;]*\;
+                stanzastop:$
+                stanzacriteria:include:^(?:[^\;]*\;){3}inoperative
+        }
+}
+
+id:ibm_os_aix.1.00049301
+checkname:BOI.4.11.2 - IBM AIX - Protecting Resources - OSRs - /etc/group permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_etc_group_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-(rw\-)(r\-\-){2}\s+root\s+security\s+\/etc\/group$
+
+id:ibm_os_aix.1.00047801
+checkname:BOI.4.11.3 - IBM AIX - Protecting Resources - OSRs - /etc/passwd permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_etc_passwd_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-(rw\-)(r\-\-){2}\s+root\s+security\s+\/etc\/passwd$
+
+id:ibm_os_aix.1.00052001
+checkname:BOI.4.11.6 - IBM AIX - Protecting Resources - OSRs - /root/smit.log permissions
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_root_smit_log_invalid_perm
+stanzastart: ^
+stanzastop: $
+# Check if required permissions are set
+stanzacriteria: include:^\-rw[\-x]\-{6}\s+\d+\s+root\s+system\s+
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# There is no requirement if the file doesn't exist
+		type: match
+		segment: aix_OSR_root_smit_log_invalid_perm
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:not\sfound
+	}
+}
+
+id:ibm_os_aix.1.00048901
+checkname:BOI.4.11.7 - IBM AIX - Protecting Resources - OSRs - /var/adm/cron/log permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cronlog_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-(rw\-){2}\-{3}\s+bin\s+cron\s+\/var\/adm\/cron\/log$
+
+id:ibm_os_aix.1.00051601
+checkname:BOI.4.11.8 - IBM AIX - Protecting Resources - OSRs - Prevent access to others
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_spool_crontab_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^d([\-r][\-w][\-x]){2}\-{3}\s+
+
+id:ibm_os_aix.1.00047901
+checkname:BOI.4.11.9 - IBM AIX - Protecting Resources - OSRs - Apply the appropriate permissions to `/var/adm/cron/at.allow`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cron_at_allow_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-r\-{8}\s+root\s+(sys|system)\s+\/var\/adm\/cron\/at\.allow$
+
+id:ibm_os_aix.1.00048801
+checkname:BOI.4.11.10 - IBM AIX - Protecting Resources - OSRs - /var/adm/cron/cron.allow permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cronallow_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-r\-{8}\s+root\s+(sys|system)\s+\/var\/adm\/cron\/cron\.allow$
+
+id:ibm_os_aix.1.00049601
+checkname:BOI.4.11.11 - IBM AIX - Protecting Resources - OSRs - /etc/motd permissions
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_etc_motd_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^\-(rw\-)(r\-\-){2}\s+bin\s+bin\s+\/etc\/motd$
+
+id:ibm_os_aix.1.00052201
+checkname:BOI.4.11.12 - IBM AIX - Protecting Resources - OSRs - prevent read/write access
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_ras_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^(d|\-)((\-|r)(\-|w)(\-|x)){2}\-\-(\-|x)\s+
+
+id:ibm_os_aix.1.00052301
+checkname:BOI.4.11.13 - IBM AIX - Protecting Resources - OSRs - prevent world read and write from /var/ct/RMstart.log
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_RMC_logfile_invalid_perm
+stanzastart: ^
+stanzastop: $
+# Check if required permissions are set
+stanzacriteria: include:^\-(\-|r)(\-|w)\-(\-|r)\-{5}\s+
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# There is no requirement the file doesn't exist
+		type: match
+		segment: aix_OSR_RMC_logfile_invalid_perm
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:not\sfound
+	}
+}
+
+id:ibm_os_aix.1.00052401
+checkname:BOI.4.11.14 - IBM AIX - Protecting Resources - OSRs - check if permissions is set to 640 /var/tmp/dpid2.log
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_dpid2_logfile_invalid_perm
+stanzastart: ^
+stanzastop: $
+# Check if required permissions are set
+stanzacriteria: include:^\-(\-|r)(\-|w)\-(\-|r)\-{5}\s+
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# There is no requirement the file doesn't exist
+		type: match
+		segment: aix_OSR_dpid2_logfile_invalid_perm
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:not\sfound
+	}
+}
+
+id:ibm_os_aix.1.00051501
+checkname:BOI.4.11.15 - IBM AIX - Protecting Resources - OSRs - prevent world read and write from /var/tmp/hostmibd.log
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_hostmibd_logfile_invalid_perm
+stanzastart: ^
+stanzastop: $
+# Check if required permissions are set
+stanzacriteria: include:^\-(\-|r)(\-|w)\-(\-|r)\-{5}\s+
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# There is no requirement the file doesn't exist
+		type: match
+		segment: aix_OSR_hostmibd_logfile_invalid_perm
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:not\sfound
+	}
+}
+
+id:ibm_os_aix.1.00052601
+checkname:BOI.4.11.16 - IBM AIX - Protecting Resources - OSRs - prevent world read and write from /var/tmp/snmpd.log
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_snmpd_logfile_invalid_perm
+stanzastart: ^
+stanzastop: $
+# Check if required permissions are set
+stanzacriteria: include:^\-(\-|r)(\-|w)\-(\-|r)\-{5}\s+
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# There is no requirement the file doesn't exist
+		type: match
+		segment: aix_OSR_snmpd_logfile_invalid_perm
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:not\sfound
+	}
+}
+
+id:ibm_os_aix.1.00052701
+checkname:BOI.4.11.17 - IBM AIX - Protecting Resources - OSRs - Prevent write access to others
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_sa_invalid_perm
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^(d|\-)(-|r|w|x){7}\-(-|x)\s+
+
+id:ibm_os_aix.1.00048669
+checkname:BOI.4.11.18 - IBM AIX - Protecting Resources - OSRs - Files in home directories must not be group or world writable
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_home_PATH_deny_write_access
+stanzastart:^-
+stanzastop:$
+stanzacriteria:include:^-(\-|r|w|x|){3}([\-r]\-[\-x]){2}\s+
+
+id:ibm_os_aix.1.00048601
+checkname:BOI.4.11.19 - IBM AIX - Protecting Resources - OSRs - Home directory must deny write to all except owner
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_home_PATH_deny_write_access
+stanzastart:^d
+stanzastop:$
+stanzacriteria:include:^d(\-|r|w|x|){3}([\-r]\-[\-x]){2}\s+
+
+id:ibm_os_aix.1.00040401
+checkname:BOI.4.11.20 - IBM AIX - Permissions and Ownership - world/group writable directory in root PATH
+severity:critical
+stanzaempty:Passed
+type:match
+segment:AIX_world_permissions
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:.+
+
+id:ibm_os_aix.1.00033201
+checkname:BOI.4.12.4 - IBM AIX - Network Settings - httpdlite must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*httpdlite\:
+
+id:ibm_os_aix.1.00033301
+checkname:BOI.4.12.5 - IBM AIX - Network Settings - pmd must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*pmd\:
+
+id:ibm_os_aix.1.00033601
+checkname:BOI.4.12.6 - IBM AIX - Network Settings - writesrv must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*writesrv\:
+
+id:ibm_os_aix.1.00028401
+checkname:BOI.4.12.7 - IBM AIX - Network Settings - block `talk`
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_inetd_talk
+stanzastart: ^
+stanzastop: $
+stanzacriteria:include:^\s*0\s*$
+
+id:ibm_os_aix.1.00028402
+checkname:BOI.4.12.7 - IBM AIX - Network Settings - block `write`
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_writesrv
+stanzastart: ^
+stanzastop: $
+stanzacriteria:include:^\s*0\s*$
+
+id:ibm_os_aix.1.00022501
+checkname:BOI.4.12.12 - IBM AIX - Business Use Notice -  /etc/motd to display Business Use Notice exists
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Business_Use_Notice_text
+stanzastart: ^
+stanzastop: $
+stanzacriteria:include:^\s*#\s*This\s*is\s*a\s*computer\s*device\s*of\s*a\s*private\s*corporation.\s*If\s*you\s*are\s*not\s*#
+
+id:ibm_os_aix.1.00049002
+checkname:BOI.4.12.13 - IBM AIX - Protecting Resources - OSRs - authorized users in `/var/adm/cron/at.allow`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_OSR_var_adm_cron_at_allow_users
+stanzastart:^
+stanzastop:$
+stanzacriteria:include:^root\sadm\ssys$
+
+id:ibm_os_aix.1.00048001
+checkname:BOI.4.12.14 - IBM AIX - Protecting Resources - OSRs - authorized users in `/var/adm/cron/cron.allow`
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: aix_OSR_var_adm_cron_allow_users
+stanzastart: ^
+stanzastop: $
+# If the cron.allow file does not exist (allows root user only).
+stanzacriteria: include:^cat\:\scannot\sopen\s\/var\/adm\/cron\/cron\.allow$
+Conditions {
+    if_passed {
+		type: alwayspassed
+	}
+	if_failed {
+# If the cron.allow file exists, only users whose login names appear in it can use the crontab command. The root user's log name must appear in the cron.allow file if the file exists. 
+		type: match
+		segment: aix_OSR_var_adm_cron_allow_users
+		stanzastart: ^
+		stanzastop: $
+		stanzacriteria: include:^((\s*root\s*)|(\s*sys\s*)|(\s*adm\s*)){3}$
+    }
+}
+
+d:ibm_os_aix.1.00039601
+checkname:BOI.4.12.16 - IBM AIX - Password Requirements - Each UID must only be used once in the /etc/passwd file
+severity:critical
+stanzaempty:Failed
+type:match
+segment:etc_passwd_uniq_UID
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:.+
+
+id:ibm_os_aix.1.00038001
+checkname:BOI.4.12.17 - IBM AIX - Password Requirements - Each GID must only be used once in the /etc/group file.
+severity:critical
+stanzaempty:Failed
+type:match
+segment:etc_group_uniq_GID
+stanzastart:^
+stanzastop:$
+stanzacriteria:exclude:.+
+
+id:ibm_os_aix.1.00042101
+checkname:BOI.4.2.18 - IBM AIX - Privileged Authorizations / Userids - check login access for the `nuucp`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^nuucp\s
+stanzastop:$
+stanzacriteria: include:nuucp\saccount\_locked=true\slogin=false\srlogin=false
+
+
+id:ibm_os_aix.1.00041001
+checkname:BOI.4.2.18 - IBM AIX - Privileged Authorizations / Userids - check login access for the `uucp`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^uucp\s
+stanzastop:$
+stanzacriteria: include:uucp\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042301
+checkname:BOI.4.2.18 - IBM AIX - Privileged Authorizations / Userids - check login access for the `lpd`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^lpd\s
+stanzastop:$
+stanzacriteria: include:lpd\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00042301
+checkname:BOI.4.2.18 - IBM AIX - Privileged Authorizations / Userids - check login access for the `printq`
+severity:critical
+stanzaempty:Failed
+type:match
+segment:lsuser_account_access
+stanzastart:^printq\s
+stanzastop:$
+stanzacriteria: include:printq\saccount\_locked=true\slogin=false\srlogin=false
+
+id:ibm_os_aix.1.00026201
+checkname:BOI.4.13.1 - IBM AIX - Network Settings - EFS must be implementated
+severity:critical
+stanzaempty:Failed
+type:match
+segment:aix_Net_EFS_CLIC_software
+stanzastart:^\s*clic\.rte\.
+stanzastop:$
+stanzacriteria:include:^\s*clic\.rte\..+$
+
+id:ibm_os_aix.1.00035101
+checkname:BOI.3.3.11 - IBM AIX - Network Settings - autoconf6 must be disabled
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_etc_rc_tcpip_services
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:^\s*start\s\/usr\/sbin\/autoconf6\s
+
+id:ibm_os_aix.1.00050401
+checkname:BOI.3.5.1 - IBM AIX - Protecting Resources - OSRs - check /root/.netrc not exist
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_OSR_root_netrc_invalid_perm
+stanzastart: ^
+stanzastop: $
+stanzacriteria: include:not\sfound
+
+id:ibm_os_aix.1.00051301
+checkname:BOI.3.5.1 - IBM AIX - Protecting Resources - OSRs - check /root/.rhosts not exist
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_OSR_root_rhosts_invalid_perm
+stanzastart: ^
+stanzastop: $
+stanzacriteria: include:not\sfound
+
+id:ibm_os_aix.1.00042401
+checkname:BOI.3.7.5 - IBM AIX - Privileged Authorizations / Userids - check account `guest` removed
+severity:critical
+stanzaempty:Passed
+type:match
+segment:lsuser_account_access
+stanzastart:^guest\s
+stanzastop:$
+stanzacriteria: exclude: .*
+
+id:ibm_os_aix.1.00033101
+checkname:BOI.4.12.3 - IBM AIX - Network Settings - disable Network Computing System (NCS)
+severity:critical
+stanzaempty:Failed
+type:match
+segment: aix_Net_lsitab
+stanzastart: ^
+stanzastop: $
+stanzacriteria:exclude:\/etc\/rc\.ncs

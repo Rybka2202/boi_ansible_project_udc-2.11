@@ -1,0 +1,93 @@
+---
+- name: Data collection control block
+  when: not fatal_on_exec | bool
+  block:
+    - name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+      ansible.builtin.shell: |
+        {{ commands.command }}
+      args:
+        executable: "{% if namebase == 'ibm_os_aix' %}/usr/bin/ksh{% else %}/bin/bash{% endif %}"
+      become: "{{ commands.become | default(omit) }}"
+      become_user: "{{ commands.become_user | default('root') }}"
+      register: cmdout
+      no_log: true
+      changed_when: false
+      ignore_errors: true
+      ignore_unreachable: true
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cmdout
+      when: udc_debug | default(False) | bool
+
+    - name: Error handling control block - only UTF-8
+      block:
+        - name: Write to outfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ out_file }}"
+            line: |
+              {{ commands.header }}
+              {{ cmdout.stdout | default('') }}
+              {{ commands.footer }}
+
+          no_log: "{{ not udc_debug | default(False) | bool }}"
+
+        - name: Write to logfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ log_file }}"
+            line: >-
+              {{ '%Y-%m-%d %H:%M:%S' | strftime }} - {{ commands.header }}:
+              {% if cmdout.rc is defined and cmdout.rc == 0 %}success{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and cmdout.stdout is defined and 'No such command' in cmdout.stdout %}ERROR - no such command{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and cmdout.stdout is defined and 'Too few arguments' in cmdout.stdout %}ERROR - too few arguments{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and cmdout.stderr is defined
+              and 'Failed to query server: Connection timed out' in cmdout.stderr %}ERROR - timeout{%
+              elif cmdout.msg is defined and 'Invalid/incorrect password' in cmdout.msg %}ERROR - Failed to authenticate the user{%
+              elif cmdout.msg is defined and 'MODULE FAILURE' in cmdout.msg %}ERROR - MODULE ERROR (could be ansible_pipelining and requiretty conflict){%
+              elif cmdout.msg is defined and 'Missing sudo password' in cmdout.msg %}ERROR - Privilege escalation error{%
+              elif cmdout.unreachable is defined and cmdout.unreachable | bool %}ERROR - Host is unreachable{%
+              else %}ERROR - unknown{% endif %}
+          no_log: "{{ not udc_debug | default(False) | bool }}"
+      rescue:
+        - name: Generate RC
+          ansible.builtin.include_role:
+            name: returncode
+          vars:
+            rc_variables: "{{ udc_return_codes['wrong_encoding'] }}"
+
+        - name: Fail UDC run for the host
+          ansible.builtin.fail:
+            msg: "{{ udc_return_codes['wrong_encoding']['rc_message'] }}"
+
+    - name: Error handling
+      when: cmdout.rc is undefined or cmdout.rc != 0 or cmdout.unreachable is defined
+      block:
+        - name: Set fact on error
+          ansible.builtin.set_fact:
+            error_on_exec: true
+          when: not error_on_exec | bool
+
+        - name: Set exec_rc
+          ansible.builtin.set_fact:
+            exec_rc: >-
+              {% if cmdout.rc is defined and cmdout.rc != 0 and cmdout.stdout is defined and 'No such command' in cmdout.stdout %}1{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and cmdout.stdout is defined and 'Too few arguments' in cmdout.stdout %}1{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and cmdout.stderr is defined
+              and 'Failed to query server: Connection timed out' in cmdout.stderr %}3{%
+              elif cmdout.msg is defined and 'MODULE FAILURE' in cmdout.msg %}1{%
+              elif cmdout.msg is defined and 'Invalid/incorrect password' in cmdout.msg %}5{%
+              elif cmdout.unreachable is defined and cmdout.unreachable | bool %}255{%
+              else %}1{% endif %}
+
+        - name: Handling fatal errors
+          when: exec_rc == '5' or exec_rc == '255'
+          block:
+            - name: Generate RC
+              ansible.builtin.include_role:
+                name: returncode
+              vars:
+                rc_variables: "{{ udc_return_codes['compute_conn'] }}"
+
+            - name: Set fact on fatal error
+              ansible.builtin.set_fact:
+                fatal_on_exec: true

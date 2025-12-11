@@ -1,0 +1,310 @@
+---
+settings_global:
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'cat /usr/openv/netbackup/version'
+    become: true
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('frozen' in check_list or 'all' in check_list) and '-frozen' not in check_list %}
+  - header: '#### <frozen>'
+    command: '/usr/openv/netbackup/bin/goodies/available_media'
+    become: true
+    footer: >
+      #### </frozen>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('noexpire' in check_list or 'all' in check_list) and '-noexpire' not in check_list %}
+  - header: '#### <noexpire>'
+    command: 'ls /usr/openv/netbackup/bin'
+    become: true
+    footer: >
+      #### </noexpire>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('cleaning_tapes' in check_list or 'all' in check_list) and '-cleaning_tapes' not in check_list %}
+  - header: '#### <cleaning_tapes>'
+    command: '/usr/openv/volmgr/bin/vmquery -p 0 -b'
+    become: true
+    footer: >
+      #### </cleaning_tapes>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('check_banner' in check_list or 'all' in check_list) and '-check_banner' not in check_list %}
+  - header: '#### <LoginBanner>'
+    command: 'ls /usr/openv/var'
+    become: true
+    footer: >
+      #### </LoginBanner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('banner_display' in check_list or 'all' in check_list) and '-banner_display' not in check_list %}
+  - header: '#### <banner_display>'
+    command: 'file="/usr/openv/var/LoginBanner.conf" ; test -e "$file" && cat $file || echo $file does not exist'
+    become: true
+    footer: >
+      #### </banner_display>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('permissions_netbackup_installation' in check_list or 'all' in check_list) and '-permissions_netbackup_installation' not in check_list %}
+  - header: '#### <netbackup_folder_permission>'
+    command: 'ls -ld /usr/openv'
+    become: true
+    footer: >
+      #### </netbackup_folder_permission>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('replication_backlogs' in check_list or 'all' in check_list) and '-replication_backlogs' not in check_list %}
+  - header: '#### <replication_backlogs>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbstlutil stlilist -image_incomplete'
+    become: true
+    footer: >
+      #### </replication_backlogs>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('catalog_backup' in check_list or 'all' in check_list) and '-catalog_backup' not in check_list %}
+  - header: '#### <catalog_backup>'
+    command: '/usr/openv/netbackup/bin/admincmd/bpdbjobs -report'
+    become: true
+    footer: >
+      #### </catalog_backup>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('disk_pool_utilization' in check_list or 'all' in check_list) and '-disk_pool_utilization' not in check_list %}
+  - header: '#### <disk_pool_utilization>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbdevquery -listdv -stype PureDisk -U'
+    become: true
+    footer: >
+      #### </disk_pool_utilization>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('disk_pool_status' in check_list or 'all' in check_list) and '-disk_pool_status' not in check_list %}
+  - header: '#### <disk_pool_status>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbdevquery -listdp -U'
+    become: true
+    footer: >
+      #### </disk_pool_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('storage_server_status' in check_list or 'all' in check_list) and '-storage_server_status' not in check_list %}
+  - header: '#### <storage_server_status>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbdevquery -liststs -U'
+    become: true
+    footer: >
+      #### </storage_server_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('media_server_status' in check_list or 'all' in check_list) and '-media_server_status' not in check_list %}
+  - header: '#### <mm_status>'
+    command: '/usr/openv/volmgr/bin/vmoprcmd'
+    become: true
+    footer: >
+      #### </mm_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('backup_job_summary' in check_list or 'all' in check_list) and '-backup_job_summary' not in check_list %}
+  - header: '#### <jobs_status>'
+    command: '/usr/openv/netbackup/bin/admincmd/bpdbjobs -summary'
+    become: true
+    footer: >
+      #### </jobs_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nbu_db_status' in check_list or 'all' in check_list) and '-nbu_db_status' not in check_list %}
+  - header: '#### <db_status>'
+    command: '/usr/openv/db/bin/nbdb_ping'
+    become: true
+    footer: >
+      #### </db_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('scheduler_status' in check_list or 'all' in check_list) and '-scheduler_status' not in check_list %}
+  - header: '#### <scheduler_status>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbpemreq -subsystems screen all'
+    become: true
+    footer: >
+      #### </scheduler_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('legacy_logging' in check_list or 'all' in check_list) and '-legacy_logging' not in check_list %}
+  - header: '#### <legacy_log_status>'
+    command: 'cat /usr/openv/netbackup/bp.conf'
+    become: true
+    footer: >
+      #### </legacy_log_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('system_serial_number' in check_list or 'all' in check_list) and '-system_serial_number' not in check_list %}
+  - header: '#### <system_serial_number>'
+    command: 'dmidecode -s system-serial-number'
+    become: true
+    footer: >
+      #### </system_serial_number>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('df_H' in check_list or 'all' in check_list) and '-df_H' not in check_list %}
+  - header: '#### <df_H>'
+    command: 'df -H /usr/openv'
+    footer: >
+      #### </df_H>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('auth' in check_list or 'all' in check_list) and '-auth' not in check_list %}
+  - header: '#### <auth>'
+    command: |
+      cat /usr/openv/netbackup/bp.conf
+      ls -ltra /usr/openv/java/auth.conf
+      ls -ld /usr/openv
+    become: true
+    footer: >
+      #### </auth>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('vxul_log' in check_list or 'all' in check_list) and '-vxul_log' not in check_list %}
+  - header: '#### <vxul_logging>'
+    command: >
+     grep OID /usr/openv/netbackup/nblog.conf  |grep = | awk -F. '{print $1}'|while read orig_id; do echo $orig_id ; /usr/openv/netbackup/bin/vxlogcfg -l -o $orig_id -p NB; done
+    become: true
+    footer: >
+      #### </vxul_logging>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('dedupe_rates' in check_list or 'all' in check_list) and '-dedupe_rates' not in check_list %}
+  - header: '#### <dedupe_rates>'
+    command: '/usr/openv/netbackup/bin/admincmd/bpdbjobs -all_columns'
+    become: true
+    footer: >
+      #### </dedupe_rates>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('msdp_encrypt' in check_list or 'all' in check_list) and '-msdp_encrypt' not in check_list %}
+  - header: '#### <msdp_encrypt>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbdevquery -liststs |grep PureDisk |cut -d" " -f2,3|while read sts_name type; do echo $sts_name; /usr/openv/netbackup/bin/admincmd/nbdevquery -listconfig -l -stype $type -storage_server $sts_name; done'
+    become: true
+    footer: >
+      #### </msdp_encrypt>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('policy_data' in check_list or 'all' in check_list) and '-policy_data' not in check_list %}
+  - header: '#### <policy_data>'
+    command: '/usr/openv/netbackup/bin/admincmd/bppllist -allpolicies -L'
+    become: true
+    footer: >
+      #### </policy_data>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('netbackup_services' in check_list or 'all' in check_list) and '-netbackup_services' not in check_list %}
+  - header: '#### <netbackup_services>'
+    command: '/usr/openv/netbackup/bin/bpps'
+    become: true
+    footer: >
+      #### </netbackup_services>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('msdp_catalog_backup' in check_list or 'all' in check_list) and '-msdp_catalog_backup' not in check_list %}
+  - header: '#### <msdp_catalog_backup>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbdevquery -liststs'
+    become: true
+    footer: >
+      #### </msdp_catalog_backup>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('msdp_catalog_backup_pol' in check_list or 'all' in check_list) and '-msdp_catalog_backup_pol' not in check_list %}
+  - header: '#### <msdp_catalog_backup_pol>'
+    command: '/usr/openv/netbackup/bin/admincmd/bppllist -allpolicies'
+    become: true
+    footer: >
+      #### </msdp_catalog_backup_pol>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('audit_24hr' in check_list or 'all' in check_list) and '-audit_24hr' not in check_list %}
+  - header: '#### <audit_24hr>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbauditreport -sdate "`date +"%m/%d/%y %H:%M:%S" -d "-1days"`" -edate `date +"%m/%d/%y"`'
+    become: true
+    footer: >
+      #### </audit_24hr>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('etc_passwd' in check_list or 'all' in check_list) and '-etc_passwd' not in check_list %}
+  - header: '#### <etc_passwd>'
+    command: 'cat /etc/passwd'
+    become: true
+    footer: >
+      #### </etc_passwd>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('etc_group' in check_list or 'all' in check_list) and '-etc_group' not in check_list %}
+  - header: '#### <etc_group>'
+    command: 'cat /etc/group'
+    become: true
+    footer: >
+      #### </etc_group>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('legacy_user_ops_logs' in check_list or 'all' in check_list) and '-legacy_user_ops_logs' not in check_list %}
+  - header: '#### <legacy_user_ops_logs>'
+    command: 'ls -lRth /usr/openv/netbackup/logs/'
+    become: true
+    footer: >
+      #### </legacy_user_ops_logs>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nb_get_config' in check_list or 'all' in check_list) and '-nb_get_config' not in check_list %}
+  - header: '#### <nb_get_config>'
+    command: '/usr/openv/netbackup/bin/nbgetconfig'
+    become: true
+    footer: >
+      #### </nb_get_config>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('startup_script_permission_new' in check_list or 'all' in check_list) and '-startup_script_permission_new' not in check_list %}
+  - header: '#### <startup_script_permission_new>'
+    command: 'ls -ltra /etc/systemd/system/netbackup.service'
+    become: true
+    footer: >
+      #### </startup_script_permission_new>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('audit_enabled' in check_list or 'all' in check_list) and '-audit_enabled' not in check_list %}
+  - header: '#### <audit_enabled>'
+    command: '/usr/openv/netbackup/bin/admincmd/nbemmcmd  -listsettings -machinename $HOSTNAME'
+    become: true
+    footer: >
+      #### </audit_enabled>
+
+{% endif %}

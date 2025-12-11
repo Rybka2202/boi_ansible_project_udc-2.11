@@ -1,0 +1,2058 @@
+<#################################################################################
+Licensed Materials - Property of Kyndryl
+(C) Copyright Kyndryl Corp. 2024. All Rights Reserved.
+
+===================================================================
+Purpose:           MSSQL Query Execution - SAT HC
+Author:            Tamas Kamocsai  (tamas.kamocsai@kyndryl.com)
+Contributor:	   Mircea Gaitan (mircea.gaitan@kyndryl.com)
+Adapted for SAT
+Created:           2022-03-02
+Last update:       2025-04-17
+===================================================================
+
+Error codes:
+10 = Fail to connect to SQL instance because of insufficient access level. The executor must have sysadmin access role.
+11 = Local server is a passive node in fail-over cluster.
+250 = Windows Authentication failure.
+255 = A network-related or instance-specific error occurred while establishing a connection to SQL Server.
+
+#################################################################################>
+
+Param (
+    [String]$LogDir,
+    [String]$AnsibleMode,
+    [String]$DeviceName,
+    [String]$ZipLog,
+    [String]$account,
+    [String]$blueid,
+    [String]$chipid,
+    [String]$location,
+    [String]$satteam,
+    [String]$hwswdomain,
+    [String]$udcmode,
+    [String]$dbName,
+    [String]$SqlInstance,
+    [String]$tpchcversion,
+    [String]$buildversion
+)
+# SATHC variables
+$tpchc_description = "Microsoft_DB_MSSQL"   # Value for description
+$tpchc_identifier = "None"              # Value for identifier
+$log_to_logfile = $True                 # Always generate log file
+$SATmode = $true
+$computer = ($env:COMPUTERNAME).ToLower()
+$HostIP = (Get-NetIPConfiguration | Where-Object {$_.IPv4Address -ne $null -and $_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"} | Select IPv4Address).IPv4Address[0].IPAddress
+$MSSQLInstanceUIDs = @()
+
+Write-Host
+
+if (!($Logdir)) {
+    $Logdir = Get-Location
+    Write-Host -ForegroundColor Yellow "Missing -LogDir parameter. Using default: $Logdir"
+}
+
+if (!($AnsibleMode)) {
+    $AnsibleMode = $False
+    Write-Host -ForegroundColor Yellow "Missing -AnsibleMode parameter. Using default: $false"
+}
+
+if (!($DeviceName)) {
+    $DeviceName = $computer
+    Write-Host -ForegroundColor Yellow "Missing -DeviceName parameter. Using default: $computer"
+}
+else {
+    $DeviceName = ($DeviceName).ToLower()
+}
+
+if (!($ZipLog)) {
+    $ZipLog = $True
+    Write-Host -ForegroundColor Yellow "Missing -ZipLog parameter. Using default: $True"
+}
+
+if (!($account)) {
+    $account = "SDE"
+    Write-Host -ForegroundColor Yellow "Missing -account parameter. Using default: $account"
+}
+
+if (!($blueid)) {
+   $blueid = "BAC9999999"
+   Write-Host -ForegroundColor Yellow "Missing -blueid parameter. Using default: $blueid"
+}
+
+if (!($chipid)) {
+   $chipid = "MyChip"
+   Write-Host -ForegroundColor Yellow "Missing -chipid parameter. Using default: $chipid"
+}
+
+if (!($location)) {
+   $location = "Tucson"
+   Write-Host -ForegroundColor Yellow "Missing -location parameter. Using default: $location"
+}
+
+if (!($satteam)) {
+   $satteam = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -satteam parameter. Using default: $satteam"
+}
+
+if (!($hwswdomain)) {
+   $hwswdomain = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -hwswdomain parameter. Using default: $hwswdomain"
+}
+
+if(!($udcmode)){
+    $udcmode = $false
+    Write-Host -ForegroundColor Yellow "Missing -UDCmode parameter. Using default: $udcmode"
+}
+
+if (!($dbName)) {
+   $dbName = "master"
+   Write-Host -ForegroundColor Yellow "Missing -dbName parameter. Using default: master"
+}
+
+if ($env:mssqluser -ne "" -and $env:mssqlpassword -ne "" -and $null -ne $env:mssqluser -and $null -ne $env:mssqlpassword) {
+   Write-Host -ForegroundColor Yellow "Attempt MS SQL authentication with user: $env:mssqluser"
+}
+
+if (!($SqlInstance)) {
+    $SqlInstance = "all"
+    Write-Host -ForegroundColor Yellow "Missing -SqlInstance parameter. Using default: all (querying all SQL instances)"
+}
+else{
+    Write-Host  -ForegroundColor Yellow "Querying only SQL instance: $SqlInstance"
+}
+
+Write-Host
+
+# Cleaning old logs
+Remove-Item -Path "$LogDir\*.out"
+Remove-Item -Path "$LogDir\*.log"
+
+# Create temp file
+$TempFile = New-Item -ItemType file "$LogDir\temp.log" -Force
+$errorcode = 0
+
+
+###############################################################################
+# MsgPrint function for logging purposes.
+###############################################################################
+function MsgPrint([string]$ShowStep, [string]$textMsg) {
+    if ($log_to_logfile) {
+        if ($LogFile -eq "" -or $Logfile -eq $null) {
+            $LogFile = "$($LogDir)\$($HostIP).log"
+        }
+
+        switch ($ShowStep.ToLower()) {
+            "info"		{Write-Output "INFO:     $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "highlight"	{Write-Output "HIGHLIGHT:$(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "ok"		{Write-Output "OK:       $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "error"		{Write-Output "ERROR:    $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "warning"	{Write-Output "WARNING:  $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "filelist"	{Write-Output "FILES:    $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            default		{Write-Output "DEFAULT:  $(get-date -format "yyyy-MM-dd HH:mm:ss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+        }
+    }
+	return
+}
+
+
+###############################################################################
+# Write header to each outfiles
+###############################################################################
+function Header($tpchc_description, $HeaderLog = "") {
+    if ($HeaderLog -ne "") {
+        $OutFile = $HeaderLog
+    }
+
+    tpchc -tpchc_description $tpchc_description -tpclog $OutFile
+
+    Write "#### <policy_cfg>" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+    #Write "microsoft_db_mssql.global.pol"  | Out-File -Append -encoding UTF8 -FilePath $OutFile
+    Write "#### </policy_cfg>`r`n" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+
+    if ($udcmode -eq $false) {
+        $timestamp = get-date -format "yyyy-MM-dd HH:mm:ss"
+        $OS = Get-CimInstance -Class Win32_OperatingSystem
+        $OS_Version = $OS.Version
+        $PowerShell_Version = $PSVersionTable.PSVersion.tostring()
+        $iso8601DateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss.zzz"
+        Write "#### <cacf_cfg>" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+        Write """collected_on"";""timestamp"";""gsma_code"";""tower_version"";""os_distribution"";""os_version"";""ansible_version"";""python_version"";""powershell_version"";""udc_version"";""healthcheck_timestamp_utc""" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+        Write """$computer"";""$timestamp"";""$account"";"""";""Windows"";""$OS_Version"";"""";""0"";""$PowerShell_Version"";"""";""$iso8601DateTime""" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+        Write "#### </cacf_cfg>`r`n" | Out-File -Append -encoding UTF8 -FilePath $OutFile
+    }
+
+    MsgPrint "info" "Windows System Information"
+    Write "#### <SystemInfo>" | out-file -Append -FilePath $OutFile -Encoding utf8
+    $SystemInfo | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $OutFile -Encoding utf8
+    Write "#### </SystemInfo>`r`n" | out-file -Append -FilePath $OutFile -Encoding utf8
+
+    MsgPrint "info" "SQL Server services"
+    Write "#### <SQL_Server_services>" | out-file -Append -FilePath $OutFile -Encoding utf8
+    $sqlServices | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Out-File -Append -FilePath $OutFile -Encoding utf8
+    Write "#### </SQL_Server_services>`r`n" | out-file -Append -FilePath $OutFile -Encoding utf8
+}
+
+
+###############################################################################
+# Write footer to each logfiles
+###############################################################################
+function Footer($Status) {
+    $date = Get-Date -Format "yyyy-MM-ddTHH.mm.ss"
+
+    if ($Status -eq 1) {
+        Write-Output $date": Data collection status: OK" | Out-File $LogFile -encoding UTF8 -Append
+    }
+    else {
+        Write-Output $date": Data collection status: FAILED" | Out-File $LogFile -encoding UTF8 -Append
+    }
+}
+
+
+###############################################################################
+# Set-OutputFile
+###############################################################################
+function Set-OutputFile([string]$logname){
+    $logname = $logname.ToLower()
+
+    if ($logname -ilike "*\*") { #named instance or cluster
+        if($logname -ilike "$env:COMPUTERNAME\*"){ #named instance
+            $logname = "$logDir\" + $Devicename + $logname.Replace("\", "-").Replace(("$env:COMPUTERNAME").ToLower(), "")
+        }
+        else{ #cluster resource + instane
+            $logname = "$logDir\$Devicename-" + $logname.Split("\")[1]
+        }
+    }
+    else{ #default instance
+        $logname = "$logDir\$Devicename-mssqlserver"
+    }
+
+    return $logname + "_microsoft_db_mssql"
+}
+
+Write "INFO:     $(get-date -format "yyyy-MM-dd HH:mm:ss") Data Collection on $HostIP Started" | Out-File -Encoding utf8 -Append -FilePath $TempFile
+
+function tpchc($tpchc_description,$tpclog) {
+    Write "#### <tpchc_cfg>"  | out-file -Append -encoding UTF8 -FilePath $tpclog
+    Write '"tpchc_version";"build_version";"blue_id";"chip_id";"account";"location";"tpchc_description";"tpchc_identifier";"satteam";"hwswdomain"' | out-file -Append -encoding UTF8 -FilePath $tpclog
+    Write """$tpchcversion"";""$buildversion"";""$blueid"";""$chipid"";""$account"";""$location"";""$tpchc_description"";""$tpchc_identifier"";""$satteam"";""$hwswdomain""" | out-file -Append -encoding UTF8 -FilePath $tpclog
+    Write "#### </tpchc_cfg>`r`n" | out-file -Append -encoding UTF8 -FilePath $tpclog
+}
+
+# Windows System Information
+$SystemInfo = New-Object -TypeName PSobject
+$computerSystem = Get-CimInstance -Class Win32_ComputerSystem
+$computerSystemProduct = Get-CimInstance -Class Win32_ComputerSystemProduct
+$computerBIOS = Get-CimInstance -Class Win32_BIOS
+$computerOS = Get-CimInstance -Class Win32_OperatingSystem
+$computerCPU = Get-CimInstance -Class Win32_Processor
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+# set up the different possible types of licenses in an array:
+$licenseStatus=@{0="Unlicensed"; 1="Licensed"; 2="OOBGrace"; 3="OOTGrace"; 4="NonGenuineGrace"; 5="Notification"; 6="ExtendedGrace"}
+# Now get the license details and assign the object to $r
+$r = Get-CimInstance -Class SoftwareLicensingProduct | Where {$_.ApplicationID -eq "55c92734-d682-4d71-983e-d6ec3f16059f" -AND $null -ne  $_.PartialProductKey}
+$PageFileResults = Get-CimInstance -Class Win32_PageFileUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "MachineName" -Value $computerSystem.Name
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Manufacturer" -Value $computerSystem.Manufacturer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Model" -Value $computerSystem.Model
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value $computerOS.caption
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem ServicePack" -Value $computerOS.ServicePackMajorVersion
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BuildNumber" -Value $computerOS.BuildNumber
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Version" -Value $computerOS.Version
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "InstallDate" -value $ComputerOS.InstallDate.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "License" -Value $licenseStatus[[int]$r.LicenseStatus]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Uptime" -value  $computerOS.LastBootUpTime.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BootDevice" -Value $computerOS.BootDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDevice" -Value $computerOS.SystemDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDirectory" -Value $computerOS.SystemDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "WindowsDirectory" -Value $computerOS.WindowsDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OSArchitecture" -Value $computerOS.OSArchitecture
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PowerShellVersion" -Value $PSVersionTable.PSVersion.tostring()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CurrentTimeZone" -Value $computerOS.CurrentTimeZone
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Debug" -Value $computerOS.Debug
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Distributed" -Value $computerOS.Distributed
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "EncryptionLevel" -Value $computerOS.EncryptionLevel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "DNS Host Name" -Value $computerSystem.DNSHostName
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Domain Role" -Value $DomainRole[$computerSystem.DomainRole]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Roles" -Value ($computerSystem.Roles -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Serial Number" -Value $computerBIOS.SerialNumber
+
+if ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU Array" -Value $computerCPU.Name[0]
+}
+else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU" -Value $computerCPU.Name
+}
+
+if ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value ($computerCPU.NumberOfCores | Measure-Object -sum).sum
+}
+else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value $computerCPU.NumberOfCores
+}
+
+if ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value ($computerCPU.NumberOfLogicalProcessors | Measure-Object -sum).sum
+}
+else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value $computerCPU.NumberOfLogicalProcessors
+}
+
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "RAM (GB)" -Value ([math]::Round($computerSystem.TotalPhysicalMemory/1GB,2))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePath" -Value $PageFileResults.Description
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "AutoManagedPageFile" -Value $computerSystem.AutomaticManagedPagefile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileSize(MB)" -Value $PageFileResults.AllocatedBaseSize
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileUsage(MB)" -Value $PageFileResults.CurrentUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePeakUsage(MB)" -Value $PageFileResults.PeakUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "TempPageFileInUse" -Value $PageFileResults.TempPageFile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "ProductKeyChannel" -Value $r.ProductKeyChannel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "UUID" -Value $computerSystemProduct.UUID
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "FQDN" -Value $([System.Net.Dns]::GetHostByName($env:computerName).HostName)
+
+
+###############################################################################
+# SQL Services
+###############################################################################
+
+$sqlServices = (Get-Service | Where-Object { $_.DisplayName -like "*SQL Server*" } |
+SELECT @{N='MachineName';E={$env:COMPUTERNAME}},ServiceName,DisplayName,Status,StartType,
+@{Name="Cluster";E={if (Get-ClusterResource -Name $_.DisplayName -ErrorAction SilentlyContinue) {"Yes"} else {"No"} }},
+@{Name="OwnerNode";E={(Get-ClusterResource -Name $_.DisplayName -ErrorAction SilentlyContinue | ForEach-Object {
+(Get-ClusterGroup -name $_.Name -ErrorAction SilentlyContinue).OwnerNode.Name} -ErrorAction SilentlyContinue).Trim() -replace "^$", "N/A"}}) |
+SELECT MachineName,ServiceName,DisplayName,Status,StartType,
+@{Name="Cluster";E={if ([string]::IsNullOrWhiteSpace($_.Cluster)){ "No" } else { $_.Cluster }}},
+@{Name="OwnerNode";E={if ([string]::IsNullOrWhiteSpace($_.OwnerNode)){ "N/A" } else{ $_.OwnerNode }}}
+
+
+###############################################################################
+# Execute SQL codes and build segments automatically
+###############################################################################>
+function Execute-SQL([string]$segmentName, [string]$sqlQuery, [string]$dbContext = $null) {
+    #set db context
+    if ($dbContext) {
+        $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+        try {
+            $sqlcmd.Connection = $sqlConn
+            $sqlcmd.CommandText = "USE [" + $dbContext + "]"
+            $numRows = $sqlcmd.ExecuteNonQuery()
+        }
+        catch [System.Data.SqlClient.SqlException]{
+            MsgPrint "error" $_
+        }
+        finally{
+            $sqlcmd.Dispose()
+        }
+    }
+
+    #build segmented output
+    $returnData = "#### <" + $segmentName + ">
+";
+
+    # Loging
+    MsgPrint "info" $segmentName
+
+    $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+
+    try {
+        $sqlcmd.Connection = $sqlConn
+        $sqlcmd.CommandText = $sqlQuery
+        $adp = New-Object System.Data.SqlClient.SqlDataAdapter $sqlcmd
+        $adp.SelectCommand.CommandTimeout = 600 #setting it for 10 minutes execution time.
+        $data = New-Object System.Data.DataSet
+        $adp.Fill($data) | Out-Null
+
+        #fetching header data for CSV
+        foreach ($cell in $data.Tables[0].Columns) {
+            $returnData += """" + $cell.ToString() + """;";
+        }
+
+        #strip the last ; char from the results and add a new line
+        $returnData = $returnData.Substring(0, $returnData.Length-1) + "
+";
+
+        #fetching data.
+        $colCount = $data.Tables[0].Columns.Count;
+
+        $ret_data = ""
+
+        foreach ($row in $data.Tables[0].Rows) {
+            for ($c = 0; $c -lt $colCount; $c++) {
+                $returnData += """" + $row.Item($c) + """"
+                $ret_data += $row.Item($c)
+
+                if ($c -lt ($colCount - 1)) {
+                    $returnData += ";"
+                    $ret_data += ";"
+                }
+            }
+
+            #add new line
+            $returnData += "
+"
+        }
+    }
+    catch [System.Data.SqlClient.SqlException]{
+        #$returnData += $_
+        MsgPrint "error" $_
+    }
+    finally{
+        $sqlcmd.Dispose()
+    }
+
+    #closing segment
+    $returnData = $returnData.Trim() + "
+#### </" + $segmentName + ">
+";
+
+    $returnData | Out-File $OutFile -encoding UTF8 -append
+
+    return $ret_data
+}
+
+
+###############################################################################
+# Connecting to SQL instance and executing the segments.
+###############################################################################
+function Get-SQLData([string]$instance, [int]$instance_number) {
+ <#   Param (
+        $instance
+    )#>
+
+    $status = $False
+    $accessLvl = $False
+    $script:errorcode = 0
+
+    MsgPrint "info" "SQL Connection - $instance"
+
+    try {
+        $sqlConn = New-Object System.Data.SqlClient.SqlConnection
+
+        # Connection string to be used where separation of duties is in place
+        if ($env:mssqluser -ne "" -and $env:mssqlpassword -ne "" -and $null -ne $env:mssqluser -and $null -ne $env:mssqlpassword) {
+            try {
+                # SQL Authentication
+                $sqlConn.ConnectionString = "Server=$instance; database=master; Initial Catalog=master; User Id=$env:mssqluser; Password=$env:mssqlpassword;Connect Timeout=5"
+                $sqlConn.Open()
+                MsgPrint "info" "SQL Server authentication: SQL authentication"
+                Write-Host -ForegroundColor Green "SQL Authentication"
+                $status = $True
+            }
+            catch {
+                # Windows Authentication
+                Write-Host -ForegroundColor Cyan "Windows Authentication 1"
+
+                try {
+                    $sqlConn.ConnectionString = "Server=$instance;Integrated Security=true;Initial Catalog=master;Connect Timeout=5"
+                    $sqlConn.Open()
+                    MsgPrint "info" "SQL Server authentication: Windows authentication"
+                    $status = $True
+                }
+                catch {
+                    $status = $False
+                    $script:errorcode = 250
+                    $output = $_
+                    MsgPrint "error" $output
+                    Write-Host $output -ForegroundColor Red
+                    return 0
+                }
+            }#end try catch
+        }
+        else {
+            try {
+                $sqlConn.ConnectionString = "Server=$instance;Integrated Security=true;Initial Catalog=master;Connect Timeout=5"
+                $sqlConn.Open()
+                MsgPrint "info" "SQL Server authentication: Windows authentication"
+                Write-Host -ForegroundColor Cyan "Windows Authentication 2"
+                $status = $True
+            }
+            catch {
+                $status = $False
+                $script:errorcode = 250
+                $output = $_
+                MsgPrint "error" $output
+                Write-Host $output -ForegroundColor Red
+                return 0
+            }
+
+        }# End else#>
+
+        try {
+            $sqlcmd = New-Object System.Data.SqlClient.SqlCommand
+            $sqlcmd.Connection = $sqlConn
+            $sqlcmd.CommandText = "SELECT IS_SRVROLEMEMBER('sysadmin');"
+            $adp = New-Object System.Data.SqlClient.SqlDataAdapter $sqlcmd
+            $adp.SelectCommand.CommandTimeout = 60
+            $data = New-Object System.Data.DataSet
+            $adp.Fill($data) | Out-Null
+
+            if ($data.Tables[0].Rows[0].Item(0) -eq "1") {
+                $accessLvl = $True
+            }
+            else {
+                $accessLvl = $False
+                $output = "An error occurred during execution of the queries due to insufficient access level. The executor must have sysadmin access role."
+                $script:errorcode = 10
+                write-host $output
+                MsgPrint "error" "$output"
+                $sqlConn.Close()
+                return 0
+            }
+
+            if ($accessLvl -eq $True) {
+
+                ###############################################################################
+                # Execute segments
+                ###############################################################################
+
+
+<#{% if ('Product_Version' in check_list or 'all' in check_list) and ('-Product_Version' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Product_Version" "SELECT
+    SERVERPROPERTY('productversion') AS 'Version',
+    SERVERPROPERTY('ProductLevel') AS 'ProductLevel',
+    @@SERVERNAME AS 'ServerName',
+    @@SERVICENAME AS 'InstanceName'" $dbName
+#$output | Out-File $OutFile -encoding UTF8 -append
+<# {% endif %}
+
+
+{% if ('C2_Audit_Mode' in check_list or 'all' in check_list) and ('-C2_Audit_Mode' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "C2_Audit_Mode" "SELECT
+	CASE value
+		WHEN 0 THEN 'Disabled'
+		ELSE 'Enabled'
+	END AS 'ConfiguredValue'
+FROM [master].[sys].[configurations] WHERE name = 'C2 Audit Mode'" $dbName
+<# {% endif %}
+
+
+{% if ('Max_degree_of_parallelism' in check_list or 'all' in check_list) and ('-Max_degree_of_parallelism' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Max_degree_of_parallelism" "DECLARE @MaxDOP INT, @CoreCount INT, @NumaNodes INT
+SELECT @CoreCount = i.cpu_count from sys.dm_os_sys_info i
+SELECT @NumaNodes = (MAX(c.memory_node_id) + 1) FROM sys.dm_os_memory_clerks c WHERE memory_node_id < 64
+IF (@CoreCount > 4)
+    --SELECT @MaxDOP = (i.cpu_count * 0.75) from sys.dm_os_sys_info i
+    SET @MaxDOP = @CoreCount * 0.75
+    -- if MaxDOP is greater than the per NUMA node
+    -- Core Count, set MaxDOP = per NUMA node core count
+    IF (@MaxDOP > (@CoreCount / @NumaNodes))
+        SET @MaxDOP = (@CoreCount / @NumaNodes) * 0.75;
+
+    -- Reduce MaxDOP to an even number
+    SET @MaxDOP = @MaxDOP - (@MaxDOP % 2);
+
+    -- Cap MAXDOP at 8, according to Microsoft
+    IF @MaxDOP > 8 SET @MaxDOP = 8;
+ELSE
+    SET @MaxDOP = 0
+
+SELECT
+    value 'MAXDOP',
+    @CoreCount 'CoreCount',
+    @NumaNodes 'NumaNodes',
+    @MaxDOP 'ExpectedMaxDOP',
+    CASE
+        WHEN (value <> @MaxDOP) THEN 'NO'
+        ELSE 'YES'
+    END 'Passed'
+FROM
+    [master].[sys].[configurations]
+WHERE
+                    name = 'max degree of parallelism'" $dbName
+<# {% endif %}
+
+
+{% if ('Number_of_TempDB_Files' in check_list or 'all' in check_list) and ('-Number_of_TempDB_Files' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Number_of_TempDB_Files" "SELECT
+	COUNT(*) 'NumberOfTempDB', (SELECT i.cpu_count from sys.dm_os_sys_info i) 'CPUCoreCount'
+FROM
+	sys.databases d
+	LEFT JOIN
+		sys.master_files m
+		ON m.database_id = d.database_id
+WHERE
+	d.name = 'tempdb' AND
+	m.type_desc <> 'LOG'" $dbName
+<# {% endif %}
+
+
+{% if ('TempDB_Configuration' in check_list or 'all' in check_list) and ('-TempDB_Configuration' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "TempDB_Configuration" "SELECT
+d.name 'FileName',
+size  'Size(KB)',
+m.growth 'Growth',
+physical_name 'PhysicalName'
+FROM
+	sys.databases d
+	LEFT JOIN
+		sys.master_files m
+		ON m.database_id = d.database_id
+WHERE
+	d.name = 'tempdb' AND
+	m.type_desc <> 'LOG'" $dbName
+<# {% endif %}
+
+
+{% if ('Maximum_SQL_Connections' in check_list or 'all' in check_list) and ('-Maximum_SQL_Connections' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Maximum_SQL_Connections" "SELECT
+	CASE
+		WHEN ISNULL(value, value_in_use) = 0 THEN 'Unlimited'
+		ELSE CONVERT(NVARCHAR, ISNULL(value, value_in_use))
+	END 'ConfiguredValue'
+FROM
+	sys.configurations
+WHERE
+	name = 'user connections'" $dbName
+<# {% endif %}
+
+
+{% if ('Ole_Automation_Procedures' in check_list or 'all' in check_list) and ('-Ole_Automation_Procedures' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs - AO.1.9.3
+Execute-SQL "Ole_Automation_Procedures" "SELECT
+	CASE
+		WHEN ISNULL(value, value_in_use) = 1 THEN 'Enabled'
+		ELSE 'Disabled'
+	END	'ConfiguredValue'
+FROM
+	sys.configurations
+WHERE
+	name = 'Ole Automation Procedures'" $dbName
+<# {% endif %}
+
+
+{% if ('Network_configuration' in check_list or 'all' in check_list) and ('-Network_configuration' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Network_configuration" "DECLARE
+	@TCPEnabled VARCHAR(10),
+	@ListenAll VARCHAR(30),
+	@TCPPort VARCHAR(30),
+	@Integer INT;
+
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\TCP',
+N'Enabled', @Integer OUTPUT;
+
+IF @Integer = 1 SET @TCPEnabled = 'Enabled';
+ELSE SET @TCPEnabled = 'Disabled';
+
+
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\TCP',
+N'ListenOnAllIPs', @Integer OUTPUT;
+
+IF @Integer = 1 SET @ListenAll = 'Enabled';
+ELSE SET @ListenAll = 'Disabled';
+
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\TCP\IPAll',
+N'TCPPort', @TCPPort OUTPUT;
+
+IF @TCPPort = NULL OR @TCPPort = '' SET @TCPPort = 'Not Configured';
+ELSE
+BEGIN
+	SET @Integer = CONVERT(INT, @TCPPort);
+	IF @Integer = NULL OR @Integer = 0 SET @TCPPort = 'Not Configured';
+END
+
+SELECT
+	@TCPEnabled 'TCPEnabled',
+	@ListenAll 'ListenAll',
+	CASE
+		WHEN (@TCPEnabled = 'Enabled') AND (@ListenAll = 'Enabled') THEN
+			CASE @TCPPort
+WHEN 'Not Configured' THEN 'dynamic'
+ELSE 'static (' + @TCPPort + ')'
+			END
+		ELSE 'Disabled'
+	END 'PortConfiguration',
+	(SELECT CONVERT(NVARCHAR, ISNULL(value, value_in_use)) FROM sys.configurations WHERE name = 'network packet size (B)') 'PacketSize'" $dbName
+<# {% endif %}
+
+
+{% if ('Memory_configuration' in check_list or 'all' in check_list) and ('-Memory_configuration' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Memory_configuration" "DECLARE
+	@intVal INT,
+	@memVal INT
+
+SELECT @memVal = CONVERT(INT, value) FROM [master].[sys].[configurations] WHERE NAME = 'Max server memory (MB)';
+
+--SQL 2005, SQL2008 VS SQL2012
+IF (select COUNT(*) from sys.all_columns ac inner join sys.all_views av on ac.object_id = av.object_id where av.name = 'dm_os_sys_info' and ac.name = 'physical_memory_in_bytes') > 0
+	EXEC sp_executesql N'SELECT @retVal = FLOOR(([physical_memory_in_bytes] / 1024) / 1024) FROM [master].[sys].[dm_os_sys_info];',N'@retVal INT OUTPUT', @retVal = @intVal OUTPUT;
+ELSE
+	EXEC sp_executesql N'SELECT @retVal = FLOOR([physical_memory_kb] / 1024) FROM [master].[sys].[dm_os_sys_info];',N'@retVal INT OUTPUT', @retVal = @intVal OUTPUT;
+
+SELECT @memVal 'MemoryLimitation(MB)', FLOOR(@intVal * 0.89) 'TotalOSMEmory(MB)'" $dbName
+<# {% endif %}
+
+
+{% if ('Builtin_Administrators_Sysadmin_Access' in check_list or 'all' in check_list) and ('-Builtin_Administrators_Sysadmin_Access' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Builtin_Administrators_Sysadmin_Access" "SELECT
+		CASE
+			WHEN COUNT(*) > 0 THEN 'HAVING ACCESS'
+			ELSE 'N/A'
+		END 'ConfiguredValue'
+		FROM sys.syslogins WHERE name LIKE 'BUILTIN\Administrators' AND sysadmin = 1" $dbName
+<# {% endif %}
+
+
+{% if ('Authentication_Mode' in check_list or 'all' in check_list) and ('-Authentication_Mode' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Authentication_Mode" "DECLARE @Integer INT
+SET @Integer = 0
+
+EXEC master.dbo.xp_instance_regread N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer',
+N'LoginMode', @Integer OUTPUT
+
+SELECT CASE @Integer
+		WHEN 1 THEN 'Windows Authentication'
+		WHEN 2 THEN 'Mixed mode Authentication'
+		ELSE 'Unknown'
+	END 'ConfiguredValue'" $dbName
+<# {% endif %}
+
+
+{% if ('Retain_error_log_files' in check_list or 'all' in check_list) and ('-Retain_error_log_files' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs AO.1.2.3 + AO.C.9.1.1
+Execute-SQL "Retain_error_log_files" "DECLARE @NumErrorLogs INT
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer',
+N'NumErrorLogs', @NumErrorLogs OUTPUT
+SELECT ISNULL(@NumErrorLogs, -1) AS 'ConfiguredValue'" $dbName
+<# {% endif %}
+
+
+{% if ('Logon_auditing' in check_list or 'all' in check_list) and ('-Logon_auditing' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs # AO.C.9.1.3
+Execute-SQL "Logon_auditing" "DECLARE @Integer INT
+SET @Integer = 0
+
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\MSSQLServer',
+N'AuditLevel', @Integer OUTPUT
+
+SELECT
+    CASE
+	    WHEN @Integer = 1 THEN 'Successful Only'
+	    WHEN @Integer = 2 THEN 'Failed Only'
+	    WHEN @Integer = 3 THEN 'Both Failed & Successful'
+	    ELSE 'None'
+    END 'ConfiguredValue'" $dbName
+<# {% endif %}
+
+
+{% if ('Path_of_SQL_binaries' in check_list or 'all' in check_list) and ('-Path_of_SQL_binaries' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Path_of_SQL_binaries" "DECLARE @A NVARCHAR(1024)
+SET @A = ''
+
+EXEC master.dbo.xp_instance_regread
+N'HKEY_LOCAL_MACHINE',
+N'Software\Microsoft\MSSQLServer\Setup',
+N'SQLBinRoot', @A OUTPUT;
+
+SELECT 'SQLBinRoot', UPPER(SUBSTRING(@A, 0, CHARINDEX(':', @A))) 'DriveLetter',  @A 'FullPath'" $dbName
+<# {% endif %}
+
+
+{% if ('Database_AutoClose_check' in check_list or 'all' in check_list) and ('-Database_AutoClose_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_AutoClose_check" "SELECT name 'DBName' FROM sys.databases WHERE is_auto_close_on = 1" $dbName
+<# {% endif %}
+
+
+{% if ('Database_AutoShrink_check' in check_list or 'all' in check_list) and ('-Database_AutoShrink_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_AutoShrink_check" "SELECT name 'DBName' FROM sys.databases WHERE is_auto_shrink_on = 1" $dbName
+<# {% endif %}
+
+
+{% if ('Databases_on_drive_C' in check_list or 'all' in check_list) and ('-Databases_on_drive_C' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Databases_on_drive_C" "SELECT
+	d.name 'DBName',
+	mf.name 'FileName',
+	mf.physical_name 'Path'
+FROM
+	sys.master_files mf
+	LEFT JOIN
+		sys.databases d
+		ON d.database_id = mf.database_id
+WHERE
+	physical_name LIKE 'c:\%'
+ORDER BY
+	d.name" $dbName
+<# {% endif %}
+
+
+{% if ('Database_data_and_logfile_check_on_same_drive' in check_list or 'all' in check_list) and ('-Database_data_and_logfile_check_on_same_drive' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_data_and_logfile_check_on_same_drive" "SELECT
+	d.name 'DBName',
+	mf_a.name 'FileName(MDF|NDF)',
+	mf_b.name 'FileName(LOG)',
+	SUBSTRING(mf_a.physical_name, 0, 3) 'DriveLetter'
+FROM
+	sys.master_files mf_a
+	LEFT JOIN
+		sys.master_files mf_b
+		ON
+			mf_a.database_id = mf_b.database_id
+	LEFT JOIN
+		sys.databases d
+		ON
+			mf_a.database_id = d.database_id
+WHERE
+	mf_a.type = 0 AND mf_b.type = 1 AND
+	SUBSTRING(mf_a.physical_name, 0, 2) = SUBSTRING(mf_b.physical_name, 0, 2) AND
+	d.name NOT IN ('master', 'model', 'msdb')
+ORDER BY
+	d.name
+ASC" $dbName
+<# {% endif %}
+
+
+{% if ('Database_backup_check_from_last_7_days' in check_list or 'all' in check_list) and ('-Database_backup_check_from_last_7_days' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_backup_check_from_last_7_days" ";WITH backupCheck AS
+(
+	SELECT
+		S.name, MAX(ISNULL(B.backup_finish_date, '1900-01-01 00:00:01')) 'finishdate'
+	FROM
+		sys.databases S
+		LEFT JOIN msdb.dbo.backupset B
+			ON S.name = B.database_name
+	WHERE
+		S.name NOT LIKE 'tempdb'
+	GROUP BY
+		S.name
+)
+SELECT
+	ISNULL(name,'N/A') 'DBName',
+	ISNULL(Convert(nvarchar, ISNULL(finishdate, '1900-01-01 00:00:01'), 102), 'never') 'LastBackup'
+FROM
+	backupCheck
+WHERE
+	finishdate < DATEADD(DAY, -7, GETDATE()) OR
+	finishdate IS NULL
+ORDER BY
+	name
+ASC" $dbName
+<# {% endif %}
+
+
+{% if ('Database_consistency_check_from_last_7_days' in check_list or 'all' in check_list) and ('-Database_consistency_check_from_last_7_days' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_consistency_check_from_last_7_days" "DECLARE @A NVARCHAR(MAX), @Pointer INT
+
+DECLARE @DBCC TABLE
+(
+	ParentObject NVARCHAR(256),
+	Object NVARCHAR(256),
+	Field NVARCHAR(64),
+	VALUE NVARCHAR(256)
+)
+
+DECLARE @TMP TABLE
+(
+	DBName NVARCHAR(512),
+	LastCheck DATETIME
+)
+
+DECLARE Cur CURSOR FAST_FORWARD FOR
+	SELECT name FROM sys.databases WHERE state = 0 AND name <> 'tempdb' ORDER BY name ASC
+
+OPEN Cur
+
+FETCH NEXT FROM Cur INTO @A
+
+SELECT @Pointer = 1
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	DELETE FROM @DBCC
+
+	INSERT INTO @DBCC
+		EXEC ('DBCC DBINFO (''' + @A + ''') WITH TABLERESULTS')
+
+		IF ((SELECT TOP 1 ISNULL(VALUE, '1900-01-01 00:00:01') FROM @DBCC WHERE Field = 'dbi_dbccLastKnownGood') < DATEADD(DAY, -7, GETDATE()))
+			INSERT INTO @TMP VALUES(@A, (SELECT TOP 1 ISNULL(VALUE, '1900-01-01 00:00:01') FROM @DBCC WHERE Field = 'dbi_dbccLastKnownGood'))
+
+	SELECT @Pointer = @Pointer + 1
+
+	FETCH NEXT FROM Cur INTO @A
+END
+
+CLOSE Cur
+DEALLOCATE Cur
+
+SELECT * FROM @TMP ORDER BY [DBName] ASC" $dbName
+<# {% endif %}
+
+
+{% if ('Disk_allocation_unit_size_check' in check_list or 'all' in check_list) and ('-Disk_allocation_unit_size_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Disk_allocation_unit_size_check" "SET NOCOUNT ON
+
+DECLARE @chkcmd AS SQL_VARIANT
+
+SELECT @chkcmd = value FROM sys.configurations where name = 'xp_cmdshell'
+
+IF @chkcmd = 0
+BEGIN
+	EXEC sp_configure 'show advanced options',1
+	RECONFIGURE WITH OVERRIDE;
+	EXEC sp_configure 'xp_cmdshell', 1
+	RECONFIGURE WITH OVERRIDE;
+END
+
+DECLARE @T NVARCHAR(MAX), @CMD NVARCHAR(1024), @A NVARCHAR(MAX)
+
+DECLARE @TBL TABLE
+(
+	row NVARCHAR(512)
+)
+
+DECLARE @TBL2 TABLE
+(
+	row NVARCHAR(512)
+)
+
+SET @T = ''
+SELECT DISTINCT
+	@T = COALESCE(@T, '') + ' Name LIKE ''' + SUBSTRING(mf.physical_name, 0, 4) + '\'' OR '
+FROM
+	sys.master_files mf
+	LEFT JOIN
+		sys.databases db
+		ON db.database_id = mf.database_id
+WHERE
+	db.name NOT IN ('master', 'msdb', 'model')
+
+SELECT @CMD = 'powershell.exe -C ""Get-WmiObject -Query \""SELECT Name, Blocksize FROM Win32_Volume WHERE FileSystem=''NTFS'' AND ' + SUBSTRING(@T, 0, LEN(@T) -2) + '\"" -ComputerName \"".\""'
+
+INSERT INTO @TBL
+	EXEC xp_cmdshell @CMD
+
+DELETE FROM @TBL WHERE ((RTRIM(LTRIM(row)) NOT LIKE 'Name%') AND (RTRIM(LTRIM(row)) NOT LIKE 'BlockSize%')) OR row IS NULL
+
+INSERT INTO @TBL2
+SELECT * FROM @TBL
+
+DELETE FROM @TBL2 WHERE RTRIM(LTRIM(row)) LIKE 'BlockSize%'
+DELETE FROM @TBL WHERE RTRIM(LTRIM(row)) LIKE 'Name%'
+
+SELECT RTRIM(LTRIM(SUBSTRING(A.row, CHARINDEX(':', A.row)+1, 3))) 'DriveLetter', RTRIM(LTRIM(SUBSTRING(B.row, CHARINDEX(':', B.row)+1, LEN(B.row)))) 'ClusterSize' FROM @TBL2 A, @TBL B
+
+IF @chkcmd = 0
+BEGIN
+	EXEC sp_configure 'xp_cmdshell', 0
+	RECONFIGURE WITH OVERRIDE;
+	EXEC sp_configure 'show advanced options',0
+	RECONFIGURE WITH OVERRIDE;
+END" $dbName
+<# {% endif %}
+
+
+{% if ('Index_maintenance_check' in check_list or 'all' in check_list) and ('-Index_maintenance_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Index_maintenance_check" "DECLARE @T NVARCHAR(MAX)
+SELECT @T = '
+
+BEGIN TRY
+	DECLARE @N NVARCHAR(256), @I REAL
+	SELECT @I = 1
+
+	DECLARE Cur CURSOR FAST_FORWARD FOR
+		SELECT name FROM sys.databases WHERE state = 0
+
+	OPEN Cur
+	FETCH NEXT FROM Cur INTO @N
+
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		IF @N = ''?''
+		BEGIN
+			BREAK
+		END
+
+		SELECT @I = @I + 1
+		FETCH NEXT FROM Cur INTO @N
+	END
+
+	CLOSE Cur
+	DEALLOCATE Cur
+END TRY
+BEGIN CATCH
+	CLOSE Cur
+	DEALLOCATE Cur
+END CATCH
+
+
+USE [?]
+SELECT
+	COUNT(*), ''?'', MAX(STATS_DATE(idx.object_id, stat.stats_id))
+FROM
+	sys.dm_db_index_physical_stats(DB_ID(''?''), NULL, NULL, NULL, NULL)  ips
+	LEFT JOIN
+		sys.stats stat
+		ON
+			ips.object_id = stat.object_id
+	LEFT JOIN
+		sys.indexes idx
+		ON
+			ips.index_id = idx.index_id AND
+			ips.object_id = idx.object_id
+WHERE
+	index_type_desc IN (''NONCLUSTERED INDEX'', ''CLUSTERED INDEX'') AND
+	stat.name NOT LIKE ''_WA_%'' AND
+	ips.page_count > 1000 AND
+	idx.name IS NOT NULL AND
+	idx.is_disabled <> 1 AND
+	idx.type < 3 AND
+	STATS_DATE(idx.object_id, stat.stats_id) < DATEADD(DAY, -8, GETDATE())
+'
+DECLARE @_DBList TABLE
+(
+	[count] INT,
+	DBName NVARCHAR(256) NOT NULL UNIQUE,
+	[LastCheck] DATETIME
+)
+
+INSERT INTO @_DBList
+	EXEC sp_MSforeachdb @T
+
+SELECT DBName, [LastCheck] 'LastMaintenance', [COUNT] 'NumberOfIndexes' FROM @_DBList WHERE [count] > 0" $dbName
+<# {% endif %}
+
+
+{% if ('SQLBrowser_service_account_check' in check_list or 'all' in check_list) and ('-SQLBrowser_service_account_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "SQLBrowser_service_account_check" "DECLARE @A NVARCHAR(512)
+
+EXEC master.dbo.xp_regread
+    'HKEY_LOCAL_MACHINE',
+    'SYSTEM\CurrentControlSet\services\SQLBROWSER',
+    'ObjectName',
+    @A OUTPUT;
+
+SELECT @A 'ServiceAccountName'" $dbName
+<# {% endif %}
+
+
+{% if ('Database_with_more_than_one_TLog' in check_list or 'all' in check_list) and ('-Database_with_more_than_one_TLog' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Database_with_more_than_one_TLog" "SELECT
+	(SELECT TOP 1 name FROM sys.databases db WHERE db.database_id = mf.database_id) 'DBName'
+FROM
+	sys.master_files mf
+WHERE
+	type_desc = 'LOG'
+GROUP BY
+	database_id
+HAVING COUNT(database_id) > 1" $dbName
+<# {% endif %}
+
+
+{% if ('SA_account_login' in check_list or 'all' in check_list) and ('-SA_account_login' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs AO.1.7.7
+
+Execute-SQL "SA_account_login" "SELECT
+	CASE
+		WHEN COUNT(*) = 0 THEN 'DISABLED'
+		ELSE 'ENABLED'
+	END 'ConfiguredValue'
+FROM
+	sys.sql_logins
+WHERE
+	name LIKE 'sa' AND
+	is_disabled = 0" $dbName
+<# {% endif %}
+
+
+{% if ('Trustworthy_check' in check_list or 'all' in check_list) and ('-Trustworthy_check' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs - AO.1.9.4
+
+Execute-SQL "Trustworthy_check" "SELECT
+	ISNULL(name, 'Not configured') 'DBName'
+FROM
+	sys.databases
+WHERE
+	is_trustworthy_on = 1 AND
+	database_id > 4" $dbName
+<# {% endif %}
+
+
+{% if ('Lock_pages_in_memory_check' in check_list or 'all' in check_list) and ('-Lock_pages_in_memory_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "Lock_pages_in_memory_check" "DECLARE @chkcmd AS SQL_VARIANT
+SELECT @chkcmd = value FROM sys.configurations where name = 'xp_cmdshell'
+
+IF @chkcmd = 0
+BEGIN
+	EXEC sp_configure 'show advanced options',1
+	RECONFIGURE WITH OVERRIDE;
+	EXEC sp_configure 'xp_cmdshell', 1
+	RECONFIGURE WITH OVERRIDE;
+END
+
+DECLARE @Res TABLE
+(
+    [output] NVARCHAR(255) NULL
+);
+
+IF (SELECT value_in_use
+    FROM sys.configurations c
+    WHERE c.name = 'xp_cmdshell'
+    ) = 1
+BEGIN
+    INSERT INTO @Res
+		EXEC xp_cmdshell 'WHOAMI /PRIV';
+
+	IF (EXISTS(SELECT * FROM @Res WHERE [output] LIKE 'SeLockMemoryPrivilege%' AND [output] LIKE '%Enabled%'))
+		SELECT 'ENABLED' 'ConfiguredValue'
+	IF (EXISTS(SELECT * FROM @Res WHERE [output] LIKE 'SeLockMemoryPrivilege%' AND [output] LIKE '%Disabled%'))
+		SELECT 'DISABLED' 'ConfiguredValue'
+	ELSE
+		SELECT 'NOT CONFIGURED' 'ConfiguredValue'
+END
+
+IF @chkcmd = 0
+BEGIN
+	EXEC sp_configure 'xp_cmdshell', 0
+	RECONFIGURE WITH OVERRIDE;
+	EXEC sp_configure 'show advanced options',0
+	RECONFIGURE WITH OVERRIDE;
+END" $dbName
+<# {% endif %}
+
+
+{% if ('SQL_Cluster_check' in check_list or 'all' in check_list) and ('-SQL_Cluster_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "SQL_Cluster_check" "SELECT
+	CASE
+		WHEN SERVERPROPERTY('IsClustered') = 0 THEN 'Not configured'
+		ELSE 'Cluster configured'
+	END 'ConfiguredValue'" $dbName
+<# {% endif %}
+
+
+{% if ('SQL_Mirroring_check' in check_list or 'all' in check_list) and ('-SQL_Mirroring_check' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "SQL_Mirroring_check" "SELECT
+	CASE
+		WHEN COUNT(*) = 0 THEN 'Not configured'
+		ELSE 'Mirroring configured'
+	END 'ConfiguredValue'
+FROM sys.database_mirroring WHERE mirroring_guid IS NOT NULL AND mirroring_state IS NOT NULL AND mirroring_role IS NOT NULL" $dbName
+<# {% endif %}
+
+
+{% if ('SQL_Server_Audit' in check_list or 'all' in check_list) and ('-SQL_Server_Audit' not in check_list) %}
+##########################################################################################################>
+# BestPractice+TechSpecs - AO.C.9.1.4
+
+Execute-SQL "SQL_Server_Audit" "SELECT
+ S.name AS 'Audit Name'
+ , CASE S.is_state_enabled
+ WHEN 1 THEN 'Y'
+ WHEN 0 THEN 'N' END AS 'Audit Enabled'
+ , S.type_desc AS 'Write Location'
+ , SA.name AS 'Audit Specification Name'
+ , CASE SA.is_state_enabled
+ WHEN 1 THEN 'Y'
+ WHEN 0 THEN 'N' END AS 'Audit Specification Enabled'
+ , SAD.audit_action_name
+ , SAD.audited_result
+FROM sys.server_audit_specification_details AS SAD
+ JOIN sys.server_audit_specifications AS SA
+ ON SAD.server_specification_id = SA.server_specification_id
+ JOIN sys.server_audits AS S
+ ON SA.audit_guid = S.audit_guid
+WHERE SAD.audit_action_id IN ('CNAU', 'LGFL', 'LGSD', 'ADDP', 'ADSP', 'OPSV') OR (SAD.audit_action_id IN ('DAGS', 'DAGF') AND (SELECT COUNT(*) FROM sys.databases WHERE containment = 1) > 0)" $dbName
+<# {% endif %}
+
+
+{% if ('SQL_service_accounts_privileges' in check_list or 'all' in check_list) and ('-SQL_service_accounts_privileges' not in check_list) %}
+##########################################################################################################>
+Execute-SQL "SQL_service_accounts_privileges" "SET NOCOUNT ON
+DECLARE @chkcmd AS SQL_VARIANT
+DECLARE @TBL TABLE
+(
+    id INT IDENTITY(1,1),
+    row NVARCHAR(512)
+)
+
+SELECT @chkcmd = value FROM sys.configurations where name = 'xp_cmdshell'
+
+IF @chkcmd = 0
+BEGIN
+    EXEC sp_configure 'show advanced options', 1
+    RECONFIGURE WITH OVERRIDE;
+    EXEC sp_configure 'xp_cmdshell', 1
+    RECONFIGURE WITH OVERRIDE;
+END
+
+BEGIN TRY
+    INSERT INTO @TBL
+        EXEC xp_cmdshell 'net localgroup administrators'
+
+    IF ((SELECT COUNT(*) FROM @TBL WHERE row LIKE '%alias name%' and row LIKE '%administrators%') > 0)
+    BEGIN
+        ;WITH result AS
+        (
+            SELECT
+row AS [service account]
+            FROM
+@TBL
+            WHERE
+id > (SELECT id FROM @TBL WHERE row LIKE '-----%') AND
+id < (SELECT COUNT(*) FROM @TBL) AND
+row IS NOT NULL
+        )
+        SELECT [service account] FROM result WHERE [service account] IN (SELECT service_account as [Service Account] from sys.dm_server_services)
+    END
+    ELSE
+    BEGIN
+        SELECT 'ERROR OCCURRED DURING DATA GATHERING'
+    END
+END TRY
+BEGIN CATCH
+    SELECT 'ERROR OCCURRED DURING DATA GATHERING'
+END CATCH
+
+IF @chkcmd = 0
+BEGIN
+    EXEC sp_configure 'xp_cmdshell', 0
+    RECONFIGURE WITH OVERRIDE;
+    EXEC sp_configure 'show advanced options',0
+    RECONFIGURE WITH OVERRIDE;
+END" $dbName
+<# {% endif %}
+
+
+{% if ('Default_trace_enabled' in check_list or 'all' in check_list) and ('-Default_trace_enabled' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.2.4
+Execute-SQL "Default_trace_enabled" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'default trace enabled';" $dbName
+<# {% endif %}
+
+
+{% if ('Account_password_policy_enforcement' in check_list or 'all' in check_list) and ('-Account_password_policy_enforcement' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.1
+Execute-SQL "Account_password_policy_enforcement" "SELECT name from sys.sql_logins WHERE is_policy_checked = 0 AND is_disabled = 0" $dbName
+<# {% endif %}
+
+
+{% if ('Guest_permissions' in check_list or 'all' in check_list) and ('-Guest_permissions' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.4.2
+Execute-SQL "Guest_permissions" "DECLARE @TBL TABLE (
+	dbname NVARCHAR(128),
+	name NVARCHAR(64)
+)
+
+INSERT INTO @TBL
+EXEC sp_MSforeachdb 'USE [?]
+SELECT DB_NAME() AS DatabaseName, ''guest'' AS Database_User
+FROM sys.database_permissions
+WHERE [grantee_principal_id] = DATABASE_PRINCIPAL_ID(''guest'')
+AND [state_desc] LIKE ''GRANT%''
+AND [permission_name] = ''CONNECT''
+AND DB_NAME() NOT IN (''master'',''tempdb'',''msdb'')'
+SELECT * FROM @TBL" $dbName
+<# {% endif %}
+
+
+{% if ('Cross_Database_Permissions' in check_list or 'all' in check_list) and ('-Cross_Database_Permissions' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.5 - suboptimal query replaced
+# Keep it for backward compatibility until 2.7.0
+Execute-SQL "Cross_Database_Permissions" "SELECT CONVERT(int, value_in_use) AS 'value_in_use'
+FROM sys.configurations
+WHERE description = 'Allow cross db ownership chaining'" $dbName
+<# {% endif %}
+
+
+{% if ('Ensure_sa_Disabled' in check_list or 'all' in check_list) and ('-Ensure_sa_Disabled' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.7 & AO.C.6.1.14
+Execute-SQL "Ensure_sa_Disabled" "SELECT
+	CASE
+		WHEN is_disabled = 0 THEN 'ENABLED'
+		ELSE 'DISABLED'
+	END
+FROM sys.server_principals
+WHERE sid = 0x01
+--AND is_disabled = 0" $dbName
+<# {% endif %}
+
+
+{% if ('Public_access_levels' in check_list or 'all' in check_list) and ('-Public_access_levels' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.10
+Execute-SQL "Public_access_levels" "SELECT *
+FROM master.sys.server_permissions
+WHERE (grantee_principal_id = SUSER_SID(N'public') and state_desc LIKE 'GRANT%')
+AND NOT (state_desc = 'GRANT' and [permission_name] = 'VIEW ANY DATABASE' and class_desc = 'SERVER')
+AND NOT (state_desc = 'GRANT' and [permission_name] = 'CONNECT' and class_desc = 'ENDPOINT' and major_id = 2)
+AND NOT (state_desc = 'GRANT' and [permission_name] = 'CONNECT' and class_desc = 'ENDPOINT' and major_id = 3)
+AND NOT (state_desc = 'GRANT' and [permission_name] = 'CONNECT' and class_desc = 'ENDPOINT' and major_id = 4)
+AND NOT (state_desc = 'GRANT' and [permission_name] = 'CONNECT' and class_desc = 'ENDPOINT' and major_id = 5);" $dbName
+<# {% endif %}
+
+
+{% if ('Windows_local_groups' in check_list or 'all' in check_list) and ('-Windows_local_groups' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.7.11
+Execute-SQL "Windows_local_groups" "
+USE [master]
+SELECT pr.[name] AS LocalGroupName, pe.[permission_name], pe.[state_desc]
+FROM sys.server_principals pr
+JOIN sys.server_permissions pe
+ON pr.[principal_id] = pe.[grantee_principal_id]
+WHERE pr.[type_desc] = 'WINDOWS_GROUP'
+AND pr.[name] like CAST(SERVERPROPERTY('MachineName') AS nvarchar) + '%';" $dbName
+<# {% endif %}
+
+
+{% if ('Database_Mail_XPs' in check_list or 'all' in check_list) and ('-Database_Mail_XPs' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.8.1
+Execute-SQL "Database_Mail_XPs" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'Database Mail XPs';" $dbName
+<# {% endif %}
+
+
+{% if ('Remote_Admin_Connections' in check_list or 'all' in check_list) and ('-Remote_Admin_Connections' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.8.2
+Execute-SQL "Remote_Admin_Connections" "USE master;
+SELECT name,
+	CAST(value as int) as value_configured,
+	CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'remote admin connections'
+AND SERVERPROPERTY('IsClustered') = 0;" $dbName
+<# {% endif %}
+
+
+{% if ('Symmetric_Key_Encryption_Levels' in check_list or 'all' in check_list) and ('-Symmetric_Key_Encryption_Levels' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.8.3
+Execute-SQL "Symmetric_Key_Encryption_Levels" "DECLARE @CMD NVARCHAR(256)
+DECLARE @TBL TABLE
+(
+	Database_Name NVARCHAR(128),
+	Key_Name NVARCHAR(128)
+)
+
+SELECT @CMD = 'USE [?]
+SELECT db_name() AS Database_Name, name AS Key_Name FROM sys.symmetric_keys
+WHERE algorithm_desc NOT IN (''AES_128'',''AES_192'',''AES_256'') AND db_id() > 4'
+
+INSERT INTO @TBL
+	EXEC sp_MSforeachdb @CMD
+
+SELECT * FROM @TBL" $dbName
+<# {% endif %}
+
+
+{% if ('Remote_Access' in check_list or 'all' in check_list) and ('-Remote_Access' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.8.4
+Execute-SQL "Remote_Access" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'remote access';" $dbName
+<# {% endif %}
+
+
+{% if ('Asymmetric_Key_Size' in check_list or 'all' in check_list) and ('-Asymmetric_Key_Size' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.8.5
+Execute-SQL "Asymmetric_Key_Size" "DECLARE @CMD NVARCHAR(256)
+DECLARE @TBL TABLE
+(
+	Database_Name NVARCHAR(128),
+	Key_Name NVARCHAR(128)
+)
+
+SELECT @CMD = 'USE [?]
+SELECT db_name() AS Database_Name, name AS Key_Name FROM sys.asymmetric_keys WHERE key_length < 2048 AND db_id() > 4'
+
+INSERT INTO @TBL
+	EXEC sp_MSforeachdb @CMD
+
+SELECT * FROM @TBL" $dbName
+<# {% endif %}
+
+
+{% if ('Scan_Startup_Procs' in check_list or 'all' in check_list) and ('-Scan_Startup_Procs' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.12
+Execute-SQL "Scan_Startup_Procs" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'scan for startup procs';" $dbName
+<# {% endif %}
+
+
+{% if ('Adhoc_Distributed_Queries' in check_list or 'all' in check_list) and ('-Adhoc_Distributed_Queries' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.5
+Execute-SQL "Adhoc_Distributed_Queries" "SELECT name, CAST(value AS INT) as value_configured, CAST(value_in_use AS INT) AS value_in_use
+FROM sys.configurations
+WHERE name = 'Ad Hoc Distributed Queries';" $dbName
+<# {% endif %}
+
+
+{% if ('CLR_Enabled' in check_list or 'all' in check_list) and ('-CLR_Enabled' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.6
+Execute-SQL "CLR_Enabled" "IF (((SELECT value FROM sys.configurations WHERE name = 'clr strict security') = 1) AND
+	((SELECT value_in_use FROM sys.configurations WHERE name = 'clr strict security') = 1))
+BEGIN
+	SELECT 'clr enabled' AS [name], 0 AS [value_configured], 0 AS [value_in_use]
+END
+ELSE
+BEGIN
+	SELECT name,
+		CAST(value AS INT) AS value_configured,
+		CAST(value_in_use as int) AS value_in_use
+	FROM sys.configurations
+	WHERE name = 'clr enabled'
+END" $dbName
+<# {% endif %}
+
+
+{% if ('Auto_Close' in check_list or 'all' in check_list) and ('-Auto_Close' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.9.5
+Execute-SQL "Auto_Close" "SELECT name, containment, containment_desc, is_auto_close_on
+FROM sys.databases
+WHERE containment <> 0 and is_auto_close_on = 1" $dbName
+<# {% endif %}
+
+
+{% if ('CLR_Assembly_Safe' in check_list or 'all' in check_list) and ('-CLR_Assembly_Safe' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.1.9.6 & AO.C.10.1.1
+Execute-SQL "CLR_Assembly_Safe" "DECLARE @CMD NVARCHAR(256)
+DECLARE @TBL TABLE
+(
+	name NVARCHAR(128),
+	permission_set_desc NVARCHAR(60)
+)
+
+SELECT @CMD = '
+USE [?];
+SELECT name,
+ permission_set_desc
+FROM sys.assemblies
+WHERE is_user_defined = 1 AND name <> ''Microsoft.SqlServer.Types'''
+
+INSERT INTO @TBL
+	EXEC sp_MSforeachdb @CMD
+
+SELECT * FROM @TBL" $dbName
+<# {% endif %}
+
+
+{% if ('SQLServer_standard_port' in check_list or 'all' in check_list) and ('-SQLServer_standard_port' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.1
+Execute-SQL "SQLServer_standard_port" "IF (SELECT value_data FROM sys.dm_server_registry WHERE value_name = 'ListenOnAllIPs') = 1
+	SELECT COUNT(*) AS 'port_in_use' FROM sys.dm_server_registry WHERE registry_key = '%IPAll%' AND value_name LIKE '%Tcp%' AND value_data = '1433'
+ELSE
+	SELECT COUNT(*) AS 'port_in_use' FROM sys.dm_server_registry WHERE value_name LIKE '%Tcp%' AND value_data = '1433'" $dbName
+<# {% endif %}
+
+
+{% if ('Hide_Instance' in check_list or 'all' in check_list) and ('-Hide_Instance' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.2
+Execute-SQL "Hide_Instance" "DECLARE @getValue INT;
+EXEC master.sys.xp_instance_regread
+ @rootkey = N'HKEY_LOCAL_MACHINE',
+ @key = N'SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib',
+ @value_name = N'HideInstance',
+ @value = @getValue OUTPUT;
+SELECT @getValue AS 'value_in_use';" $dbName
+<# {% endif %}
+
+
+{% if ('No_SA_login' in check_list or 'all' in check_list) and ('-No_SA_login' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.3
+Execute-SQL "No_SA_login" "SELECT principal_id, name
+FROM sys.server_principals
+WHERE name = 'sa';" $dbName
+<# {% endif %}
+
+
+{% if ('CLR_strict_security' in check_list or 'all' in check_list) and ('-CLR_strict_security' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.4
+Execute-SQL "CLR_strict_security" "SELECT name,
+ CAST(value as int) as value_configured,
+ CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'clr strict security';" $dbName
+<# {% endif %}
+
+
+{% if ('Orphaned_Users' in check_list or 'all' in check_list) and ('-Orphaned_Users' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.1
+Execute-SQL "Orphaned_Users" "DECLARE @CMD NVARCHAR(256)
+DECLARE @TBL TABLE
+(
+	UserName NVARCHAR(32),
+	UserSID VARBINARY(85)
+)
+
+SELECT @CMD = '
+USE [?];
+SELECT
+	dp.name AS [UserName],
+	dp.sid AS [UserSID]
+FROM sys.database_principals AS dp
+LEFT JOIN sys.server_principals AS sp
+ON dp.sid = sp.sid
+WHERE sp.sid IS NULL AND dp.authentication_type_desc = ''INSTANCE'''
+
+INSERT INTO @TBL
+	EXEC sp_MSforeachdb @CMD
+
+SELECT * FROM @TBL" $dbName
+<# {% endif %}
+
+
+{% if ('SQL_Authentication_contained_databases' in check_list or 'all' in check_list) and ('-SQL_Authentication_contained_databases' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.2
+Execute-SQL "SQL_Authentication_contained_databases" "SELECT name AS DBUser
+FROM sys.database_principals
+WHERE name NOT IN ('dbo','Information_Schema','sys','guest')
+AND type IN ('U','S','G')
+AND authentication_type = 2;" $dbName
+<# {% endif %}
+
+
+{% if ('Windows_BUILTIN_groups_no_SQL_Logins' in check_list or 'all' in check_list) and ('-Windows_BUILTIN_groups_no_SQL_Logins' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.3
+Execute-SQL "Windows_BUILTIN_groups_no_SQL_Logins" "SELECT pr.[name], pe.[permission_name], pe.[state_desc]
+FROM sys.server_principals pr
+JOIN sys.server_permissions pe
+ON pr.principal_id = pe.grantee_principal_id
+WHERE pr.name like 'BUILTIN%';" $dbName
+<# {% endif %}
+
+
+{% if ('Windows_local_groups_no_SQL_Logins' in check_list or 'all' in check_list) and ('-Windows_local_groups_no_SQL_Logins' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.4
+Execute-SQL "Windows_local_groups_no_SQL_Logins" "USE [master]
+SELECT pr.[name] AS LocalGroupName, pe.[permission_name], pe.[state_desc]
+FROM sys.server_principals pr
+JOIN sys.server_permissions pe
+ON pr.[principal_id] = pe.[grantee_principal_id]
+WHERE pr.[type_desc] = 'WINDOWS_GROUP'
+AND pr.[name] like CAST(SERVERPROPERTY('MachineName') AS nvarchar) + '%';" $dbName
+<# {% endif %}
+
+
+{% if ('Msdb_public_SQLAgent_proxies' in check_list or 'all' in check_list) and ('-Msdb_public_SQLAgent_proxies' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.5
+Execute-SQL "Msdb_public_SQLAgent_proxies" "USE [msdb]
+SELECT sp.name AS proxyname
+FROM dbo.sysproxylogin spl
+JOIN sys.database_principals dp
+ON dp.sid = spl.sid
+JOIN sysproxies sp
+ON sp.proxy_id = spl.proxy_id
+WHERE principal_id = USER_ID('public');" $dbName
+<# {% endif %}
+
+
+{% if ('Check_Expiration_SQLlogin_Sysadmin' in check_list or 'all' in check_list) and ('-Check_Expiration_SQLlogin_Sysadmin' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.8.1.1
+Execute-SQL "Check_Expiration_SQLlogin_Sysadmin" "SELECT l.[name], 'sysadmin membership' AS 'Access_Method'
+FROM sys.sql_logins AS l
+WHERE IS_SRVROLEMEMBER('sysadmin',name) = 1
+AND l.is_expiration_checked <> 1
+UNION ALL
+SELECT l.[name], 'CONTROL SERVER' AS 'Access_Method'
+FROM sys.sql_logins AS l
+JOIN sys.server_permissions AS p
+ON l.principal_id = p.grantee_principal_id
+WHERE p.type = 'CL' AND p.state IN ('G', 'W')
+AND l.is_expiration_checked <> 1;" $dbName
+<# {% endif %}
+
+
+{% if ('sa_Login_Account_has_been_renamed' in check_list or 'all' in check_list) and ('-sa_Login_Account_has_been_renamed' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.3 & AO.1.7.1.3
+Execute-SQL "sa_Login_Account_has_been_renamed" "SELECT COUNT(*) AS 'sa_in_use'  FROM sys.sql_logins WHERE name = 'sa' and sid = 0x01 and type = 'S'" $dbName
+<# {% endif %}
+
+
+{% if ('Cross_DB_Ownership_Chain' in check_list or 'all' in check_list) and ('-Cross_DB_Ownership_Chain' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.6.1.7
+Execute-SQL "Cross_DB_Ownership_Chain" "SELECT name,
+ CAST(value AS INT) AS value_configured,
+ CAST(value_in_use AS INT) AS value_in_use
+FROM sys.configurations
+WHERE name = 'cross db ownership chaining';" $dbName
+<# {% endif %}
+
+
+{% if ('Windows_Authentication_Mode' in check_list or 'all' in check_list) and ('-Windows_Authentication_Mode' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.6
+Execute-SQL "Windows_Authentication_Mode" "SELECT SERVERPROPERTY('IsIntegratedSecurityOnly') AS [login_mode]" $dbName
+<# {% endif %}
+
+
+{% if ('admin_roles_in_MSDB' in check_list or 'all' in check_list) and ('-admin_roles_in_MSDB' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS AO.C.7.1.9
+Execute-SQL "admin_roles_in_MSDB" "USE [msdb]
+SELECT COUNT(*) AS 'Number'
+FROM sys.database_role_members AS drm
+INNER JOIN sys.database_principals AS r
+ ON drm.role_principal_id = r.principal_id
+INNER JOIN sys.database_principals AS m
+ ON drm.member_principal_id = m.principal_id
+WHERE r.name IN ('db_owner', 'db_securityadmin', 'db_ddladmin', 'db_datawriter') AND m.name <> 'dbo'" $dbName
+<# {% endif %}
+
+
+# BEGIN BOI CHECKS ONLY BLOCK
+
+{% if ('SQL_Mail_XPs' in check_list or 'all' in check_list) and ('-SQL_Mail_XPs' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS BOI SQL-2.9
+Execute-SQL "SQL Mail XPs" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'SQL Mail XPs';" $dbName
+<# {% endif %}
+
+
+{% if ('XP_cmd_shell' in check_list or 'all' in check_list) and ('-XP_cmd_shell' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS BOI SQL-2.16
+Execute-SQL "XP cmd shell" "SELECT name,
+      CAST(value as int) as value_configured,
+      CAST(value_in_use as int) as value_in_use
+FROM sys.configurations
+WHERE name = 'xp_cmdshell';" $dbName
+<# {% endif %}
+
+{% if ('Port_configuration' in check_list or 'all' in check_list) and '-Port_configuration' not in check_list %}
+##########################################################################################################>
+# TECHSPECS BOI SQL-2.12
+Execute-SQL "Port_configuration" "SELECT local_tcp_port
+FROM sys.dm_exec_connections
+WHERE session_id = @@SPID" $dbName
+<# {% endif %}
+
+{% if ('SQLBrowser_service_enabled_check' in check_list or 'all' in check_list) and ('-SQLBrowser_service_enabled_check' not in check_list) %}
+##########################################################################################################>
+# TECHSPECS BOI SQL-7.5
+Execute-SQL "SQLBrowser_service_enabled_check" "DECLARE @A NVARCHAR(512)
+
+EXEC master.dbo.xp_regread
+    'HKEY_LOCAL_MACHINE',
+    'SYSTEM\CurrentControlSet\services\SQLBROWSER',
+    'Start',
+    @A OUTPUT;
+
+SELECT @A 'StartType'" $dbName
+<# {% endif %}#>
+
+# END BOI CHECKS ONLY BLOCK
+
+
+# BEGIN ANSIBLE MANAGED BLOCK
+# END ANSIBLE MANAGED BLOCK
+
+
+                # WARNING! THIS SEGMENT IS MANDATORY! REMOVING IT RESULTS A FAILED DATA PROCESSING
+                $script:MSSQLInstanceUIDs[$instance_number] = Execute-SQL "Instance UID" "declare @Checksum nvarchar(512)
+                exec master.dbo.xp_instance_regread N'HKEY_LOCAL_MACHINE', N'SOFTWARE\Microsoft\MSSQLServer\Setup', N'checksum', @Checksum OUTPUT
+                SELECT CONVERT(NVARCHAR(32),HashBytes('MD5', @Checksum),2) UNIQUE_ID" $dbName
+
+                $sqlConn.Close()
+                return 1
+            }
+        }
+        catch [System.Data.SqlClient.SqlException] {
+            $output = $_
+            Write-Host $output -ForegroundColor red
+            MsgPrint "error" $output
+            $output | Out-File $OutFile -encoding UTF8 -append
+            $sqlConn.Close()
+            return 0
+        }
+
+        if ($status -eq $True) {
+            $sqlConn.Close()
+        }
+        else {
+            $script:errorcode = 255
+            $output = "A network-related or instance-specific error occurred while establishing a connection to SQL Server." +
+            " The server was not found or was not accessible. Verify that the instance name is correct and that SQL Server is configured to allow remote connections."
+            write-host $output
+            MsgPrint "error" "error A network-related or instance-specific error occurred while establishing a connection to SQL Server."
+            $sqlConn.Close()
+            return 0
+        }
+    }
+    catch {
+        $output = $_
+        Write-Host $output -ForegroundColor Red
+        MsgPrint "error" $_
+        $sqlConn.Close()
+        return 0
+    }
+    finally {
+        $sqlConn.Close()
+        MsgPrint "info" "SQL Connection Closed."
+    }
+
+    return 1
+}
+
+
+###############################################################################
+# Getting SQL instances on local computer (stand-alone, FCI, AOAG).
+###############################################################################
+function Get-SqlInstances {
+    $instances = @()
+    $clusterSystem = $False
+    $aoag = $False
+
+    #1st step: check if the host is a cluster
+    #2nd step: check if this is an AOAG
+    #3rd step: collect cluster (FCI) or local (stand alone and AOAG) instances
+
+    try {
+        Import-Module FailoverClusters -ErrorAction Stop
+        $clusterSystem = $True
+
+        try {
+            [array]$data = Get-Clusterresource | Sort-Object Name | Where-Object {$_.resourcetype -like 'sql server availability group*'}
+
+            if ($data.Length -ne 0) {
+                $aoag = $True
+                #DEBUG:
+                #Write-Host "AOAG"
+            }
+            else {
+                #DEBUG:
+                #Write-Host "Not AOAG"
+            }
+        }
+        catch {
+            #DEBUG:
+            #Write-Host "Error in cluster resource discovery"
+        }
+
+        #DEBUG:
+        #Write-Host "Cluster"
+    }
+    catch {
+        $clusterSystem = $False
+        #DEBUG:
+        #Write-Host "Stand alone"
+    }
+
+    #if it is a cluster and there is no aoag then it means, the cluster is an FCI
+    if ($clusterSystem -and -not $aoag) {
+        try {
+            $instances = Get-ClusterResource | Sort-Object Name | Where-Object {$_.ResourceType -like 'sql server' -and (Get-ClusterGroup -name $_.Name).OwnerNode.Name -like $env:COMPUTERNAME}| ForEach-Object { ($_ | Get-ClusterParameter -Name VirtualServerName).Value+"\"+($_ | Get-ClusterParameter -Name InstanceName).Value }
+        }
+        catch {
+            #DEBUG:
+            #Write-Host "Insufficiend rights!"
+        }
+    }
+    #AOAG or Stand Alone instances
+    else {
+        [array]$services = Get-Service | Where-Object {$_.DisplayName -like "SQL Server*" -and $_.ServiceName -like "MSSQL*"} | Select-Object -ExpandProperty ServiceName
+
+        foreach($instance in $services) {
+            try {
+                $instance = $instance | %{$_.split("$")[1]} | %{$_.trim()}
+            }
+            catch {
+                #suppress error message
+            }
+
+            if ($instance -like "MSSQLSERVER") {
+                $instances += "$env:COMPUTERNAME"
+            }
+            else {
+                $instances += "$env:COMPUTERNAME\$instance"
+            }
+        }
+    }
+
+    $instances
+}
+
+
+###############################################################################
+# Get the SQL instances then executing the same query on all the local SQL instances
+###############################################################################
+function Get-Data {
+    $instances = Get-SqlInstances
+    $cnt = $instances.Count
+
+    if ($cnt -eq 0) {
+        MsgPrint "warning" "info No SQL instances"
+    }
+    else {
+        MsgPrint "info" "Local SQL instances: $instances"
+    }
+
+    $i = 1
+    $outputFile = ""
+    $instanceNumber = 0
+    $anyInstanceFailed = 0
+
+    if ($cnt -gt 0) {
+        if ($SqlInstance -eq "MSSQLSERVER") {
+            $SqlInstance = $env:COMPUTERNAME
+        }
+
+        if ("all" -eq $SqlInstance) {
+            $SqlInstance = $null
+        }
+
+        $instancesTemp = "Local SQL instances: $instances"
+
+        if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+            MsgPrint "info" "Querying only SQL instance: $SqlInstance"
+            $instancesTemp = "Querying only SQL instance: $SqlInstance"
+        }
+
+        Write "INFO:     $(get-date -format "yyyy-MM-dd HH:mm:ss") $instancesTemp" | Out-File -Append -FilePath $TempFile -Encoding utf8
+
+        #predefining a clean array with empty elements.
+        foreach ($instance in $instances) {
+            $script:MSSQLInstanceUIDs += ""
+        }
+
+        foreach ($instance in $instances) {
+            if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                if ($instance -ne $SqlInstance) {
+                    $instanceNumber++
+                    continue
+                }
+            }
+
+            $outputFile = Set-OutputFile $instance
+
+            # Define log files
+            $LogFile = $outputFile + ".log"
+            $OutFile = $outputFile + ".out"
+            $script:errorcode = 0
+
+            # Write Header
+            Header -tpchc_description Microsoft_DB_MSSQL -HeaderLog $OutFile
+
+            # Get SQLData
+            $result = (Get-SQLData -instance $instance -instance_number $instanceNumber)
+
+            if ($result -eq 1) {
+                Write "INFO:     $(get-date -format "yyyy-MM-dd HH.mm.ss") DATA COLLECTION ON $instance FINISHED SUCCESSFULLY" | Out-File -Encoding utf8 -Append -FilePath $TempFile #parent
+                Write "INFO:     $(get-date -format "yyyy-MM-dd HH.mm.ss") DATA COLLECTION ON $instance FINISHED SUCCESSFULLY" | Out-File -Encoding utf8 -Append -FilePath $LogFile #child
+            }
+            else {
+                Write "ERROR:    $(get-date -format "yyyy-MM-dd HH.mm.ss") DATA COLLECTION ON $instance FINISHED WITH ERRORS ($script:errorcode)" | Out-File -Encoding utf8 -Append -FilePath $TempFile #parent
+                Write "ERROR:    $(get-date -format "yyyy-MM-dd HH.mm.ss") DATA COLLECTION ON $instance FINISHED WITH ERRORS ($script:errorcode)" | Out-File -Encoding utf8 -Append -FilePath $LogFile #child
+                $anyInstanceFailed = 1
+            }
+
+            # Write Footer
+            Footer $result
+
+            if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                break
+            }
+
+            $instanceNumber++
+        }
+
+        foreach ($instance in $instances) {
+            if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                if ($instance -ne $SqlInstance) {
+                    $instanceNumber++
+                    continue
+                }
+            }
+
+            $outputFile = Set-OutputFile $instance
+            $OutFile = $outputFile + ".out"
+
+            #Write "INFO:     $(get-date -format "yyyyMMdd-HHmmss") Connected on $instance Successfully (0)" | Out-File -Encoding utf8 -Append -FilePath $TempFile
+            Write "#### <devicelist_cfg>" | out-file -Append -encoding UTF8 -FilePath $OutFile
+            Write '"Devicename";"Deviceaddress";"Devicetype"' | out-file -Append -encoding UTF8  -FilePath $OutFile
+            Write """$HostIP"";""$HostIP"";""Microsoft_MW_MSSQL""" | out-file -Append -encoding UTF8  -FilePath $OutFile
+
+            $i = 0
+            $uid = ""
+
+            foreach ($element in $instances) {
+                $uid = $script:MSSQLInstanceUIDs[$i]
+
+                if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                    if ($element -ne $instance) {
+                        $i++
+                        continue
+                    }
+                }
+
+                $Device = $element.ToLower()
+
+                if ($Device -ilike "*\*") { #named instance or cluster
+                    if($Device -ilike "$env:COMPUTERNAME\*"){ #named instance
+                        $Device = $Devicename + $Device.Replace("\", "-").Replace(("$env:COMPUTERNAME").ToLower(), "")
+                    }
+                    else{ #cluster resource + instane
+                        $Device = "$Devicename-"+$Device.Split("\")[1]
+                    }
+                }
+                else{ #default instance
+                    $Device = "$Devicename-mssqlserver"
+                }
+
+                $Device = $Device + "_microsoft_db_mssql"
+
+                Write """$Device"";""$uid"";""$tpchc_description""" | out-file -Append -encoding UTF8 -FilePath $OutFile
+                $i++
+
+                if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                    break
+                }
+            }
+
+            Write "#### </devicelist_cfg>`r`n" | out-file -Append -encoding UTF8 -FilePath $OutFile
+
+            if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                break
+            }
+        }
+    }
+
+    if ($anyInstanceFailed -ne 0) {
+        $DataCollectionStatus = "FAILED"
+    }
+    else {
+        $DataCollectionStatus = "OK"
+    }
+
+    Write "$(get-date -format "yyyy-MM-ddTHH.mm.ss") Data collection status: $DataCollectionStatus" | Out-File -Encoding utf8 -Append -FilePath $TempFile
+
+    #parent out file:
+    $OutFile = "$($LogDir)\$($HostIP).out"
+    $LogFile = "$($LogDir)\$($HostIP).log"
+
+    #Header -HeaderLog $OutFile
+    Header -tpchc_description Microsoft_MW_MSSQL -HeaderLog $OutFile
+
+    Write "#### <devicelist_cfg>" | out-file -Append -encoding UTF8 -FilePath $OutFile
+    Write '"Devicename";"Deviceaddress";"Devicetype"' | out-file -Append -encoding UTF8  -FilePath $OutFile
+    Write """$HostIP"";""$HostIP"";""Microsoft_MW_MSSQL""" | out-file -Append -encoding UTF8  -FilePath $OutFile
+
+    if ($cnt -gt 0) {
+        $i = 0
+        $uid = ""
+
+        foreach ($element in $instances) {
+            $uid = $script:MSSQLInstanceUIDs[$i]
+
+            if ($null -ne $SqlInstance  -and $SqlInstance -ne "all") {
+                if ($element -ne $instance) {
+                    $i++
+                    continue
+                }
+            }
+
+            $Device = $element.ToLower()
+
+            if ($Device -ilike "*\*") { #named instance or cluster
+                if($Device -ilike "$env:COMPUTERNAME\*"){ #named instance
+                    $Device = $Devicename + $Device.Replace("\", "-").Replace(("$env:COMPUTERNAME").ToLower(), "")
+                }
+                else{ #cluster resource + instane
+                    $Device = "$Devicename-"+$Device.Split("\")[1]
+                }
+            }
+            else{ #default instance
+                $Device = "$Devicename-mssqlserver"
+            }
+
+            $Device = $Device + "_microsoft_db_mssql"
+
+            Write """$Device"";""$uid"";""$tpchc_description""" | out-file -Append -encoding UTF8 -FilePath $OutFile
+            $i++
+
+            if ($null -ne $SqlInstance -and $SqlInstance -ne "all") {
+                break
+            }
+        }
+    }
+
+    Write "#### </devicelist_cfg>`r`n" | out-file -Append -encoding UTF8 -FilePath $OutFile
+}
+
+
+###############################################################################
+# Calling the main function
+###############################################################################
+Get-Data
+Get-Content $TempFile | Out-File -FilePath "$($LogDir)\$($HostIP).log" -Encoding utf8
+
+# Clean temp files
+Remove-Item -Path $LogDir\temp.log  -Force
+try { Remove-Item -Path $LogDir\error.log -Force -ErrorAction stop }catch{}
+Write-Host

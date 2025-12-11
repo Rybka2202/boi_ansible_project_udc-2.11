@@ -1,0 +1,691 @@
+Param (
+    $LogPath,
+    $LogFile,
+    $Username,
+    $Password,
+    [String]$AnsibleMode,
+    [String]$DeviceName,
+    [String]$ZipLog,
+    [String]$account,
+    [String]$blueid,
+    [String]$chipid,
+    [String]$location,
+    [String]$satteam,
+    [String]$hwswdomain,
+    [String]$udcmode,
+    [String]$tpchcversion,
+    [String]$buildversion
+)
+
+# Active Directory credentials to login to VMs running Windows server
+##########################################################################################################
+Write-Host
+if ($env:Username -eq $null -or $env:Password -eq $null){
+    Write-Host -ForegroundColor Yellow "Variables missing: env:Username & env:Password. Trying to run locally."
+    if ($Username -eq $null -or $Password -eq $null){
+        Write-Host -ForegroundColor Red "To run locally you must supply mandatory parameters: -Username and -Password"
+        Write-Host -ForegroundColor Red "e.g. .\$($MyInvocation.MyCommand) -Username CONTOSO\Administrator -Password MySecurePassword"
+        Write-Host
+        Exit 1
+    }
+}
+else{
+    $Username = $env:Username
+    $Password = $env:Password
+    Write-Host -ForegroundColor Green "Using credentials from environmental variables"
+}
+Write-Host -ForegroundColor Green "Using Active Directory domain username: $Username"
+$Password = ConvertTo-SecureString -AsPlainText $Password -Force
+$credential = New-Object -TypeName System.Management.Automation.PSCredential ($Username,$Password)
+
+# SATHC variables
+$tpchc_description = "Microsoft_AP_HyperV"          # Value for description
+$tpchc_identifier = "None"                          # Value for identifier
+$log_to_logfile = $true                             # Always generate log file
+$computer = ($env:COMPUTERNAME).ToLower()
+
+# Default variables
+if(!($tpchcversion)) {
+   $tpchcversion = "2.5.0"                       # Value for tpchversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -tpchversion parameter. Using default: $tpchcversion"
+}
+ # Code level for this script
+if(!($buildversion)) {
+   $buildversion	= "2.5.0.20240924"           # Value for buildversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -buildversion parameter. Using default: $buildversion"
+}
+if(!($AnsibleMode)){
+    $AnsibleMode = $false
+    Write-Host -ForegroundColor Yellow "Missing -AnsibleMode parameter. Using default: $false"
+}
+if(!($DeviceName)){
+    $DeviceName = ($env:COMPUTERNAME+"_microsoft_hv_hyperv").ToLower()
+    Write-Host -ForegroundColor Yellow "Missing -DeviceName parameter. Using default: $DeviceName"
+}
+if(!($ZipLog)){
+    $ZipLog = $True
+    Write-Host -ForegroundColor Yellow "Missing -ZipLog parameter. Using default: $True"
+}
+if(!($account)){
+    $account = "SDE"
+    Write-Host -ForegroundColor Yellow "Missing -account parameter. Using default: $account"
+}
+if(!($blueid)){
+    $blueid = "BAC9999999"
+    Write-Host -ForegroundColor Yellow "Missing -blueid parameter. Using default: $blueid"
+}
+if(!($chipid)){
+    $chipid = "MyChip"
+    Write-Host -ForegroundColor Yellow "Missing -chipid parameter. Using default: $chipid"
+}
+if(!($location)){
+    $location = "Tucson"
+    Write-Host -ForegroundColor Yellow "Missing -location parameter. Using default: $location"
+}
+if(!($satteam)){
+    $satteam = "Hypervisor"
+    Write-Host -ForegroundColor Yellow "Missing -satteam parameter. Using default: $satteam"
+}
+if(!($hwswdomain)){
+    $hwswdomain = "Hypervisor"
+    Write-Host -ForegroundColor Yellow "Missing -hwswdomain parameter. Using default: $hwswdomain"
+}
+if(!($udcmode)){
+    $udcmode = $false
+    Write-Host -ForegroundColor Yellow "Missing -UDCmode parameter. Using default: $udcmode"
+}
+if(!($LogPath)){
+    $LogPath = "$DeviceName.out"
+    Write-Host -ForegroundColor Yellow "Missing -LogPath parameter. Using default: $LogPath"
+}
+if(!($LogFile)){
+    $LogFile = "$DeviceName.log"
+    Write-Host -ForegroundColor Yellow "Missing -LogFile parameter. Using default: $LogFile"
+}
+$crt = 0
+
+function MsgPrint([string]$ShowStep, [string]$textMsg) {
+    if ($log_to_logfile) {
+        switch ($ShowStep.ToLower()) {
+            "info"		{Write-Output "INFO:     $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "highlight"	{Write-Output "HIGHLIGHT:$(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "ok"		{Write-Output "OK:       $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "error"		{Write-Output "ERROR:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "warning"	{Write-Output "WARNING:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "filelist"	{Write-Output "FILES:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            default		{Write-Output "DEFAULT:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+        }
+    }
+	return
+}
+
+function SAT-Header{
+    Write "#### <devicelist_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """Devicename"";""Deviceaddress"";""Devicetype""" | Out-File -Append -FilePath $LogPath
+    Write """$DeviceName"";""$HostIP"";""$tpchc_description""" | Out-File -Append -FilePath $LogPath
+    Write "#### </devicelist_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    Write "#### <tpchc_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """tpchc_version"";""build_version"";""blue_id"";""chip_id"";""account"";""location"";""tpchc_description"";""tpchc_identifier"";""satteam"";""hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write """$tpchcversion"";""$buildversion"";""$blueid"";""$chipid"";""$account"";""$location"";""$tpchc_description"";""$tpchc_identifier"";""$satteam"";""$hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write "#### </tpchc_cfg>`r`n" | out-file -Append -FilePath $LogPath
+
+    Write "#### <policy_cfg>" | Out-File -Append -FilePath $LogPath
+    Write "#### </policy_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    if ($udcmode -eq $false) {
+        $timestamp = get-date -format "yyyyMMdd-HHmmss"
+        $OS = Get-CimInstance -Class Win32_OperatingSystem
+        $OS_Version = $OS.Version
+        $PowerShell_Version = $PSVersionTable.PSVersion.tostring()
+        $iso8601DateTime = Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz"
+        Write "#### <cacf_cfg>" | Out-File -Append -FilePath $LogPath
+        Write """collected_on"";""timestamp"";""gsma_code"";""tower_version"";""os_distribution"";""os_version"";""ansible_version"";""python_version"";""powershell_version"";""udc_version"";""healthcheck_timestamp_utc""" | Out-File -Append -FilePath $LogPath
+        Write """$computer"";""$timestamp"";""$account"";"""";""Windows"";""$OS_Version"";"""";""0"";""$PowerShell_Version"";"""";""$iso8601DateTime""" | Out-File -Append -FilePath $LogPath
+        Write "#### </cacf_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+    }
+}
+
+# Log variables
+$loglocation = Get-Location
+$logdir = "$loglocation\hyperv-$DeviceName"
+
+# Cleaning old logs
+try{(Get-ChildItem -Path $loglocation -Filter "hyperv-$DeviceName*report.zip").FullName | Remove-Item -Force -ErrorAction Stop}catch{}
+try{
+    Get-Item $logdir -ErrorAction Stop | Out-Null
+    Remove-Item $logdir -Recurse | Out-Null
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+catch{
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+Remove-Item *.out -ErrorAction SilentlyContinue
+Remove-Item *.log -ErrorAction SilentlyContinue
+
+$HostIP = (
+    Get-WmiObject Win32_NetworkAdapterConfiguration |
+    Where-Object {$_.IPAddress -ne $null -and $_.DefaultIPGateway -ne $null}
+).IPAddress[0]
+
+# Check required modules: Hyper-V, Storage, NetAdapter
+$hypervRole = (Get-WindowsFeature | Where-Object {$_.Installed -eq "True" -and $_.FeatureType -eq "Role" -and $_.name -eq "Hyper-V"}).name
+if (!($hypervRole)){
+    # Exit. Terminate log file
+    # SATHC header start
+    SAT-Header
+    $crt++
+    $date = Get-Date -Format "yyyy-mm-ddTHH.mm.ss"
+    MsgPrint "error" "$crt. Hyper-V role: missing"
+    Write-Host -ForegroundColor Red "Execute script on server with Hyper-V role enabled!"
+    Write-Output $date": DATA COLLECTION ON $computer FINISHED WITH ERRORS (1)" | Out-File $LogFile -encoding UTF8 -Append
+    Write-Output $date": Data collection status: Failed" | Out-File $LogFile -encoding UTF8 -Append
+    Exit
+}
+else{
+
+    # SATHC header start
+    SAT-Header
+    $DataCollectionStatus = "OK"
+    Write-Host
+    <#
+    {% if ('HyperV_Role' in check_list or 'all' in check_list) and '-HyperV_Role' not in check_list %}
+
+    # Hyper-V should be the only enabled role
+    ##########################################################################################################>
+    # https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/hyper-v-should-be-the-only-enabled-role
+    $crt++
+    MsgPrint "info" "$crt. Hyper-V role: installed"
+    Write "#### <HyperV_Role>" | out-file -Append -FilePath $LogPath
+    Get-WindowsFeature | Where-Object {$_.Installed -eq "True" -and $_.FeatureType -eq "Role"} |
+    select @{n="MachineName";e={$computer}},Name,DisplayName,@{n="Clustered";e={if($clustertest -like $computer){Write "True"}else{Write "False"}}} |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMMService.csv
+    Get-content -Path $logdir\$crt-VMMService.csv | out-file -Append -FilePath $LogPath
+    Write "#### </HyperV_Role>`r`n" | out-file -Append -FilePath $LogPath
+    <#{% endif %}#>
+}
+
+
+# Initial variables
+$VMs = Get-VM
+$computerSystem = Get-CimInstance -Class Win32_ComputerSystem
+
+<#
+{% if ('HyperV_SystemInfo' in check_list or 'all' in check_list) and '-HyperV_SystemInfo' not in check_list %}
+
+
+# System Information
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. System Information"
+Write "#### <HyperV_SystemInfo>" | out-file -Append -FilePath $LogPath
+$SystemInfo = New-Object -TypeName PSobject
+$computerSystemProduct = Get-CimInstance -Class Win32_ComputerSystemProduct
+$computerBIOS = Get-CimInstance -Class Win32_BIOS
+$computerOS = Get-CimInstance -Class Win32_OperatingSystem
+$computerCPU = Get-CimInstance -Class Win32_Processor
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+# Set up the different possible types of licenses in an array:
+$DaysSinceReboot = (New-TimeSpan -Start $($computerOS.LastBootUpTime.ToString()) -End (Get-Date)).Days
+$licenseStatus=@{0="Unlicensed"; 1="Licensed"; 2="OOBGrace"; 3="OOTGrace"; 4="NonGenuineGrace"; 5="Notification"; 6="ExtendedGrace"}
+# Get license details and assign the object to $r
+$r = Get-CimInstance -Class SoftwareLicensingProduct | Where {$_.ApplicationID -eq "55c92734-d682-4d71-983e-d6ec3f16059f" -AND $_.PartialProductKey -ne $null}
+$PageFileResults = Get-CimInstance -Class Win32_PageFileUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "MachineName" -Value $computer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Manufacturer" -Value $computerSystem.Manufacturer
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Model" -Value $computerSystem.Model
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem" -Value $computerOS.caption
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OperatingSystem ServicePack" -Value $computerOS.ServicePackMajorVersion
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BuildNumber" -Value $computerOS.BuildNumber
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Version" -Value $computerOS.Version
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "InstallDate" -value $ComputerOS.InstallDate.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "License" -Value $licenseStatus[[int]$r.LicenseStatus]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Uptime" -value  $computerOS.LastBootUpTime.ToString()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Days Since Reboot" -value  $DaysSinceReboot
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "BootDevice" -Value $computerOS.BootDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDevice" -Value $computerOS.SystemDevice
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "SystemDirectory" -Value $computerOS.SystemDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "WindowsDirectory" -Value $computerOS.WindowsDirectory
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "OSArchitecture" -Value $computerOS.OSArchitecture
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PowerShellVersion" -Value $PSVersionTable.PSVersion.tostring()
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CurrentTimeZone" -Value $computerOS.CurrentTimeZone
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Debug" -Value $computerOS.Debug
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Distributed" -Value $computerOS.Distributed
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "EncryptionLevel" -Value $computerOS.EncryptionLevel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "DNS Host Name" -Value $computerSystem.DNSHostName
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Domain Role" -Value $DomainRole[$computerSystem.DomainRole]
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Roles" -Value ($computerSystem.Roles -join ',')
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "Serial Number" -Value $computerBIOS.SerialNumber
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU Array" -Value $computerCPU.Name[0]
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU" -Value $computerCPU.Name
+}
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU Number Of Processors" -Value $computerSystem.NumberOfProcessors
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value ($computerCPU.NumberOfCores | Measure-Object -sum).sum
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU cores" -Value $computerCPU.NumberOfCores
+}
+If ($computerCPU -is [array]) {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value ($computerCPU.NumberOfLogicalProcessors | Measure-Object -sum).sum
+} else {
+    $SystemInfo | Add-Member -MemberType NoteProperty -Name "CPU LogicalProcessors" -Value $computerCPU.NumberOfLogicalProcessors
+}
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "RAM (GB)" -Value ([math]::Round($computerSystem.TotalPhysicalMemory/1GB,2))
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePath" -Value $PageFileResults.Description
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "AutoManagedPageFile" -Value $computerSystem.AutomaticManagedPagefile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileSize(MB)" -Value $PageFileResults.AllocatedBaseSize
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFileUsage(MB)" -Value $PageFileResults.CurrentUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "PageFilePeakUsage(MB)" -Value $PageFileResults.PeakUsage
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "TempPageFileInUse" -Value $PageFileResults.TempPageFile
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "ProductKeyChannel" -Value $r.ProductKeyChannel
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "UUID" -Value $computerSystemProduct.UUID
+$SystemInfo | Add-Member -MemberType NoteProperty -Name "FQDN" -Value $([System.Net.Dns]::GetHostByName($env:computerName).HostName)
+$SystemInfo |  Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-SystemInfo.csv
+Get-content -Path $logdir\$crt-SystemInfo.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_SystemInfo>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+<#{% if ('HyperV_IPconfig' in check_list or 'all' in check_list) and '-HyperV_IPconfig' not in check_list %}
+
+
+
+
+# IP Configuration
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. IP Configuration"
+Write "#### <HyperV_IPconfig>" | out-file -Append -FilePath $LogPath
+$IPAddress = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPAddress -ne $null}
+$IPAddress | sort |  select @{N='MachineName';E={$computer}},@{N='InterfaceName';E={(Get-NetAdapter -InterfaceIndex $_.InterfaceIndex).Name}}, Description, @{N='DNSDomainSuffixSearchOrder';E={($_.DNSDomainSuffixSearchOrder) -join ','}}, MACAddress, InterfaceIndex,`
+@{N='IPAddress';E={($_.IPAddress)[0]}}, @{N='IPSubnet';E={($_.IPSubnet) -join ','}}, `
+@{N='DefaultIPGateway';E={($_.DefaultIPGateway) -join ','}},@{N='DNSServerSearchOrder';E={($_.DNSServerSearchOrder) -join ','}},`
+DHCPEnabled, @{N='DHCPLeaseExpires';E={[Management.ManagementDateTimeConverter]::ToDateTime($_.DHCPLeaseExpires)}}, `
+@{N='DHCPLeaseObtained';E={[Management.ManagementDateTimeConverter]::ToDateTime($_.DHCPLeaseObtained)}}, DHCPServer |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-HyperV_IPconfig.csv
+Get-content -Path $logdir\$crt-HyperV_IPconfig.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_IPconfig>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_Host' in check_list or 'all' in check_list) and '-HyperV_Host' not in check_list %}
+
+
+
+
+# Host information
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Hyper-V Host information"
+Write "#### <HyperV_Host>" | out-file -Append -FilePath $LogPath
+$hvhost = Get-VMHost -ComputerName $computer |
+Select @{Name="MachineName";Expression={$computer}},
+@{Name="Domain";Expression={$_.FullyQualifiedDomainName}},
+@{Name="MemoryGB";Expression={$_.MemoryCapacity/1GB -as [int]}},
+MaximumStorageMigrations,NumaSpanningEnabled,IoVSupport,VirtualHardDiskPath,VirtualMachinePath
+$hvhost | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-SystemInfo.csv
+Get-content -Path $logdir\$crt-SystemInfo.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_Host>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_Memory' in check_list or 'all' in check_list) and '-HyperV_Memory' not in check_list %}
+
+
+
+
+# Memory
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Memory"
+Write "#### <HyperV_Memory>" | out-file -Append -FilePath $LogPath
+$memory = $computerOS |
+Select @{n="MachineName";e={$computer}},@{Name="FreeGB";Expression={[math]::Round(($_.FreePhysicalMemory/1MB),2)}},
+@{Name="TotalGB";Expression={[math]::Round(($_.TotalVisibleMemorySize/1MB),2)}},
+@{Name="Percent Free";Expression={[math]::Round(($_.FreePhysicalMemory/$_.TotalVisibleMemorySize)*100,2)}},
+@{Name="FreeVirtualGB";Expression={[math]::Round(($_.FreeVirtualMemory/1MB),2)}},
+@{Name="TotalVirtualGB";Expression={[math]::Round(($_.TotalVirtualMemorySize/1MB),2)}}
+$memory | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Memory.csv
+Get-content -Path $logdir\$crt-Memory.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_Memory>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_NeworkAdapters' in check_list or 'all' in check_list) and '-HyperV_NeworkAdapters' not in check_list %}
+
+
+
+
+# Nework Adapters
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Nework Adapters"
+Write "#### <HyperV_NeworkAdapters>" | out-file -Append -FilePath $LogPath
+$HyperV_NeworkAdapters = Get-NetAdapterStatistics -CimSession $computer |
+Select @{n="MachineName";e={$computer}},@{Name="NetworkAdapter";Expression={$_.Name}},
+@{Name="ReceivedUnicastBytesMB";Expression={[math]::Round(($_.ReceivedUnicastBytes/1MB),2)}},
+@{Name="SentUnicastBytesMB";Expression={[math]::Round(($_.SentUnicastBytes/1MB),2)}},
+ReceivedUnicastPackets,SentUnicastPackets,
+ReceivedDiscardedPackets,OutboundDiscardedPackets
+$HyperV_NeworkAdapters | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-NeworkAdapters.csv
+Get-content -Path $logdir\$crt-NeworkAdapters.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_NeworkAdapters>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_StorageVolumes' in check_list or 'all' in check_list) and '-HyperV_StorageVolumes' not in check_list %}
+
+
+
+
+# Storage Volumes
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Storage Volumes"
+Write "#### <HyperV_StorageVolumes>" | out-file -Append -FilePath $LogPath
+$Volumes = Get-Volume -CimSession $computer |
+Where drivetype -eq 'fixed' | Sort DriveLetter |
+Select @{n="MachineName";e={$computer}},@{Name="Drive";Expression={
+if ($_.DriveLetter) { $_.driveletter} else {"none"}
+}},Path,HealthStatus,
+@{Name="SizeGB";Expression={[math]::Round(($_.Size/1gb),2)}},
+@{Name="FreeGB";Expression={[math]::Round(($_.SizeRemaining/1gb),4)}},
+@{Name="PercentFree";Expression={[math]::Round((($_.SizeRemaining/$_.Size)*100),2)}}
+$Volumes | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Volumes.csv
+Get-content -Path $logdir\$crt-Volumes.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_StorageVolumes>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_Services' in check_list or 'all' in check_list) and '-HyperV_Services' not in check_list %}
+
+
+
+
+# HyperV Services (HyperV Virtual Machine Management Service (vmms) should be configured to start automatically)
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/The-Hyper-V-Virtual-Machine-Management-service-should-be-configured-to-start
+$crt++
+MsgPrint "info" "$crt. Hyper-V Services"
+Write "#### <HyperV_Services>" | out-file -Append -FilePath $LogPath
+Get-CimInstance win32_service -filter "displayname like 'hyper-v%'" -ComputerName $computer |
+Select @{n="MachineName";e={$computer}},Name,Displayname,StartMode,State,Startname,Status,ExitCode,ProcessID |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMMService.csv
+Get-content -Path $logdir\$crt-VMMService.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_Services>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_VMs' in check_list or 'all' in check_list) and '-HyperV_VMs' not in check_list %}
+
+
+
+
+# HyperV Virtual Machines
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Virtual Machines"
+Write "#### <HyperV_VMs>" | out-file -Append -FilePath $LogPath
+$VMs |
+select @{n="MachineName";e={$computer}},@{n="VMName";e={$_.Name}},State,@{Name="DomainRole";Expression={try{Invoke-Command -VMName $_.name -ScriptBlock {(Get-CimInstance -Class Win32_ComputerSystem).DomainRole} -Credential $credential -ErrorAction Stop}catch{$_}}},CPUUsage,MemoryAssigned,Uptime,Status,Version,ComputerName,AutomaticCheckpointsEnabled,`
+AutomaticCriticalErrorAction,AutomaticCriticalErrorActionTimeout,AutomaticStartAction,AutomaticStartDelay,`
+AutomaticStopAction,BatteryPassthroughEnabled,CheckpointType,ConfigurationLocation,CreationTime,`
+@{Name="DVDDrives";Expression={($_.DVDDrives).name}},DynamicMemoryEnabled,EnhancedSessionTransportType,
+@{Name="FibreChannelHostBusAdapters";Expression={($_.FibreChannelHostBusAdapters).name -join ","}},FloppyDrive,Generation,@{Name="Groups";Expression={($_.Groups).name -join ","}},`
+GuestControlledCacheTypes,@{Name="HardDrives";Expression={($_.HardDrives).name -join ","}},Heartbeat,HighMemoryMappedIoSpace,`
+IntegrationServicesState,IntegrationServicesVersion,IsClustered,IsDeleted,LockOnDisconnect,`
+LowMemoryMappedIoSpace,MemoryDemand,MemoryMaximum,MemoryMinimum,MemoryStartup,MemoryStatus,`
+@{Name="NetworkAdapters";Expression={($_.NetworkAdapters).name -join ","}},Notes,`
+NumaAligned,NumaNodesCount,NumaSocketCount,@{Name="OperationalStatus";Expression={($_.OperationalStatus) -replace ("{","")}},`
+ParentSnapshotId,ParentSnapshotName,Path,PrimaryOperationalStatus,PrimaryStatusDescription,`
+ProcessorCount,RemoteFxAdapter,ReplicationHealth,ReplicationMode,ReplicationState,ResourceMeteringEnabled,`
+SecondaryOperationalStatus,SecondaryStatusDescription,SizeOfSystemFiles,SmartPagingFileInUse,SmartPagingFilePath,`
+SnapshotFileLocation,@{Name="StatusDescriptions";Expression={($_.StatusDescriptions) -replace ("{","")}},VirtualMachineSubType,VirtualMachineType,@{Name="VMIntegrationService";Expression={($_.VMIntegrationService).name -join ","}} |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMs.csv
+Get-content -Path $logdir\$crt-VMs.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_VMs>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_VirtualDiskDetails' in check_list or 'all' in check_list) and '-HyperV_VirtualDiskDetails' not in check_list %}
+
+
+
+
+# HyperV Virtual Disk Details
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Virtual Disk Details"
+Write "#### <HyperV_VirtualDiskDetails>" | out-file -Append -FilePath $LogPath
+$VirtualDiskArray = @()
+foreach ($vm in $VMs) {
+    try{
+        foreach ($drive in $vm.harddrives) {
+            $detail = Get-VHD -ComputerName $computer -path $drive.path -ErrorAction Stop
+            $VHDObj = [pscustomobject]@{
+                MachineName = $computer
+                VMName = $vm.Name
+                VMState = $vm.State
+                ControllerType = $drive.ControllerType
+                ControllerNumber = $drive.ControllerNumber
+                IsDeleted = $drive.IsDeleted
+                VHDFormat = $detail.VHDFormat
+                VHDType = $detail.VHDType
+                FileSizeMB = $([math]::Round(($detail.FileSize/1MB),2))
+                SizeMB = $([math]::Round(($detail.Size/1MB),2))
+                MinimumSizeMB = $([math]::Round(($detail.MinimumSize/1MB),2))
+                Alignment = $detail.Alignment
+                Attached = $detail.Attached
+                Number = $detail.Number
+                DiskNumber = $detail.DiskNumber
+                BlockSize = $detail.BlockSize
+                LogicalSectorSize = $detail.LogicalSectorSize
+                ParenthPath = $detail.ParenthPath
+                PhysicalSectorSize = $detail.PhysicalSectorSize
+                DiskIdentifier = $detail.DiskIdentifier
+                FragmentationPercentage = $detail.FragmentationPercentage
+                IsPMEMCompatible = $detail.IsPMEMCompatible
+                DiskError = 'None'
+                Path = $drive.path
+            }
+            $VirtualDiskArray += $VHDObj
+        }
+    }
+    catch{
+        $VHDErrorObj = [pscustomobject]@{
+            MachineName = $computer
+            VMName = $vm.Name
+            VMState = $vm.State
+            ControllerType = 'n/a'
+            ControllerNumber = 'n/a'
+            IsDeleted = 'n/a'
+            VHDFormat = 'n/a'
+            VHDType = 'n/a'
+            FileSizeMB = 'n/a'
+            SizeMB = 'n/a'
+            MinimumSizeMB = 'n/a'
+            Alignment = 'n/a'
+            Attached = 'n/a'
+            Number = 'n/a'
+            DiskNumber = 'n/a'
+            BlockSize = 'n/a'
+            LogicalSectorSize = 'n/a'
+            ParenthPath = 'n/a'
+            PhysicalSectorSize = 'n/a'
+            DiskIdentifier = 'n/a'
+            FragmentationPercentage = 'n/a'
+            IsPMEMCompatible = 'n/a'
+            DiskError = $_
+            Path = $drive.path
+        }
+        $VirtualDiskArray += $VHDErrorObj
+    }
+}
+$VirtualDiskArray | sort VMName |
+select MachineName,VMName,VMState,ControllerType,ControllerNumber,IsDeleted,VHDFormat,VHDType,FileSizeMB,SizeMB,MinimumSizeMB,Alignment,Attached,DiskNumber,BlockSize,DiskIdentifier,FragmentationPercentage,IsPMEMCompatible,Path,DiskError |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMDisks.csv
+Get-content -Path $logdir\$crt-VMDisks.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_VirtualDiskDetails>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_IntegrationServices' in check_list or 'all' in check_list) and '-HyperV_IntegrationServices' not in check_list %}
+
+
+
+
+# Offer all available integration services to virtual machines
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/offer-all-available-integration-services-to-virtual-machines
+$crt++
+MsgPrint "info" "$crt. Integration Services"
+Write "#### <HyperV_IntegrationServices>" | out-file -Append -FilePath $LogPath
+$VMIntegrationServiceArray = $null
+$VMIntegrationServiceArray = @()
+foreach ($VM in $VMs){
+    try{$VMIntegrationServiceArray += Get-VMIntegrationService -VMName $VM.VMName -ErrorAction Stop}
+    catch{
+        $VMIntegrationServiceobj = [pscustomobject]@{
+            MachineName = $computer
+            VMName = $VM.VMName
+            Name = 'Integration Service error'
+            Enabled  = 'Error'
+        }
+        $VMIntegrationServiceArray += $VMIntegrationServiceobj
+    }
+}
+$VMIntegrationServiceArray | select @{Name="MachineName";Expression={$computer}},VMName,Name,Enabled |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-IntegrationServices.csv
+Get-content -Path $logdir\$crt-IntegrationServices.csv | Out-File -Append -FilePath $LogPath
+Write "#### </HyperV_IntegrationServices>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_VMDisplayAdapters' in check_list or 'all' in check_list) and '-HyperV_VMDisplayAdapters' not in check_list %}
+
+
+
+
+# Display adapters should be enabled in virtual machines to provide video capabilities
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/display-adapters-should-be-enabled-in-virtual-machines-to-provide-video
+$crt++
+MsgPrint "info" "$crt. Virtual Machines Display Adapters"
+Write "#### <HyperV_VMDisplayAdapters>" | out-file -Append -FilePath $LogPath
+$VMDisplayAdapters = foreach ($vm in $VMs){
+    Get-VMVideo -VM $VM | select @{Name="MachineName";Expression={$computer}},VMName,Name,HorizontalResolution,VerticalResolution,IsDeleted,ResolutionType,VMId,VMSnapshotId,VMSnapshotName
+}
+$VMDisplayAdapters | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMDisplayAdapters.csv
+Get-content -Path $logdir\$crt-VMDisplayAdapters.csv | Out-File -Append -FilePath $LogPath
+Write "#### </HyperV_VMDisplayAdapters>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_VMLogicalCPU' in check_list or 'all' in check_list) and '-HyperV_VMLogicalCPU' not in check_list %}
+
+
+
+
+# The number of logical processors in use must not exceed the supported maximum
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/the-number-of-logical-processors-in-use-must-not-exceed-the-supported-maximum
+$crt++
+MsgPrint "info" "$crt. Virtual Machine Logical Processors"
+Write "#### <HyperV_VMLogicalCPU>" | out-file -Append -FilePath $LogPath
+$VMProcessorArray = $null
+$VMProcessorArray = @()
+foreach ($VM in $VMs){
+    try{$VMProcessorArray += Get-VMProcessor -VMName $VM.VMName -ErrorAction Stop}
+    catch{
+        $VMProcessorObj = [pscustomobject]@{
+            VMName = $VM.VMName
+            Name = 'n/a'
+            CompatibilityForMigrationEnabled = 'n/a'
+            CompatibilityForOlderOperatingSystemsEnabled = 'n/a'
+            Count = 'n/a'
+            EnableHostResourceProtection = 'n/a'
+            EnablePerfmonLbr = 'n/a'
+            EnablePerfmonPebs = 'n/a'
+            EnablePerfmonPmu = 'n/a'
+            ExposeVirtualizationExtensions = 'n/a'
+            HwThreadCountPerCore = 'n/a'
+            IsDeleted = 'n/a'
+            Maximum = 'n/a'
+            MaximumCountPerNumaNode = 'n/a'
+            MaximumCountPerNumaSocket = 'n/a'
+            MaximumExceed = 'n/a'
+            OperationalStatus = 'n/a'
+            RelativeWeight = 'n/a'
+            Reserve = 'n/a'
+            ResourcePoolName = 'n/a'
+            StatusDescription = 'n/a'
+        }
+        $VMProcessorArray += $VMProcessorObj
+    }
+}
+$VMProcessorArray |
+select @{Name="MachineName";Expression={$computer}},VMName,Name,CompatibilityForMigrationEnabled,CompatibilityForOlderOperatingSystemsEnabled,Count,EnableHostResourceProtection,EnablePerfmonLbr,EnablePerfmonPebs,EnablePerfmonPmu,ExposeVirtualizationExtensions,HwThreadCountPerCore,IsDeleted,Maximum,MaximumCountPerNumaNode,MaximumCountPerNumaSocket,@{Name="MaximumExceed";Expression={if ($_.Count -le $_.MaximumCountPerNumaNode){"False"}else{"True"}}},@{Name="OperationalStatus";Expression={($_.OperationalStatus) -join ","}},RelativeWeight,Reserve,ResourcePoolName,@{Name="StatusDescription";Expression={($_.StatusDescription) -join ","}} |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-VMLogicalCPU.csv
+Get-content -Path $logdir\$crt-VMLogicalCPU.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_VMLogicalCPU>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_RAMECC' in check_list or 'all' in check_list) and '-HyperV_RAMECC' not in check_list %}
+
+
+
+
+# Use RAM that provides error correction
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/Use-RAM-that-provides-error-correction
+$crt++
+MsgPrint "info" "$crt. RAM Error Correction"
+Write "#### <HyperV_RAMECC>" | out-file -Append -FilePath $LogPath
+$RAM = Get-WmiObject Win32_PhysicalMemory |
+Select-Object BankLabel,@{Name = "CapacityGB"; Expression = {$_.Capacity / 1GB}}, Manufacturer, DataWidth, TotalWidth
+$RAMArray =@()
+foreach ($item in $RAM){
+    $obj = New-Object PSObject
+    if ($item.DataWidth -eq $item.TotalWidth){$ECC = "Non-ECC"}else{$ECC = "ECC"}
+    $obj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+    $obj | Add-Member -MemberType NoteProperty -Name BankLabel -Value $item.BankLabel
+    $obj | Add-Member  -MemberType NoteProperty -Name Manufacturer -Value $item.Manufacturer
+    $obj | Add-Member  -MemberType NoteProperty -Name CapacityGB -Value $item.CapacityGB
+    $obj | Add-Member  -MemberType NoteProperty -Name DataWidth -Value $item.DataWidth
+    $obj | Add-Member  -MemberType NoteProperty -Name TotalWidth -Value $item.TotalWidth
+    $obj | Add-Member  -MemberType NoteProperty -Name ECC -Value $ECC
+    $RAMArray += $obj
+}
+$RAMArray | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-RAMECC.csv
+Get-content -Path $logdir\$crt-RAMECC.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_RAMECC>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('HyperV_SMBv3' in check_list or 'all' in check_list) and '-HyperV_SMBv3' not in check_list %}
+
+
+
+
+# Use at least SMB protocol version 3.0 for file shares that store files for virtual machines.
+##########################################################################################################>
+# https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/best-practices-analyzer/Use-at-least-SMB-protocol-version-3.0-for-file-shares-that-store-files-for-virtual-machines
+$crt++
+MsgPrint "info" "$crt. SMB v3 Shared Drives"
+Write "#### <HyperV_SMBv3>" | out-file -Append -FilePath $LogPath
+$SMBshares = Get-SmbConnection | Where-Object {$_.ServerName -NE "localhost" -and $_.ShareName -NE "SysVol" -and $_.ShareName -NE "IPC$"}
+$SMBshares | Select @{Name="MachineName";Expression={$computer}},ServerName,Redirected,ContinuouslyAvailable,Dialect,Encrypted,NumOpens,ShareName,Signed |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-SMBv3.csv
+Get-content -Path $logdir\$crt-SMBv3.csv | out-file -Append -FilePath $LogPath
+Write "#### </HyperV_SMBv3>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+
+
+
+
+# Compressing the logs (Compress-Archive requires PowerShell 5+)
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Data collection compression and cleanup"
+# Convert to UTF8
+$lines = Get-Content $logpath
+$lines | Out-File $logpath -encoding UTF8
+$date = Get-Date -Format "yyyy-mm-ddTHH.mm.ss"
+Write-Output $date": Data collection status: $DataCollectionStatus" | Out-File $LogFile -encoding UTF8 -Append
+Copy-Item -Path $LogPath -Destination $logdir
+Copy-Item -Path $LogFile -Destination $logdir
+if ($ZipLog -eq $True) {
+    $TimeStamp = Get-Date -Format yyyyMMdd-HHmmss
+    if (($PSVersionTable.PSVersion).Major -lt 5){
+        Write-Host
+        Write-Host "Please zip folder ""$logdir"" and collect for further analysis." -ForegroundColor green
+    }
+    else{
+        Write-Host
+        Compress-Archive -Path $logdir* -CompressionLevel Optimal -DestinationPath $logdir-$TimeStamp-report.zip -Force
+        Remove-Item -path $logdir -recurse
+        Write-Host "Please collect $logdir-$TimeStamp-report.zip for further analysis." -ForegroundColor green
+        Write-Host
+    }
+}
+Else {
+    Write-Host "$crt. Cleaning working folder/files"
+    Remove-Item -path $logdir -recurse
+}

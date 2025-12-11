@@ -1,0 +1,6 @@
+---
+- name: Do not use this
+  hosts: localhost
+  remote_user: root
+  roles:
+    - udc_windows_os

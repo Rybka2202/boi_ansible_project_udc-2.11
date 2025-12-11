@@ -1,0 +1,765 @@
+---
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logging_properties' in check_list or 'all' in check_list) and '-logging_properties' not in check_list %}
+  - header: '#### <logging_properties>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        while read -r line; do
+          # Skip empty line
+          if grep -qP '^\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Skip comment line
+          if grep -qP '^#' <<< "$line"; then
+            continue
+          fi
+
+          echo $line
+        done < "$CATALINA_HOME/conf/logging.properties"
+      }
+    become: true
+    footer: >
+      #### </logging_properties>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logging_properties_directory_folders' in check_list or 'all' in check_list) and '-logging_properties_directory_folders' not in check_list %}
+  - header: '#### <logging_properties_directory_folders>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+          echo "ERR=Failed to run! No CATALINA_BASE variable set."
+          exit 0
+        fi
+
+        folders=()
+        count=0
+        while read -r line; do
+          # Skip empty line
+          if grep -qP '^\s*$' <<< "$line"; then
+              continue
+          fi
+
+          # Skip comment line
+          if grep -qP '^#' <<< "$line"; then
+            continue
+          fi
+
+          # Extract data from properties file
+          if grep -qP '\.directory\s*=\s*' <<< "$line"; then
+            folders[count++]=$(echo $line | sed 's/.*=\s*//' | tr -d '\r')
+          fi
+        done < "$CATALINA_BASE/conf/logging.properties"
+
+        # Extract the variable content and list permissions
+        for folder in "${folders[@]}"; do
+          ls -ldL $folder
+        done
+      }
+    become: true
+    footer: >
+      #### </logging_properties_directory_folders>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('server_xml' in check_list or 'all' in check_list) and '-server_xml' not in check_list %}
+  - header: '#### <server_xml>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        queue=0
+        while read -r line; do
+          # Eliminate blank lines
+          if grep -qP '^[\s\t]*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate full comment line
+          if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate multiple lines comment
+          if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+            queue=1
+            continue
+          fi
+          if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+            queue=0
+            continue
+          fi
+
+          # Extract data from xml file
+          if [ $queue -eq 0 ]; then
+            echo $line
+          fi
+        done < "$CATALINA_HOME/conf/server.xml"
+      }
+    become: true
+    footer: >
+      #### </server_xml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('catalina_policy' in check_list or 'all' in check_list) and '-catalina_policy' not in check_list %}
+  - header: '#### <catalina_policy>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        while read -r line; do
+          # Skip empty line
+          if grep -qP '^\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Skip comment line
+          if grep -qP '^\/\/' <<< "$line"; then
+            continue
+          fi
+
+          echo $line
+        done < "$CATALINA_HOME/conf/catalina.policy"
+      }
+    become: true
+    footer: >
+      #### </catalina_policy>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('catalina_properties' in check_list or 'all' in check_list) and '-catalina_properties' not in check_list %}
+  - header: '#### <catalina_properties>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        while read -r line; do
+          # Skip empty line
+          if grep -qP '^\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Skip comment line
+          if grep -qP '^#' <<< "$line"; then
+            continue
+          fi
+
+          echo $line
+        done < "$CATALINA_HOME/conf/catalina.properties"
+      }
+    become: true
+    footer: >
+      #### </catalina_properties>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_service' in check_list or 'all' in check_list) and '-tomcat_service' not in check_list %}
+  - header: '#### <tomcat_service>'
+    command: '/usr/bin/cat /etc/systemd/system/tomcat.service | grep -vP "^\s*$"'
+    become: true
+    footer: >
+      #### </tomcat_service>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('context_xml' in check_list or 'all' in check_list) and '-context_xml' not in check_list %}
+  - header: '#### <context_xml>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        queue=0
+        while read -r line; do
+          # Eliminate blank lines
+          if grep -qP '^[\s\t]*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate full comment line
+          if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate multiple lines comment
+          if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+            queue=1
+            continue
+          fi
+          if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+            queue=0
+            continue
+          fi
+
+          # Extract data from xml file
+          if [ $queue -eq 0 ]; then
+            echo $line
+          fi
+        done < "$CATALINA_HOME/conf/context.xml"
+      }
+    become: true
+    footer: >
+      #### </context_xml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_context_xml' in check_list or 'all' in check_list) and '-applications_context_xml' not in check_list %}
+  - header: '#### <applications_context_xml>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+            echo "ERR=Failed to run! No CATALINA_BASE variable set."
+            exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_BASE/webapps -name "context.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract data from xml file
+            if [ $queue -eq 0 ]; then
+              echo "$file:$line"
+            fi
+          done < "$file"
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_context_xml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_context_xml_pattern' in check_list or 'all' in check_list) and '-applications_context_xml_pattern' not in check_list %}
+  - header: '#### <applications_context_xml_pattern>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+          echo "ERR=Failed to run! No CATALINA_BASE variable set."
+          exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_BASE/webapps -name "context.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          printed=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract data from xml file
+            if [ $queue -eq 0 ] && grep -qP 'pattern\s*=\s*"' <<< "$line"; then
+              echo "$file:$line"
+              printed=1
+            fi
+          done < "$file"
+
+          if [ $printed -eq 0 ]; then
+            echo "$file:MISSING, No pattern found!"
+          fi
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_context_xml_pattern>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_context_xml_logEffectiveWebXml' in check_list or 'all' in check_list) and '-applications_context_xml_logEffectiveWebXml' not in check_list %}
+  - header: '#### <applications_context_xml_logEffectiveWebXml>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+          echo "ERR=Failed to run! No CATALINA_BASE variable set."
+          exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_BASE/webapps -name "context.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          printed=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract data from xml file
+            if [ $queue -eq 0 ] && grep -qP 'logEffectiveWebXml\s*=\s*"' <<< "$line"; then
+              echo "$file:$line"
+              printed=1
+            fi
+          done < "$file"
+
+          if [ $printed -eq 0 ]; then
+            echo "$file:MISSING, No logEffectiveWebXml attribute found!"
+          fi
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_context_xml_logEffectiveWebXml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('web_xml' in check_list or 'all' in check_list) and '-web_xml' not in check_list %}
+  - header: '#### <web_xml>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        queue=0
+        while read -r line; do
+          # Eliminate blank lines
+          if grep -qP '^[\s\t]*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate full comment line
+          if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Eliminate multiple lines comment
+          if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+            queue=1
+            continue
+          fi
+          if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+            queue=0
+            continue
+          fi
+
+          # Extract data from xml file
+          if [ $queue -eq 0 ]; then
+            echo $line
+          fi
+        done < "$CATALINA_HOME/conf/web.xml"
+      }
+    become: true
+    footer: >
+      #### </web_xml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_web_xml' in check_list or 'all' in check_list) and '-applications_web_xml' not in check_list %}
+  - header: '#### <applications_web_xml>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_HOME/webapps -name "web.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract data from xml file
+            if [ $queue -eq 0 ]; then
+              echo "$file:$line"
+            fi
+          done < "$file"
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_web_xml>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_web_xml_metadata_complete' in check_list or 'all' in check_list) and '-applications_web_xml_metadata_complete' not in check_list %}
+  - header: '#### <applications_web_xml_metadata_complete>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+          echo "ERR=Failed to run! No CATALINA_BASE variable set."
+          exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_BASE/webapps -name "web.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          printed=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract data from xml file
+            if [ $queue -eq 0 ] && grep -qP 'metadata-complete\s*=\s*"' <<< "$line"; then
+              echo "$file:$line"
+              printed=1
+            fi
+          done < "$file"
+
+          if [ $printed -eq 0 ]; then
+            echo "$file:MISSING, No metadata-complete attribute found!"
+          fi
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_web_xml_metadata_complete>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('applications_web_xml_error_page' in check_list or 'all' in check_list) and '-applications_web_xml_error_page' not in check_list %}
+  - header: '#### <applications_web_xml_error_page>'
+    command: |
+      {
+        if [ -z "$CATALINA_BASE" ]; then
+          echo "ERR=Failed to run! No CATALINA_BASE variable set."
+          exit 0
+        fi
+
+        files=($(/usr/bin/find $CATALINA_BASE/webapps -name "web.xml"))
+        for file in "${files[@]}"; do
+          queue=0
+          print=0
+          printed=0
+          while read -r line; do
+            # Skip empty line
+            if grep -qP '^\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip full comment line
+            if grep -qP '^\s*<!--[\S\s]*-->\s*$' <<< "$line"; then
+              continue
+            fi
+
+            # Skip multiple lines comment
+            if [ $queue -eq 0 ] && grep -qP '<!--' <<< "$line"; then
+              queue=1
+              continue
+            fi
+            if [ $queue -eq 1 ] && grep -qP "\-->" <<< "$line"; then
+              queue=0
+              continue
+            fi
+
+            # Extract error-page init tag from xml file
+            if [ $queue -eq 0 ] && grep -qP "<error-page>" <<< "$line" && grep -qP "<\/error-page>" <<< "$line"; then
+              echo $line
+              printed=1
+              break
+            fi
+            if [ $queue -eq 0 ] && grep -qP "<error-page>" <<< "$line" && ! grep -qP "<\/error-page>" <<< "$line"; then
+              output_command="$line"
+              print=1
+              printed=1
+              continue
+            fi
+            if [ $print -eq 1 ] && grep -qP "<\/error-page>" <<< "$line"; then
+              output_command=$( cat <(echo "$output_command") <(echo $line) )
+              print=0
+              continue
+            fi
+
+            if [ $print -eq 1 ]; then
+              output_command=$( cat <(echo "$output_command") <(echo $line) )
+            fi
+          done < "$file"
+
+          if [ $printed -eq 0 ]; then
+            echo "$file:MISSING, No error-page tag found!"
+          else
+            echo "$file:$output_command" | tr '\r\n' ' ' | sed -r 's/[ ]+/ /g;  s/[ ]$//'
+            echo ''
+          fi
+        done
+      }
+    become: true
+    footer: >
+      #### </applications_web_xml_error_page>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_processes' in check_list or 'all' in check_list) and '-tomcat_processes' not in check_list %}
+  - header: '#### <tomcat_processes>'
+    command: '/usr/bin/ps -ef | grep tomcat'
+    become: true
+    footer: >
+      #### </tomcat_processes>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('catalina_home_folder' in check_list or 'all' in check_list) and '-catalina_home_folder' not in check_list %}
+  - header: '#### <catalina_home_folder>'
+    command: '/usr/bin/ls -ldL $CATALINA_HOME'
+    become: true
+    footer: >
+      #### </catalina_home_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('catalina_base_folder' in check_list or 'all' in check_list) and '-catalina_base_folder' not in check_list %}
+  - header: '#### <catalina_base_folder>'
+    command: '/usr/bin/ls -ldL $CATALINA_BASE'
+    become: true
+    footer: >
+      #### </catalina_base_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_bin_folder' in check_list or 'all' in check_list) and '-tomcat_bin_folder' not in check_list %}
+  - header: '#### <tomcat_bin_folder>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        /usr/bin/find $CATALINA_HOME/bin  -type d -exec /usr/bin/ls -ld {} \;
+        /usr/bin/find $CATALINA_HOME/bin/ -type f -exec /usr/bin/ls -l {} \;
+
+      }
+    become: true
+    footer: >
+      #### </tomcat_bin_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_conf_folder' in check_list or 'all' in check_list) and '-tomcat_conf_folder' not in check_list %}
+  - header: '#### <tomcat_conf_folder>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        /usr/bin/find $CATALINA_HOME/conf  -type d -exec /usr/bin/ls -ld {} \;
+        /usr/bin/find $CATALINA_HOME/conf/ -type f -exec /usr/bin/ls -l {} \;
+
+      }
+    become: true
+    footer: >
+      #### </tomcat_conf_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_log_folder' in check_list or 'all' in check_list) and '-tomcat_log_folder' not in check_list %}
+  - header: '#### <tomcat_log_folder>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        /usr/bin/find $CATALINA_HOME/logs  -type d -exec /usr/bin/ls -ld {} \;
+        /usr/bin/find $CATALINA_HOME/logs/ -type f -exec /usr/bin/ls -l {} \;
+
+      }
+    become: true
+    footer: >
+      #### </tomcat_log_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_temp_folder' in check_list or 'all' in check_list) and '-tomcat_temp_folder' not in check_list %}
+  - header: '#### <tomcat_temp_folder>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        /usr/bin/find $CATALINA_HOME/temp  -type d -exec /usr/bin/ls -ld {} \;
+        /usr/bin/find $CATALINA_HOME/temp/ -type f -exec /usr/bin/ls -l {} \;
+
+      }
+    become: true
+    footer: >
+      #### </tomcat_temp_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_webapps_folder' in check_list or 'all' in check_list) and '-tomcat_webapps_folder' not in check_list %}
+  - header: '#### <tomcat_webapps_folder>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        /usr/bin/find $CATALINA_HOME/webapps  -type d -exec /usr/bin/ls -ld {} \;
+        /usr/bin/find $CATALINA_HOME/webapps/ -type f -exec /usr/bin/ls -l {} \;
+
+      }
+    become: true
+    footer: >
+      #### </tomcat_webapps_folder>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_catalina_sh' in check_list or 'all' in check_list) and '-tomcat_catalina_sh' not in check_list %}
+  - header: '#### <tomcat_catalina_sh>'
+    command: |
+      {
+        if [ -z "$CATALINA_HOME" ]; then
+          echo "ERR=Failed to run! No CATALINA_HOME variable set."
+          exit 0
+        fi
+
+        while read -r line; do
+          # Skip empty line
+          if grep -qP '^\s*$' <<< "$line"; then
+            continue
+          fi
+
+          # Skip comment line
+          if grep -qP '^#' <<< "$line"; then
+            continue
+          fi
+
+          echo $line
+        done < "$CATALINA_HOME/bin/catalina.sh"
+      }
+    become: true
+    footer: >
+      #### </tomcat_catalina_sh>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('system_serial_number' in check_list or 'all' in check_list) and '-system_serial_number' not in check_list %}
+  - header: '#### <system_serial_number>'
+    command: '/usr/sbin/dmidecode -s system-serial-number'
+    become: true
+    footer: >
+      #### </system_serial_number>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tomcat_version' in check_list or 'all' in check_list) and '-tomcat_version' not in check_list %}
+  - header: '#### <tomcat_version>'
+    command: '/usr/bin/cat $CATALINA_HOME/RELEASE-NOTES | grep -Pi "tomcat\s+version"'
+    become: true
+    footer: >
+      #### </tomcat_version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('lscpu' in check_list or 'all' in check_list) and '-lscpu' not in check_list %}
+  - header: '#### <lscpu>'
+    command: '/usr/bin/lscpu || /bin/lscpu'
+    become: true
+    footer: >
+      #### </lscpu>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

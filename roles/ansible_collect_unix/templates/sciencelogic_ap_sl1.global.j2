@@ -1,0 +1,238 @@
+---
+settings_global:
+{% if ('chage_em7admin' in check_list or 'all' in check_list) and '-chage_em7admin' not in check_list %}
+  - header: '#### <chage_em7admin>'
+    command: 'chage -l em7admin'
+    footer: >
+      #### </chage_em7admin>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('chage_root' in check_list or 'all' in check_list) and '-chage_root' not in check_list %}
+  - header: '#### <chage_root>'
+    command: 'chage -l root'
+    become: true
+    footer: >
+      #### </chage_root>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pwquality.conf' in check_list or 'all' in check_list) and '-pwquality.conf' not in check_list %}
+  - header: '#### <pwquality.conf>'
+    command: 'cat /etc/security/pwquality.conf'
+    footer: >
+      #### </pwquality.conf>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pam_password_auth' in check_list or 'all' in check_list) and '-pam_password_auth' not in check_list %}
+  - header: '#### <pam_password_auth>'
+    command: 'cat /etc/pam.d/password-auth'
+    footer: >
+      #### </pam_password_auth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pam_system_auth' in check_list or 'all' in check_list) and '-pam_system_auth' not in check_list %}
+  - header: '#### <pam_system_auth>'
+    command: 'cat /etc/pam.d/system-auth'
+    footer: >
+      #### </pam_system_auth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('silo_conf' in check_list or 'all' in check_list) and '-silo_conf' not in check_list %}
+  - header: '#### <silo_conf>'
+    command: 'cat  /etc/silo.conf'
+    footer: >
+      #### </silo_conf>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sshd_config' in check_list or 'all' in check_list) and '-sshd_config' not in check_list %}
+  - header: '#### <sshd_config>'
+    command: 'cat  /etc/ssh/sshd_config'
+    become: true
+    footer: >
+      #### </sshd_config>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('passwd' in check_list or 'all' in check_list) and '-passwd' not in check_list %}
+  - header: '#### <passwd>'
+    command: 'cat  /etc/passwd'
+    footer: >
+      #### </passwd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('php_ini' in check_list or 'all' in check_list) and '-php_ini' not in check_list %}
+  - header: '#### <php_ini>'
+    command: >
+      cat  /etc/php.ini | egrep -v '^;|^$'
+
+    footer: >
+      #### </php_ini>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('nginx_ssl_protocols' in check_list or 'all' in check_list) and '-nginx_ssl_protocols' not in check_list %}
+  - header: '#### <nginx_ssl_protocols>'
+    command: 'grep -H ssl_protocols /etc/nginx/conf.d/*.conf'
+    footer: >
+      #### </nginx_ssl_protocols>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('system_status' in check_list or 'all' in check_list) and '-system_status' not in check_list %}
+  - header: '#### <system_status>'
+    command: "/usr/bin/tac /var/log/em7/system_status.log | /usr/bin/awk '/All Done!/{f=1};/Command invoked:/{if (f==1) {f;exit}};f'  | /usr/bin/tac"
+    footer: >
+      #### </system_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('dmidecode' in check_list or 'all' in check_list) and '-dmidecode' not in check_list %}
+  - header: '#### <dmidecode>'
+    command: 'dmidecode'
+    become: true
+    footer: >
+      #### </dmidecode>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('tmout' in check_list or 'all' in check_list) and '-tmoout' not in check_list %}
+  - header: '#### <tmout>'
+    command: 'grep "TMOUT" /etc/profile.d/*'
+    footer: >
+      #### </tmout>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('system_settings_core' in check_list or 'all' in check_list) and '-system_settings_core' not in check_list %}
+  - header: '#### <system_settings_core>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo 'select * from master.system_settings_core;' | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </system_settings_core>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('access_hooks_keys' in check_list or 'all' in check_list) and '-access_hooks_keys' not in check_list %}
+  - header: '#### <access_hooks_keys>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo 'select mak2h.hook_id, mak2h.key_id, mak.* from master_access.keys_to_hooks as mak2h left join master_access.keys mak on mak.key_id = mak2h.key_id where mak2h.hook_id in ("CRED_VIEW_PASSWORDS","SYS_TOOLS_DB");' | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </access_hooks_keys>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('iam_report_schedule' in check_list or 'all' in check_list) and '-iam_report_schedule' not in check_list %}
+  - header: '#### <iam_report_schedule>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo 'select mrdrn.rep_id, mrdrn.title, mrdrn.version, mrrs.* from master_reports.dynamic_reports_new as mrdrn left join master_reports.report_schedules mrrs on mrrs.rep_id = mrdrn.rep_id where mrdrn.title = "Kyndryl: IAM Extract"' | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </iam_report_schedule>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('external_authentication' in check_list or 'all' in check_list) and '-external_authentication' not in check_list %}
+  - header: '#### <external_authentication>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo 'select map.profile_id, map.profile_name, map.enabled, mar.id, mar.name, mar.type as auth_type, mdact.name as auth_type_name from master.auth_profile_to_resources as map2r
+      left join master.authentication_profiles as map on map.profile_id = map2r.profile_id
+      left join  master.authentication_resources as mar on mar.id = map2r.resource_id
+      left join master.definitions_auth_connector_types as mdact on mdact.id = mar.type
+      where map.enabled = 1 and mar.type >2 ' | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </external_authentication>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ui_passwd_settings' in check_list or 'all' in check_list) and '-ui_passwd_settings' not in check_list %}
+  - header: '#### <ui_passwd_settings>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo "
+      select
+      maa.roa_id,
+      maa.uid,
+      maa.user,
+      maa.email,
+      mbui.uid_convention_data,
+      case
+        -- Some assumptions are made in deciding the user type. If this does not work the users can be updated with UID convention data in the notes field.
+        when mbui.uid_convention_data <> '' then CONCAT_WS(':',SUBSTRING_INDEX(SUBSTRING_INDEX(mbui.uid_convention_data, '/',2),'/',-1),maa.ldap)
+        when mbui.uid_convention_data = '' and lower(maa.user) REGEXP '.*@kyndryl.com' then CONCAT_WS(':','K',maa.ldap)
+        when mbui.uid_convention_data = '' and lower(maa.user) REGEXP '^[^[:space:]@]+@([^[:space:]@.,]+\.)+[^[:space:]@.,]{2,}$' then CONCAT_WS(':','E',maa.ldap)
+        when mbui.uid_convention_data = '' and maa.ldap=0 and not maa.user in ('em7admin','kdadmin') then 'S:0'
+        when mbui.uid_convention_data = '' and maa.ldap=0 and maa.user in ('em7admin','kdadmin') then 'F:0'
+        else CONCAT_WS(':','U',maa.ldap)
+      end as uid_type,
+      maa.ldap,
+      maa.passwd_expiration,
+      maa.passwd_prev_count,
+      maa.passwd_strength,
+      maa.state,
+      maa.admin,
+      maa.create_user,
+      maa.passwd_reset_required,
+      case
+        -- For local users, if the user was changed by uid other than their own, then passwd_reset_required must be set
+        when maa.ldap=0 and (not maa.edit_user = maa.uid) and (maa.passwd_set_date = maa.create_date or maa.passwd_set_date = maa.edit_date) then 'YES'
+        else 'NO'
+      end as local_passwd_changed,
+      maa.passwd_set_date,
+      maa.create_date,
+      maa.edit_date,
+      maa.edit_user,
+      maal.login_time,
+      mbui.country as l_country,
+      mbui.state as l_state,
+      mbui.city as l_city,
+      mpu.policy_id,
+      mpu.name as policy_name,
+      mpu.passwd_expiration as policy_passwd_expiration,
+      mpu.passwd_prev_count as policy_passwd_prev_count,
+      mpu.passwd_strength as policy_passwd_strength,
+      (select passwd_hash_method_default from master.system_settings_core) as passwd_hash_method_default,
+      (select passwd_reset_interval from master.system_settings_core) as passwd_reset_interval
+      from  master_access.accounts as maa
+      left join master.policies_users as mpu on mpu.policy_id = maa.template_id
+      left join (select uid, max(login_time) as login_time from master_access.access_log group by uid) as maal on maal.uid = maa.uid
+      left join (
+            select
+            uid,
+            city,
+            country,
+            state,
+            case
+                when notes REGEXP '^[0-9]{3}|[A-Z]{2}/[[:alpha:]]/[^/]*/[^/]*/[^<]*$' then notes
+                when notes REGEXP '^[0-9]{3}|[A-Z]{2}/[[:alpha:]]/[^/]*/[^/]*/[^<]*<br>' then SUBSTRING_INDEX(notes, '<br>',1)
+                when notes REGEXP '<br>[0-9]{3}|[A-Z]{2}/[[:alpha:]]/[^/]*/[^/]*/[^<]*<br>$' then REPLACE(SUBSTRING_INDEX(notes, '<br>',-2),'<br>','')
+              else ''
+            end as uid_convention_data
+            from master_biz.user_information
+            ) as mbui on mbui.uid = maa.uid
+      where maa.state = 1
+      " | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </ui_passwd_settings>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ui_legaleese' in check_list or 'all' in check_list) and '-ui_legaleese' not in check_list %}
+  - header: '#### <ui_legaleese>'
+    command: >
+      egrep 'Appliance Model:' /var/log/em7/system_status.log | tail -1 | egrep 'Appliance Model: (AIO|DB)' && systemctl is-active mariadb | egrep '^active$' && echo 'select *
+      from master.definitions_legaleese where leg_id = 2' | silo_mysql --xml || echo "=== NOT APPLICABLE ==="
+
+    footer: >
+      #### </ui_legaleese>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

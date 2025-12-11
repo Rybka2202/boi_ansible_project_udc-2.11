@@ -1,0 +1,738 @@
+{% if ('lssec_etc_security_logincfg_default' in check_list or 'all' in check_list) and '-lssec_etc_security_logincfg_default' not in check_list %}
+- header: '#### <lssec_etc_security_logincfg_default>'
+  command: >
+    lssec -f /etc/security/login.cfg -s default -a ALL
+  become: true
+  footer: '#### </lssec_etc_security_logincfg_default>'
+{% endif %}
+
+
+{% if ('lssec_etc_security_user' in check_list or 'all' in check_list) and '-lssec_etc_security_user' not in check_list %}
+- header: '#### <lssec_etc_security_user>'
+  command: >
+    lssec -f /etc/security/user -s default -a ALL
+  become: true
+  footer: '#### </lssec_etc_security_user>'
+{% endif %}
+
+{% if ('pwd_algorithm_login.cfg' in check_list or 'all' in check_list) and '-pwd_algorithm_login.cfg' not in check_list %}
+- header: '#### <pwd_algorithm_login.cfg>'
+  command: >
+    lssec -f /etc/security/login.cfg -s usw -a pwd_algorithm
+  become: true
+  footer: '#### </pwd_algorithm_login.cfg>'
+{% endif %}
+
+{% if ('lsuser_account_access' in check_list or 'all' in check_list) and '-lsuser_account_access' not in check_list %}
+- header: '#### <lsuser_account_access>'
+  command: >
+    lsuser -a account_locked login rlogin ALL
+  become: true
+  footer: '#### </lsuser_account_access>'
+{% endif %}
+
+{% if ('lssec_etc_security_logincfg_USW' in check_list or 'all' in check_list) and '-lssec_etc_security_logincfg_USW' not in check_list %}
+- header: '#### <lssec_etc_security_logincfg_USW>'
+  command: >
+    lssec -f /etc/security/login.cfg -s usw -a ALL
+  become: true
+  footer: '#### </lssec_etc_security_logincfg_USW>'
+{% endif %}
+
+{% if ('lsuser_rlogin_root' in check_list or 'all' in check_list) and '-lsuser_rlogin_root' not in check_list %}
+- header: '#### <lsuser_rlogin_root>'
+  command: >
+    lsuser -a rlogin root
+  become: true
+  footer: '#### </lsuser_rlogin_root>'
+{% endif %}
+
+{% if ('lsuser_root_sugroups' in check_list or 'all' in check_list) and '-lsuser_root_sugroups' not in check_list %}
+- header: '#### <lsuser_root_sugroups>'
+  command: >
+    lssec -f /etc/security/user -s root -a sugroups -a su
+  become: true
+  footer: '#### </lsuser_root_sugroups>'
+{% endif %}
+
+{% if ('aix_Net_lsitab' in check_list or 'all' in check_list) and '-aix_Net_lsitab' not in check_list %}
+- header: '#### <aix_Net_lsitab>'
+  command: >
+    lsitab -a
+  become: true
+  footer: '#### </aix_Net_lsitab>'
+{% endif %}
+
+{% if ('aix_Net_etc_rc_tcpip_services' in check_list or 'all' in check_list) and '-aix_Net_etc_rc_tcpip_services' not in check_list %}
+- header: '#### <aix_Net_etc_rc_tcpip_services>'
+  command: >
+    grep "^[[:blank:]]*start[[:blank:]]" /etc/rc.tcpip
+  become: true
+  footer: '#### </aix_Net_etc_rc_tcpip_services>'
+{% endif %}
+
+{% if ('aix_Net_inetd_conf_services' in check_list or 'all' in check_list) and '-aix_Net_inetd_conf_services' not in check_list %}
+- header: '#### <aix_Net_inetd_conf_services>'
+  command: >
+    grep -E -v '^[[:space:]]*#' /etc/inetd.conf  || echo "File not found"
+  become: true
+  footer: '#### </aix_Net_inetd_conf_services>'
+{% endif %}
+
+{% if ('aix_OSR_etc_inetdconf_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_etc_inetdconf_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_etc_inetdconf_invalid_perm>'
+  command: >
+    ls -l /etc/inetd.conf | awk '{print $1 " " $3 " " $4 " " $9}
+  become: true
+  footer: '#### </aix_OSR_etc_inetdconf_invalid_perm>'
+{% endif %}
+
+{% if ('aix_Net_Remote_Services_Daemons_files' in check_list or 'all' in check_list) and '-aix_Net_Remote_Services_Daemons_files' not in check_list %}
+- header: '#### <aix_Net_Remote_Services_Daemons_files>'
+  command: >
+    ls -l /usr/sbin/rlogind /usr/sbin/rshd /usr/sbin/tftdsadd | awk '{print $1, $9}'
+  become: true
+  footer: '#### </aix_Net_Remote_Services_Daemons_files>'
+{% endif %}
+
+{% if ('aix_Net_network_tuning_parameters' in check_list or 'all' in check_list) and '-aix_Net_network_tuning_parameters' not in check_list %}
+- header: '#### <aix_Net_network_tuning_parameters>'
+  command: >
+    no -a | sed 's/^[[:blank:]]*//'
+  become: true
+  footer: '#### </aix_Net_network_tuning_parameters>'
+{% endif %}
+
+
+{% if ('aix_Net_NFS_tuning_parameters' in check_list or 'all' in check_list) and '-aix_Net_NFS_tuning_parameters' not in check_list %}
+- header: '#### <aix_Net_NFS_tuning_parameters>'
+  command: >
+    nfso -a |sed 's/^[[:blank:]]*//'
+  become: true
+  footer: '#### </aix_Net_NFS_tuning_parameters>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cron_allow_users' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cron_allow_users' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cron_allow_users>'
+  command: >
+    cat /var/adm/cron/cron.allow | tr '\n' ' '
+  become: true
+  footer: '#### </aix_OSR_var_adm_cron_allow_users>'
+{% endif %}
+
+
+{% if ('aix_OSR_var_adm_cron_deny' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cron_deny' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cron_deny>'
+  command: >
+    ls -l /var/adm/cron/cron.deny 2>&1 | cat
+  become: true
+  footer: '#### </aix_OSR_var_adm_cron_deny>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cron_at_allow_users' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cron_at_allow_users' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cron_at_allow_users>'
+  command: >
+    cat /var/adm/cron/at.allow | tr '\n' ' '
+  become: true
+  footer: '#### </aix_OSR_var_adm_cron_at_allow_users>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cron_at_deny' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cron_at_deny' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cron_at_deny>'
+  command: >
+    ls -l /var/adm/cron/at.deny 2>&1 | cat
+  become: true
+  footer: '#### </aix_OSR_var_adm_cron_at_deny>'
+{% endif %}
+
+{% if ('aix_Business_default_herald' in check_list or 'all' in check_list) and '-aix_Business_default_herald' not in check_list %}
+- header: '#### <aix_Business_default_herald>'
+  command: >
+    lssec -f /etc/security/login.cfg -s default -a herald
+  become: true
+  footer: '#### </aix_Business_default_herald>'
+{% endif %}
+
+{% if ('aix_OSR_crontab_active_entries_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_crontab_active_entries_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_crontab_active_entries_invalid_perm>'
+  command: >
+    crontab -l |egrep -v '^#' |awk '{print $6}' |grep "^/" | sort -u | xargs -I {} ls -ld "{}" | awk '{print $1, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_crontab_active_entries_invalid_perm>'
+{% endif %}
+
+{% if ('aix_Net_etc_security_limits_core_dumps' in check_list or 'all' in check_list) and '-aix_Net_etc_security_limits_core_dumps' not in check_list %}
+- header: '#### <aix_Net_etc_security_limits_core_dumps>'
+  command: >
+    lssec -f /etc/security/limits -s default -a core -a core_hard
+  become: true
+  footer: '#### </aix_Net_etc_security_limits_core_dumps>'
+{% endif %}
+
+{% if ('auth_info_log_file' in check_list or 'all' in check_list) and '-auth_info_log_file' not in check_list %}
+- header: '#### <auth_info_log_file>'
+  command: >
+    /usr/bin/egrep -v "(^$)|(^#)" /etc/syslog.conf
+  become: true
+  footer: '#### </auth_info_log_file>'
+{% endif %}
+
+{% if ('aix_Net_ps_deaf' in check_list or 'all' in check_list) and '-aix_Net_ps_deaf' not in check_list %}
+- header: '#### <aix_Net_ps_deaf>'
+  command: >
+    ps -deaf
+  become: true
+  footer: '#### </aix_Net_ps_deaf>'
+{% endif %}
+
+{% if ('Aix_OpenSSH_version' in check_list or 'all' in check_list) and '-Aix_OpenSSH_version' not in check_list %}
+- header: '#### <Aix_OpenSSH_version>'
+  command: >
+    sshd -i </dev/null | cut -d _ -f 2
+  become: true
+  footer: '#### </Aix_OpenSSH_version>'
+{% endif %}
+
+{% if ('Aix_sshd_t' in check_list or 'all' in check_list) and '-Aix_sshd_t' not in check_list %}
+- header: '#### <Aix_sshd_t>'
+  command: >
+    sshd -T
+  become: true
+  footer: '#### </Aix_sshd_t>'
+{% endif %}
+
+{% if ('Aix_IgnoreRhosts' in check_list or 'all' in check_list) and '-Aix_IgnoreRhosts' not in check_list %}
+- header: '#### <Aix_IgnoreRhosts>'
+  command: >
+    found_files=$(find / -name ".shosts"); if [ -z "$found_files" ]; then echo "No files found"; else echo "$found_files"; fi
+  become: true
+  footer: '#### </Aix_IgnoreRhosts>'
+{% endif %}
+
+{% if ('Aix_shostsequiv_File' in check_list or 'all' in check_list) and '-Aix_shostsequiv_File' not in check_list %}
+- header: '#### <Aix_shostsequiv_File>'
+  command: >
+    ls /etc/shosts.equiv 2>&1 | cat
+  become: true
+  footer: '#### </Aix_shostsequiv_File>'
+{% endif %}
+
+{% if ('Aix_SSH_OSRs_Protecting_Resources' in check_list or 'all' in check_list) and '-Aix_SSH_OSRs_Protecting_Resources' not in check_list %}
+- header: '#### <Aix_SSH_OSRs_Protecting_Resources>'
+  command: |
+    for file in /bin/openssl /bin/ssh2 /bin/ssh-add /bin/ssh-add2 /bin/ssh-agent /bin/ssh-agent2 /bin/ssh-askpass /bin/ssh-askpass2 /bin/ssh-certenroll2 /bin/ssh-chrootmgr /bin/ssh-dummy-shell /bin/scp /bin/ssh-keygen /bin/ssh-keygen2 /bin/ssh-keyscan /bin/ssh-pam-client /bin/ssh-probe /bin/ssh-probe2 /bin/ssh-pubkeymgr /bin/ssh-signer /bin/ssh-signer2 /lib/libcrypto.a /bin/scp2 /lib/libssh.a /lib/libssl.a /lib/libz.a /lib-exec/openssh/sftp-server /lib-exec/openssh/ssh-keysign /lib-exec/openssh/ssh-askpass /lib-exec/sftp-server /lib-exec/ssh-keysign /lib-exec/ssh-rand-helper /libexec/openssh/sftp-server /bin/sftp /libexec/openssh/ssh-keysign /libexec/openssh/ssh-askpass /libexec/sftp-server /libexec/ssh-keysign /libexec/ssh-rand-helper /sbin/sshd /sbin/sshd2 /sbin/sshd-check-conf /lib/svc/method/sshd /bin/sftp2 /usr/lib/ssh/sshd /bin/sftp-server /bin/sftp-server2 /bin/slogin /bin/ssh /etc/openssh/sshd_config /usr/lib/ssh/ssh-keysign /etc/ssh/sshd_config /etc/ssh/sshd2_config /etc/ssh2/sshd_config /etc/ssh2/sshd2_config /etc/sshd_config /etc/sshd2_config /usr/local/etc/sshd_config /usr/local/etc/sshd2_config
+    do
+      ls -l "$file" | awk '{print $9, $3, $4, $1}' 2>/dev/null || echo "$file not found"
+    done
+  become: true
+  footer: '#### </Aix_SSH_OSRs_Protecting_Resources>'
+{% endif %}
+
+{% if ('aix_OSR_var_spool_mqueue_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_spool_mqueue_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_spool_mqueue_invalid_perm>'
+  command: >
+    ls -ld /var/spool/mqueue || echo "File not found"
+  become: true
+  footer: '#### </aix_OSR_var_spool_mqueue_invalid_perm>'
+{% endif %}
+
+{% if ('aix_Net_CDE_fileset' in check_list or 'all' in check_list) and '-aix_Net_CDE_fileset' not in check_list %}
+- header: '#### <aix_Net_CDE_fileset>'
+  command: |
+    lslpp -L |grep -i CDE  2>/dev/null || echo "CDE not installed"
+  footer: '#### </aix_Net_CDE_fileset>'
+{% endif %}
+
+{% if ('aix_Net_etc_export_anon_UID' in check_list or 'all' in check_list) and '-aix_Net_etc_export_anon_UID' not in check_list %}
+- header: '#### <aix_Net_etc_export_anon_UID>'
+  command: |
+    (grep -v "^[[:space:]]*#" /etc/exports | grep "anon" | grep -v 'anon=-[2]') 2>/dev/null || echo "A value of -2 is the nobody user"
+  become: true
+  footer: '#### </aix_Net_etc_export_anon_UID>'
+{% endif %}
+
+{% if ('aix_Net_NIS_client_fileset' in check_list or 'all' in check_list) and '-aix_Net_NIS_client_fileset' not in check_list %}
+- header: '#### <aix_Net_NIS_client_fileset>'
+  command: |
+    lslpp -L |grep -i bos.net.nis.client 2>/dev/null || echo "NIS client not installed"
+  become: true
+  footer: '#### </aix_Net_NIS_client_fileset>'
+{% endif %}
+
+{% if ('aix_Net_NIS_server_fileset' in check_list or 'all' in check_list) and '-aix_Net_NIS_server_fileset' not in check_list %}
+- header: '#### <aix_Net_NIS_server_fileset>'
+  command: |
+    lslpp -L |grep -i bos.net.nis.server 2>/dev/null || echo "NIS server not installed"
+  become: true
+  footer: '#### </aix_Net_NIS_server_fileset>'
+{% endif %}
+
+{% if ('aix_Net_NIS_markers_password_group' in check_list or 'all' in check_list) and '-aix_Net_NIS_markers_password_group' not in check_list %}
+- header: '#### <aix_Net_NIS_markers_password_group>'
+  command: >
+    grep "^+" /etc/passwd /etc/group || echo "No NIS user or group found"
+  become: true
+  footer: '#### </aix_Net_NIS_markers_password_group>'
+{% endif %}
+
+{% if ('aix_Net_NIS_Daemon_yppasswdd' in check_list or 'all' in check_list) and '-aix_Net_NIS_Daemon_yppasswdd' not in check_list %}
+- header: '#### <aix_Net_NIS_Daemon_yppasswdd>'
+  command: >
+    lssrc -s yppasswdd | awk '/Subsystem is not on file./ {print $0; next} NR==1 {print $1 ";" $3; next} NF==3 {print $1 ";" $3; next}  NF==4 {print $1 ";" $4}'
+  become: true
+  footer: '#### </aix_Net_NIS_Daemon_yppasswdd>'
+{% endif %}
+
+{% if ('aix_Net_snmpd_conf_file' in check_list or 'all' in check_list) and '-aix_Net_snmpd_conf_file' not in check_list %}
+- header: '#### <aix_Net_snmpd_conf_file>'
+  command: >
+    grep -v "^[[:blank:]]*#" /etc/snmpd.conf | grep -v '^[[:space:]]*$'
+  become: true
+  footer: '#### </aix_Net_snmpd_conf_file>'
+{% endif %}
+
+{% if ('rc.tcpip_portmap' in check_list or 'all' in check_list) and '-rc.tcpip_portmap' not in check_list %}
+- header: '#### <rc.tcpip_portmap>'
+  command: >
+    lssrc -s portmap | awk '{print $1 ";" $2 ";" $3 ";" $4}'
+  become: true
+  footer: '#### </rc.tcpip_portmap>'
+{% endif %}
+
+{% if ('rc.tcpip_portmap_rcpinfo' in check_list or 'all' in check_list) and '-rc.tcpip_portmap_rcpinfo' not in check_list %}
+- header: '#### <rc.tcpip_portmap_rcpinfo>'
+  command: >
+    rpcinfo -p localhost | grep -v portmapper || echo "Can't contact portmapper"
+  become: true
+  footer: '#### </rc.tcpip_portmap_rcpinfo>'
+{% endif %}
+
+{% if ('aix_OSR_etc_group_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_etc_group_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_etc_group_invalid_perm>'
+  command: >
+    ls -l /etc/group | awk '{print $1, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_etc_group_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_etc_passwd_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_etc_passwd_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_etc_passwd_invalid_perm>'
+  command: >
+    ls -l /etc/passwd | awk '{print $1, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_etc_passwd_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_root_smit_log_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_root_smit_log_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_root_smit_log_invalid_perm>'
+  command: >
+    ls -l /root/smit.log 2>&1 | awk '{print $1, $2, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_root_smit_log_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cronlog_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cronlog_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cronlog_invalid_perm>'
+  command: >
+    ls -l /var/adm/cron/log | awk '{print $1, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_var_adm_cronlog_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_spool_crontab_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_spool_crontab_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_spool_crontab_invalid_perm>'
+  command: >
+    ls -ld /var/spool/cron/crontabs
+  become: true
+  footer: '#### </aix_OSR_var_spool_crontab_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cron_at_allow_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cron_at_allow_perm' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cron_at_allow_perm>'
+  command: >
+    ls -l /var/adm/cron/at.allow | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_OSR_var_adm_cron_at_allow_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_cronallow_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_cronallow_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_adm_cronallow_invalid_perm>'
+  command: >
+    ls -l /var/adm/cron/cron.allow | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_OSR_var_adm_cronallow_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_etc_motd_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_etc_motd_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_etc_motd_invalid_perm>'
+  command: >
+    ls -l /etc/motd | awk '{print $1, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_etc_motd_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_ras_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_ras_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_adm_ras_invalid_perm>'
+  command: >
+    ls -lR /var/adm/ras | grep -E '^(-|d)'
+  become: true
+  footer: '#### </aix_OSR_var_adm_ras_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_RMC_logfile_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_RMC_logfile_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_RMC_logfile_invalid_perm>'
+  command: >
+    ls -l /var/ct/RMstart.log | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_OSR_RMC_logfile_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_dpid2_logfile_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_dpid2_logfile_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_dpid2_logfile_invalid_perm>'
+  command: >
+     (ls -l /var/tmp/dpid2.log | awk '{print $1 " " $3 " " $4 " " $9}') 2>&1 | cat
+  become: true
+  footer: '#### </aix_OSR_dpid2_logfile_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_hostmibd_logfile_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_hostmibd_logfile_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_hostmibd_logfile_invalid_perm>'
+  command: >
+    ls -l /var/tmp/hostmibd.log | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_OSR_hostmibd_logfile_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_snmpd_logfile_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_snmpd_logfile_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_snmpd_logfile_invalid_perm>'
+  command: >
+    ls -l /var/tmp/snmpd.log 2>&1 | cat
+  become: true
+  footer: '#### </aix_OSR_snmpd_logfile_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_var_adm_sa_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_var_adm_sa_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_var_adm_sa_invalid_perm>'
+  command: >
+    find /var/adm/sa \( -type f -o -type d \) -exec ls -ld {} +
+  become: true
+  footer: '#### </aix_OSR_var_adm_sa_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_home_PATH_deny_write_access' in check_list or 'all' in check_list) and '-aix_OSR_home_PATH_deny_write_access' not in check_list %}
+- header: '#### <aix_OSR_home_PATH_deny_write_access>'
+  command: |
+    #!/usr/bin/ksh -e
+    lsuser -R files -a id home ALL | while read name ids homes rest;
+    do
+        uid_check=$(echo ${ids} | cut -f2 -d =)
+        if [[ ${uid_check} -ge 200 ]]; then
+            home=$(echo ${homes} | cut -f2 -d =)
+            if [[ ${home} == "/dev/null" ]]; then
+                continue
+            elif [[ ! -d ${home} ]]; then
+                /usr/bin/printf "%-32s does not exist\n" ${home}
+            else
+                ls -ld ${home}
+            fi
+        fi
+    done
+  become: true
+  footer: '#### </aix_OSR_home_PATH_deny_write_access>'
+{% endif %}
+
+{% if ('AIX_world_permissions' in check_list or 'all' in check_list) and '-AIX_world_permissions' not in check_list %}
+- header: '#### <AIX_world_permissions>'
+  command: |
+    echo "/:${PATH}" | tr ':' '\n' | grep "^/" | sort -u | while read DIR
+    do
+    DIR=${DIR:-$(pwd)}
+    while [[ -d ${DIR} ]]
+    do [[ "$(ls -ld ${DIR})" = @(d???????w? *) ]] && echo " WARNING ${DIR} is world writable"
+    [[ "$(ls -ld ${DIR})" = @(d????w???? *) ]] && [[ ${DIR} != "/usr/ucb" ]] && echo " WARNING ${DIR} is group writable"
+    [[ "$(ls -ld ${DIR} |awk '{print $3}')" != @(root|bin) ]] && echo " WARNING ${DIR} is not owned by root or bin"
+    DIR=${DIR%/*}
+    done
+    done
+  become: true
+  footer: '#### </AIX_world_permissions>'
+{% endif %}
+
+{% if ('aix_Net_inetd_talk' in check_list or 'all' in check_list) and '-aix_Net_inetd_talk' not in check_list %}
+- header: '#### <aix_Net_inetd_talk>'
+  command: >
+    (lssrc -s inetd -l | grep -c talk) 2>&1 | cat
+  become: true
+  footer: '#### </aix_Net_inetd_talk>'
+{% endif %}
+
+{% if ('aix_Net_writesrv' in check_list or 'all' in check_list) and '-aix_Net_writesrv' not in check_list %}
+- header: '#### <aix_Net_writesrv>'
+  command: >
+    lssrc -s writesrv | grep -c active | cat
+  become: true
+  footer: '#### </aix_Net_writesrv>'
+{% endif %}
+
+{% if ('aix_Business_Use_Notice_text' in check_list or 'all' in check_list) and '-aix_Business_Use_Notice_text' not in check_list %}
+- header: '#### <aix_Business_Use_Notice_text>'
+  command: >
+    tr -s ' ' < /etc/motd | tr -d '\n' | sed 's/\*//g'
+  become: true
+  footer: '#### </aix_Business_Use_Notice_text>'
+{% endif %}
+
+{% if ('etc_passwd_uniq_UID' in check_list or 'all' in check_list) and '-etc_passwd_uniq_UID' not in check_list %}
+- header: '#### <etc_passwd_uniq_UID>'
+  command: >
+    cut -d: -f 3 /etc/passwd |sort -n |uniq -d
+  become: true
+  footer: '#### </etc_passwd_uniq_UID>'
+{% endif %}
+
+{% if ('etc_group_uniq_GID' in check_list or 'all' in check_list) and '-etc_group_uniq_GID' not in check_list %}
+- header: '#### <etc_group_uniq_GID>'
+  command: >
+    cut -d: -f 3 /etc/group |sort -n | uniq -d
+  become: true
+  footer: '#### </etc_group_uniq_GID>'
+{% endif %}
+
+{% if ('aix_Net_EFS_CLIC_software' in check_list or 'all' in check_list) and '-aix_Net_EFS_CLIC_software' not in check_list %}
+- header: '#### <aix_Net_EFS_CLIC_software>'
+  command: |
+    lslpp -L | grep "clic"
+  become: true
+  footer: '#### </aix_Net_EFS_CLIC_software>'
+{% endif %}
+
+{% if ('aix_OSR_root_netrc_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_root_netrc_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_root_netrc_invalid_perm>'
+  command: >
+    ls -l /root/.netrc 2>&1 | awk '{print $1, $2, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_root_netrc_invalid_perm>'
+{% endif %}
+
+{% if ('aix_OSR_root_rhosts_invalid_perm' in check_list or 'all' in check_list) and '-aix_OSR_root_rhosts_invalid_perm' not in check_list %}
+- header: '#### <aix_OSR_root_rhosts_invalid_perm>'
+  command: >
+    ls -l /root/.rhosts 2>&1 | awk '{print $1, $2, $3, $4, $9}'
+  become: true
+  footer: '#### </aix_OSR_root_rhosts_invalid_perm>'
+{% endif %}
+
+{% if ('aix_cat_sshd_config' in check_list or 'all' in check_list) and '-aix_cat_sshd_config' not in check_list %}
+- header: '#### <aix_cat_sshd_config>'
+  command: >
+    cat /etc/ssh/sshd_config
+  become: true
+  footer: '#### </aix_cat_sshd_config>'
+{% endif %}
+
+{% if ('aix_ssh_config_perm' in check_list or 'all' in check_list) and '-aix_ssh_config_perm' not in check_list %}
+- header: '#### <aix_ssh_config_perm>'
+  command: >
+    ls -l /etc/ssh/ssh_config | awk '{print $1 " " $3 " " $4 " " $9}' 
+  become: true
+  footer: '#### </aix_ssh_config_perm>'
+{% endif %}
+
+{% if ('aix_sendmail_cf_perm' in check_list or 'all' in check_list) and '-aix_sendmail_cf_perm' not in check_list %}
+- header: '#### <aix_sendmail_cf_perm>'
+  command: >
+    ls -l /etc/mail/sendmail.cf | awk '{print $1 " " $3 " " $4 " " $9}' 
+  become: true
+  footer: '#### </aix_sendmail_cf_perm>'
+{% endif %}
+
+{% if ('aix_cat_exports' in check_list or 'all' in check_list) and '-aix_cat_exports' not in check_list %}
+- header: '#### <aix_cat_exports>'
+  command: >
+    cat /etc/exports || echo "File not found or cannot be opened"
+  become: true
+  footer: '#### </aix_cat_exports>'
+{% endif %}
+
+{% if ('aix_security_perm' in check_list or 'all' in check_list) and '-aix_security_perm' not in check_list %}
+- header: '#### <aix_security_perm>'
+  command: >
+    ls -ld /etc/security | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_security_perm>'
+{% endif %}
+
+{% if ('aix_all_have_passwords' in check_list or 'all' in check_list) and '-aix_all_have_passwords' not in check_list %}
+- header: '#### <aix_all_have_passwords>'
+  command: >
+    pwdck -n ALL 2>&1 | cat
+  become: true
+  footer: '#### </aix_all_have_passwords>'
+{% endif %}
+
+{% if ('aix_root_path_no_dots_doubledots' in check_list or 'all' in check_list) and '-aix_root_path_no_dots_doubledots' not in check_list %}
+- header: '#### <aix_root_path_no_dots_doubledots>'
+  command: >
+    su - root -c "echo ${PATH}" | awk '/((:[ t]*:)|(:[ t]*$)|(^[ t]*:)|(^.:)|(:.$)|(:.:))/'
+  become: true
+  footer: '#### </aix_root_path_no_dots_doubledots>'
+{% endif %}
+
+{% if ('aix_env_path_no_dots_doubledots' in check_list or 'all' in check_list) and '-aix_env_path_no_dots_doubledots' not in check_list %}
+- header: '#### <aix_env_path_no_dots_doubledots>'
+  command: >
+    grep "^PATH=" /etc/environment |awk '/((:[ t]*:)|(:[ t]*$)|(^[ t]*:)|(^.:)|(:.$)|(:.:))/'
+  become: true
+  footer: '#### </aix_env_path_no_dots_doubledots>'
+{% endif %}
+
+{% if ('aix_env_path_no_dots_doubledots' in check_list or 'all' in check_list) and '-aix_env_path_no_dots_doubledots' not in check_list %}
+- header: '#### <aix_env_path_no_dots_doubledots>'
+  command: >
+    grep "^PATH=" /etc/environment |awk '/((:[ t]*:)|(:[ t]*$)|(^[ t]*:)|(^.:)|(:.$)|(:.:))/'
+  become: true
+  footer: '#### </aix_env_path_no_dots_doubledots>'
+{% endif %}
+
+{% if ('aix_sudo_installed' in check_list or 'all' in check_list) and '-aix_sudo_installed' not in check_list %}
+- header: '#### <aix_sudo_installed>'
+  command: >
+    lslpp -l | grep sudo
+  become: true
+  footer: '#### </aix_sudo_installed>'
+{% endif %}
+
+{% if ('aix_rbac_installed' in check_list or 'all' in check_list) and '-aix_rbac_installed' not in check_list %}
+- header: '#### <aix_rbac_installed>'
+  command: >
+    which lssecattr
+  become: true
+  footer: '#### </aix_rbac_installed>'
+{% endif %}
+
+{% if ('aix_Net_Remote_Access_Services_files' in check_list or 'all' in check_list) and '-aix_Net_Remote_Access_Services_files' not in check_list %}
+- header: '#### <aix_Net_Remote_Access_Services_files>'
+  command: >
+    ls -l /usr/bin/rcp | awk '{print $1, $9}'; ls -l /usr/bin/rlogin | awk '{print $1, $9}'; ls -l /usr/bin/rsh | awk '{print $1, $9}'
+  become: true
+  footer: '#### </aix_Net_Remote_Access_Services_files>'
+{% endif %}
+
+{% if ('aix_cat_sendmail_cf' in check_list or 'all' in check_list) and '-aix_cat_sendmail_cf' not in check_list %}
+- header: '#### <aix_cat_sendmail_cf>'
+  command: >
+    cat /etc/mail/sendmail.cf
+  become: true
+  footer: '#### </aix_cat_sendmail_cf>'
+{% endif %}
+
+{% if ('aix_netsec_installed' in check_list or 'all' in check_list) and '-aix_netsec_installed' not in check_list %}
+- header: '#### <aix_netsec_installed>'
+  command: >
+    lslpp -l | grep "netsec.options" 2>/dev/null || echo "Netsec is not installed"
+  become: true
+  footer: '#### </aix_netsec_installed>'
+{% endif %}
+
+{% if ('aix_cat_hosts_deny' in check_list or 'all' in check_list) and '-aix_cat_hosts_deny' not in check_list %}
+- header: '#### <aix_cat_hosts_deny>'
+  command: >
+    cat /etc/hosts.deny || echo "File not found or cannot be open"
+  become: true
+  footer: '#### </aix_cat_hosts_deny>'
+{% endif %}
+
+{% if ('aix_Net_inetd_conf_tcpd' in check_list or 'all' in check_list) and '-aix_Net_inetd_conf_tcpd' not in check_list %}
+- header: '#### <aix_Net_inetd_conf_tcpd>'
+  command: >
+    grep "^[[:blank:]]" /etc/inetd.conf | grep "tcpd" | cat
+  become: true
+  footer: '#### </aix_Net_inetd_conf_tcpd>'
+{% endif %}
+
+{% if ('aix_security_audit_permissions' in check_list or 'all' in check_list) and '-aix_security_audit_permissions' not in check_list %}
+- header: '#### <aix_security_audit_permissions>'
+  command: >
+    ls -ld /etc/security/audit | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_security_audit_permissions>'
+{% endif %}
+
+{% if ('aix_audit_permissions' in check_list or 'all' in check_list) and '-aix_audit_permissions' not in check_list %}
+- header: '#### <aix_audit_permissions>'
+  command: >
+    ls -ld /audit | awk '{print $1 " " $3 " " $4 " " $9}'
+  become: true
+  footer: '#### </aix_audit_permissions>'
+{% endif %}
+
+{# Commented out as it is not working in the related shell version
+{% if ('aix_diff_hosts_allow' in check_list or 'all' in check_list) and '-aix_diff_hosts_allow' not in check_list %}
+- header: '#### <aix_diff_hosts_allow>'
+  command: |
+    echo "Difference findings:"
+    cat << EOF | diff - <(grep -Ev '^[[:space:]]*$' /etc/hosts.allow | sort) | grep -E '^(<|>)' | sed 's/</(missing)/g' | sed 's/>/(additional)/g'
+    ALL:10.64.101.0/255.255.255.0: allow
+    ALL:10.64.114.0/255.255.255.0: allow
+    ALL:10.64.114.0/255.255.255.0: allow
+    ALL:10.64.123.0/255.255.255.0: allow
+    ALL:10.64.124.0/255.255.255.0: allow
+    ALL:10.64.124.0/255.255.255.0: allow
+    ALL:10.64.129.0/255.255.255.0: allow
+    ALL:10.64.144.0/255.255.255.0: allow
+    ALL:10.64.145.0/255.255.255.0: allow
+    ALL:10.64.146.0/255.255.255.0: allow
+    ALL:10.64.147.0/255.255.255.0: allow
+    ALL:10.64.189.0/255.255.255.0: allow
+    ALL:10.64.249.0/255.255.255.0: allow
+    ALL:10.64.67.0/255.255.255.0: allow
+    ALL:10.64.68.0/255.255.255.0: allow
+    ALL:10.64.75.0/255.255.255.0: allow
+    ALL:10.70.122.0/255.255.255.0: allow
+    ALL:10.70.125.0/255.255.255.0: allow
+    ALL:10.70.126.0/255.255.255.0: allow
+    ALL:10.70.129.0/255.255.255.0: allow
+    ALL:10.70.2.0/255.255.255.0: allow
+    ALL:10.70.67.0/255.255.255.0: allow
+    ALL:10.70.68.0/255.255.255.0: allow
+    ALL:10.71.129.0/255.255.255.0: allow
+    ALL:10.71.139.0/255.255.255.0: allow
+    ALL:10.71.152.0/255.255.255.0: allow
+    ALL:10.71.166.0/255.255.255.0: allow
+    ALL:10.71.176.0/255.255.255.0: allow
+    ALL:10.71.177.0/255.255.255.0: allow
+    ALL:10.71.80.0/255.255.255.0: allow
+    ALL:10.71.81.0/255.255.255.0: allow
+    ALL:10.71.82.0/255.255.255.0: allow
+    ALL:10.71.83.0/255.255.255.0: allow
+    ALL:10.75.208.0/255.255.255.0: allow
+    ALL:10.75.209.0/255.255.255.0: allow
+    ALL:19.46.123.0/255.255.255.0: allow
+    ALL:19.50.1.0/255.255.255.0: allow
+    ALL:19.50.10.0/255.255.255.0: allow
+    ALL:19.50.15.0/255.255.255.0: allow
+    ALL:19.50.160.0/255.255.255.0: allow
+    ALL:19.50.24.0/255.255.255.0: allow
+    ALL:19.50.30.0/255.255.255.0: allow
+    ALL:19.50.7.0/255.255.255.0: allow
+    ALL:19.50.79.0/255.255.255.0: allow
+    ALL:19.50.8.0/255.255.255.0: allow
+    ALL:19.50.80.0/255.255.255.0: allow
+    sshd:10.18.20.0/255.255.252.0: allow
+    sshd:10.22.10.0/255.255.255.0: allow
+    sshd:10.64.129.0/255.255.255.0: allow
+    sshd:10.64.145.0/255.255.255.0: allow
+    sshd:10.64.49.0/255.255.255.0: allow
+    sshd:10.64.51.0/255.255.255.0: allow
+    sshd:10.70.147.0/255.255.255.0: allow
+    sshd:10.71.170.0/255.255.255.0: allow
+    sshd:10.73.54.0/255.255.255.0: allow
+    sshd:10.73.55.0/255.255.255.0: allow
+    sshd:19.102.121.0/255.255.255.0: allow
+    sshd:19.50.30.0/255.255.255.0: allow
+    sshd:19.50.86.0/255.255.255.0: allow
+    sshd:192.168.171.0/255.255.255.0: allow
+    EOF
+  become: true
+  footer: '#### </aix_diff_hosts_allow>'
+{% endif %}#}

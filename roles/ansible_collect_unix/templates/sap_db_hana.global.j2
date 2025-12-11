@@ -1,0 +1,1177 @@
+---
+devicetype: 'SAP_DB_HANA'
+
+settings_global:
+  - header: '#### <vendor>'
+    command: >
+      echo "SAP"
+    footer: '#### </vendor>'
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+  - header: '#### <hana_version>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"VERSION\";\"BRANCH\";\"MACHINE_CONFIG\";\"COMPILE_DATE\""
+      for instance in "${hanainstances[@]}"
+      do
+        hanauser=$(echo "$instance" | awk '{ print tolower($0) "adm" }')
+        version_info=$(su - "$hanauser" -c "HDB version")
+        version=$(echo "$version_info" | grep "version:" | sed -r 's/version:\s+(.*)$/\1/' | tr -d " ")
+        branch=$(echo "$version_info" | grep "branch:" | sed -r 's/branch:\s+(.*)$/\1/' | tr -d " ")
+        machine_config=$(echo "$version_info" | grep "machine config:" | sed -r 's/machine config:\s+(.*)$/\1/' | tr -d " ")
+        compile_date=$(echo "$version_info" | grep "compile date:" | sed -r 's/compile date:\s+(.*)$/\1/' | tr -d " ")
+        echo "\"$instance\";\"$version\";\"$branch\";\"$machine_config\";\"$compile_date\""
+      done
+    become: true
+    footer: >
+      #### </hana_version>
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+  - header: '#### <os_info>'
+    command: |
+      echo "\"HOSTNAME\";\"OS_DETAILS\";\"RELEASE_NUMBER\";\"KERNEL\";\"SERIAL\""
+      HOSTNAME=$(hostname)
+      OS_DETAILS={{ ansible_facts['distribution'] }}
+      VERSION_ID={{ ansible_facts['distribution_version'] }}
+      KERNEL=$(/usr/bin/uname -r)
+      SERIAL={% if ansible_facts.os_family == 'RedHat' %}{% if ansible_facts["architecture"] == "ppc64le" %}$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'SN unreadable'){%
+              else %}$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo "SN unreadable"){% endif %}{%
+              else %}{% if ansible_facts["architecture"] == "ppc64le" %}$(/usr/bin/grep serial_number /proc/powerpc/lparcfg | cut -d ',' -f 2 | cut -c 3- || echo "SN unreadable"){%
+              else %}$(/usr/sbin/dmidecode -s system-serial-number || echo "SN unreadable"){% endif %}{% endif %}{{ '' }}
+      echo "\"$HOSTNAME\";\"$OS_DETAILS\";\"$VERSION_ID\";\"$KERNEL\";\"$SERIAL\""
+    become: true
+    become_user: "{{ become_user | default('root') }}"
+    footer: >
+      #### </os_info>
+{# ------------------------------------------------------------------------------------------------------------------------------------------------ #}
+{% if ('sap_hana_numa_check' in check_list or 'all' in check_list) and '-sap_hana_numa_check' not in check_list %}
+  - header: '#### <sap_hana_numa_check>'
+    command: |
+      function Get_prtuuid {
+          prtuuid_str=$(/opt/rsct/bin/ctgethscid | fgrep "PartitionUUID" | sed 's/.*\"\(.*\)\".*/\1/')
+          if [ -z "$prtuuid_str" ]; then
+              prtuuid_str="Failed"
+          fi
+          echo "$prtuuid_str"
+      }
+
+      function Chk_LPM {
+          drmgr_str=$(fgrep " pmig " -B2 /var/log/drmgr* | fgrep "#####" | sed 's/.*# \([A-Za-z]*\) *\([0-9]*\) *\([0-9,:]*\) *\([0-9]*\) .*/\1 \2 \4 \3/' | xargs -I {} date +"%Y-%m-%d %H:%M:%S" -d {} | sort | tail -n 1)
+          who_str=$(LANG=POSIX who -b | sed 's/.*boot *//g' | xargs -I {} date +"%Y-%m-%d %H:%M:%S" -d {})
+          ret=$FAILED
+          lpm_date=$(echo "$drmgr_str")
+          boot_date=$(echo "$who_str")
+
+          if [ -n "$boot_date" ]; then
+              ret=$SUCCES
+              if [ -n "$lpm_date" ]; then
+                  if [ "$boot_date" \< "$lpm_date" ]; then
+                      echo "WARNING: A possible Live Partition Migration (LPM) might have been performed since the last boot!"
+                      ret=$WRNING
+                  fi
+              else
+                  lpm_date="None"
+                  ret=$FAILED
+              fi
+              echo "Date of latest LPM : $lpm_date"
+              echo "Date of latest boot: $boot_date"
+          fi
+          return $ret
+      }
+
+      function Get_numactl_info {
+          numa_lst=()
+          vcpu_cnt=0
+
+          numactl_str=$(numactl --hardware | grep "node.*:")
+
+          while IFS= read -r line; do
+              IFS=':' read -r -a nm_s <<< "$line"
+              if [[ "${nm_s[0]}" == *"cpus"* ]]; then
+                  vcpu_cnt=$(echo "${nm_s[1]}" | wc -w)
+              elif [[ "${nm_s[0]}" == *"size"* ]]; then
+                  nm_s_w=(${nm_s[0]})
+                  node_no=${nm_s_w[1]}
+                  nm_s_w=(${nm_s[1]})
+                  mem_sz_mb=${nm_s_w[0]}
+                  mem_sz_unt=${nm_s_w[1]}
+                  case "$mem_sz_unt" in
+                      "GB") mem_sz_mb=$(($mem_sz_mb * 1000)) ;;
+                      "TB") mem_sz_mb=$(($mem_sz_mb * 1000000)) ;;
+                      "KB") mem_sz_mb=$(($mem_sz_mb / 1000)) ;;
+                  esac
+                  if [[ $node_no != 0 || $vcpu_cnt != 0 || $mem_sz_mb != 0 ]]; then
+                      entry=($node_no $vcpu_cnt $mem_sz_mb)
+                      numa_lst+=("${entry[@]}")
+                  fi
+              fi
+          done <<< "$numactl_str"
+
+          echo "${numa_lst[@]}"
+      }
+
+      function Chk_numactl_info {
+          NOD=0
+          CPU=1
+          SIZ=2
+          ret=$SUCCES
+
+          numa_inf=$(Get_numactl_info)
+          if [ -z "$numa_inf" ]; then
+              echo "ERROR: numactl --hardware could not be executed"
+              ret=$FAILED
+          else
+              IFS=' ' read -r -a numa_arr <<< "$numa_inf"
+              numa_arr_length=$(echo "${numa_arr[@]}" | wc -w)
+              for (( i=0; i<numa_arr_length; i+=3 )); do    
+                  echo "Numa Node: ${numa_arr[i]} Number of virt. CPUs: ${numa_arr[i+1]} Amount of memory: ${numa_arr[i+2]} MB"
+              done
+
+              ttl_cps=0
+              ttl_msz=0
+              mmszs=()
+              numa_arr_length=$(echo "${numa_arr[@]}" | wc -w)
+              for (( i=0; i<numa_arr_length; i+=3 )); do 
+                  if [ ${numa_arr[i+1]} -eq 0 ]; then
+                      continue
+                  fi
+                  if [ ${numa_arr[i+2]} -eq 0 ]; then
+                      echo "FAILED: Numa node without memory detected. Please verify with numactl -H and use DPO to rearrange topology."
+                      ret=$FAILED
+                      break
+                  fi
+                  mmszs+=($((${numa_arr[i+2]} / ${numa_arr[i+1]})))
+                  ttl_msz=$(($ttl_msz + ${numa_arr[i+2]}))
+                  ttl_cps=$(($ttl_cps + ${numa_arr[i+1]}))
+              done
+
+              if [ $ret -eq $SUCCES ]; then
+                  avg_msz=$(($ttl_msz / $ttl_cps))
+                  mrgn=$(($avg_msz / 2))
+                  up_bnd=$(($avg_msz + $mrgn))
+                  lw_bnd=$(($avg_msz - $mrgn))
+
+                  for mmsz in "${mmszs[@]}"; do
+                      if [ $mmsz -lt $lw_bnd ] || [ $mmsz -gt $up_bnd ]; then
+                          echo "Numa distribution of cores and memory unbalanced. This might cause performance degradation to the HANA database. Consider performing DPO to rearrange the topology."
+                          ret=$WRNING
+                          break
+                      fi
+                  done
+              fi
+          fi
+          return $ret
+      }
+
+      SUCCES=0
+      WRNING=1
+      FAILED=2
+
+      ret=$FAILED
+      hostname_var=$(hostname)
+
+      now=$(date +'%Y-%m-%d %H:%M:%S')
+      echo "###  Check run on: $now  #####"
+      prtuuid=$(Get_prtuuid)
+      echo "Hostname: $(uname -n)"
+      echo "Partition UUID: $prtuuid"
+
+      Chk_LPM
+      ret=$?
+      if [ $ret -eq $FAILED ]; then
+          echo "INFO: Could not automatically parse /var/log/drmgr* for LPM. Please check manually for the latest occurrence of string \"Validating partition migration\"."
+      elif [ $ret -eq $WRNING ]; then
+          echo "WARNING: LPM may have been performed"
+      fi
+
+      Chk_numactl_info
+      rtrn=$?
+      if [ $rtrn -eq $FAILED ]; then
+          echo "ERROR: Numa node without memory"
+          ret=$rtrn
+      elif [ $rtrn -eq $WRNING ]; then
+          echo "WARNING: Numa unbalanced"
+          if [ $ret -ne $WRNING ]; then
+              ret=$rtrn
+          fi
+      fi
+
+      if [ $ret -eq $SUCCES ]; then
+          echo "OK"
+      fi
+
+      exit 0
+    become: true
+    footer: >
+      #### </sap_hana_numa_check>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_hana_check_swap' in check_list or 'all' in check_list) and '-sap_hana_check_swap' not in check_list %}
+  - header: '#### <sap_hana_check_swap>'
+    command: "swapon -s | awk 'NR==2 {print $3 / 1024}'"
+    become: true
+    footer: >
+      #### </sap_hana_check_swap>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_hana_check_thp' in check_list or 'all' in check_list) and '-sap_hana_check_thp' not in check_list %}
+  - header: '#### <sap_hana_check_thp>'
+    command: 'cat /sys/kernel/mm/transparent_hugepage/enabled'
+    become: true
+    footer: >
+      #### </sap_hana_check_thp>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_hana_prole_check' in check_list or 'all' in check_list) and '-sap_hana_prole_check' not in check_list %}
+  - header: '#### <sap_hana_prole_check>'
+    command: |
+      PROLE_PROCESS=$(ps -ef | grep prole | grep -v grep | head -n 1)
+      PROLEPID=$(echo $PROLE_PROCESS | awk '{print $2}')
+      lsof -p $PROLEPID | wc -l
+    become: true
+    footer: >
+      #### </sap_hana_prole_check>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sap_hana_user_umask' in check_list or 'sap_hana_tech_specs' in check_list or 'all' in check_list) and '-sap_hana_user_umask' not in check_list %}
+  - header: '#### <sap_hana_user_umask>'
+    command: |
+      hanausers=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/' | awk '{print tolower($0) "adm"}'))
+      for hanauser in "${hanausers[@]}"
+      do
+        su - "$hanauser" -c "umask;echo \"$hanauser\"" | paste -sd ',' -
+      done
+    become: true
+    footer: >
+      #### </sap_hana_user_umask>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('minimal_password_length' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-minimal_password_length' not in check_list %}
+  - header: '#### <minimal_password_length>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='minimal_password_length'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </minimal_password_length>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('password_layout' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-password_layout' not in check_list %}
+  - header: '#### <password_layout>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='password_layout'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </password_layout>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('force_first_password_change' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-force_first_password_change' not in check_list %}
+  - header: '#### <force_first_password_change>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='force_first_password_change'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </force_first_password_change>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('last_used_passwords' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-last_used_passwords' not in check_list %}
+  - header: '#### <last_used_passwords>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='last_used_passwords'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </last_used_passwords>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('maximum_invalid_connect_attempts' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-maximum_invalid_connect_attempts' not in check_list %}
+  - header: '#### <maximum_invalid_connect_attempts>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='maximum_invalid_connect_attempts'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </maximum_invalid_connect_attempts>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('password_lock_time' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-password_lock_time' not in check_list %}
+  - header: '#### <password_lock_time>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='password_lock_time'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </password_lock_time>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('minimum_password_lifetime' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-minimum_password_lifetime' not in check_list %}
+  - header: '#### <minimum_password_lifetime>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='minimum_password_lifetime'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </minimum_password_lifetime>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('maximum_password_lifetime' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-maximum_password_lifetime' not in check_list %}
+  - header: '#### <maximum_password_lifetime>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='maximum_password_lifetime'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </maximum_password_lifetime>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('maximum_unused_initial_password_lifetime' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-maximum_unused_initial_password_lifetime' not in check_list %}
+  - header: '#### <maximum_unused_initial_password_lifetime>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='maximum_unused_initial_password_lifetime'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </maximum_unused_initial_password_lifetime>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('maximum_unused_productive_password_lifetime' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-maximum_unused_productive_password_lifetime' not in check_list %}
+  - header: '#### <maximum_unused_productive_password_lifetime>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='maximum_unused_productive_password_lifetime'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </maximum_unused_productive_password_lifetime>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('password_expire_warning_time' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-password_expire_warning_time' not in check_list %}
+  - header: '#### <password_expire_warning_time>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='password_expire_warning_time'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </password_expire_warning_time>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('password_lock_for_system_user' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-password_lock_for_system_user' not in check_list %}
+  - header: '#### <password_lock_for_system_user>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='password_lock_for_system_user'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </password_lock_for_system_user>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('detailed_error_on_connect' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_password_requirements' in check_list or 'all' in check_list) and '-detailed_error_on_connect' not in check_list %}
+  - header: '#### <detailed_error_on_connect>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | awk '{print $3}' | tr -d "," | sed 's/.*\(.\{3\}\)$/\1/'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"
+      do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | grep "Database name" | grep -i SYSTEMDB | grep -i $hanainstance | awk '{print $5}')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}') 
+        hanatenants=($(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME,ACTIVE_STATUS from M_DATABASES"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"
+        do
+          tenant_status=$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'"\" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$(sleep 1 | su - $hanauser -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM M_PASSWORD_POLICY WHERE property='detailed_error_on_connect'\"" | tr -d '"' | sed '1d')\""
+        done
+      done
+    become: true
+    footer: >
+      #### </detailed_error_on_connect>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('global_auditing_state' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-global_auditing_state' not in check_list %}
+  - header: '#### <global_auditing_state>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'auditing configuration' and c.KEY = 'global_auditing_state'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </global_auditing_state>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('default_audit_trail_type_system' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-default_audit_trail_type_system' not in check_list %}
+  - header: '#### <default_audit_trail_type_system>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"IS_PRIMARY";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        replication_mode=$(su - "$hanauser" -c "hdbnsutil -sr_state | grep -i \"^mode: \"" | awk '{print $2}')
+        if [ "$replication_mode" = "primary" ] || [ "$replication_mode" = "none" ]; then
+          is_primary="YES"
+        else
+          is_primary="NO"
+        fi
+        hanatenant="SYSTEMDB"
+        tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+        combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'auditing configuration' and c.KEY = 'default_audit_trail_type'\"" | tr -d '"' | sed '1d')
+        while IFS=',' read -r port value service; do
+          service=$(echo "$service" | awk '{print toupper($0)}')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$is_primary\";\"$service\";\"$value\""
+        done <<< "$combined_data"
+      done
+    become: true
+    footer: >
+      #### </default_audit_trail_type_system>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('default_audit_trail_type_tenant' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-default_audit_trail_type_tenant' not in check_list %}
+  - header: '#### <default_audit_trail_type_tenant>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      has_primary=0
+      for hanainstance in "${hanainstances[@]}"; do
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        replication_mode=$(su - "$hanauser" -c "hdbnsutil -sr_state | grep -i \"^mode: \"" | awk '{print $2}')
+        if [ "$replication_mode" = "primary" ] || [ "$replication_mode" = "none" ]; then
+          has_primary=1
+        fi
+      done
+      if [ "$has_primary" -ne 1 ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"IS_PRIMARY";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        replication_mode=$(su - "$hanauser" -c "hdbnsutil -sr_state | grep -i \"^mode: \"" | awk '{print $2}')
+        if [ "$replication_mode" = "primary" ] || [ "$replication_mode" = "none" ]; then
+          is_primary="YES"
+          hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES where DATABASE_NAME != 'SYSTEMDB'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+          for hanatenant in "${hanatenants[@]}"; do
+            tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+            combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'auditing configuration' and c.KEY = 'default_audit_trail_type'\"" | tr -d '"' | sed '1d')
+            while IFS=',' read -r port value service; do
+              service=$(echo "$service" | awk '{print toupper($0)}')
+              echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$is_primary\";\"$service\";\"$value\""
+            done <<< "$combined_data"
+          done
+        elif [ "$replication_mode" = "syncmem" ] || [ "$replication_mode" = "sync" ] || [ "$replication_mode" = "async" ]; then
+          is_primary="NO"
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$is_primary\";\"\";\"\""
+        fi
+      done
+    become: true
+    footer: >
+      #### </default_audit_trail_type_tenant>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sr_audit_trail_type_cstable_override' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-sr_audit_trail_type_cstable_override' not in check_list %}
+  - header: '#### <sr_audit_trail_type_cstable_override>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      has_primary=0
+      for hanainstance in "${hanainstances[@]}"; do
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        replication_mode=$(su - "$hanauser" -c "hdbnsutil -sr_state | grep -i \"^mode: \"" | awk '{print $2}')
+        if [ "$replication_mode" = "primary" ] || [ "$replication_mode" = "none" ]; then
+          has_primary=1
+        fi
+      done
+      if [ "$has_primary" -ne 0 ]; then
+        echo "IGNORE"
+        exit 0
+      fi
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"IS_PRIMARY";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        if [[ -n "$hanainstance" ]]; then
+          instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+          hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+          replication_mode=$(su - "$hanauser" -c "hdbnsutil -sr_state | grep -i \"^mode: \"" | awk '{print $2}')
+          if [ "$replication_mode" = "syncmem" ] || [ "$replication_mode" = "sync" ] || [ "$replication_mode" = "async" ]; then
+            is_primary="NO"
+            tenant_folders=($(ls /usr/sap/$hanainstance/SYS/global/hdb/custom/config/ | grep DB_))
+            for tenant_folder in "${tenant_folders[@]}"; do
+              value=$(grep sr_audit_trail_type_cstable_override /usr/sap/$hanainstance/SYS/global/hdb/custom/config/$tenant_folder/global.ini)
+              hanatenant=$(echo "$tenant_folder" | sed 's/^DB_//')
+              echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$is_primary\";\"\";\"$value\""
+            done
+          fi
+        fi
+      done
+    become: true
+    footer: >
+      #### </sr_audit_trail_type_cstable_override>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('minimal_retention_period' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-minimal_retention_period' not in check_list %}
+  - header: '#### <minimal_retention_period>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'auditing configuration' and c.KEY = 'minimal_retention_period'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </minimal_retention_period>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('data_volume_encryption' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_encryption' in check_list or 'all' in check_list) and '-data_volume_encryption' not in check_list %}
+  - header: '#### <data_volume_encryption>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT value FROM  "SYS"."M_HOST_INFORMATION" WHERE KEY = 'crypto_provider_version'\"" | tr -d '"' | sed '1d')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </data_volume_encryption>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('user_system_deactivated' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_users' in check_list or 'all' in check_list) and '-user_system_deactivated' not in check_list %}
+  - header: '#### <user_system_deactivated>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT USER_DEACTIVATED from "SYS"."USERS" WHERE USER_NAME='SYSTEM'\"" | tr -d '"' | sed '1d')
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </user_system_deactivated>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('no_privilege_data_admin' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_users' in check_list or 'all' in check_list) and '-no_privilege_data_admin' not in check_list %}
+  - header: '#### <no_privilege_data_admin>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"SELECT GRANTEE FROM EFFECTIVE_PRIVILEGE_GRANTEES WHERE OBJECT_TYPE = 'SYSTEMPRIVILEGE' AND PRIVILEGE = 'DATA ADMIN' AND GRANTEE NOT IN ('SYSTEM','_SYS_REPO');\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          if [ "$value" = ""0"" ]; then
+            value="FALSE"
+          else 
+            value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT GRANTEE FROM EFFECTIVE_PRIVILEGE_GRANTEES WHERE OBJECT_TYPE = 'SYSTEMPRIVILEGE' AND PRIVILEGE = 'DATA ADMIN' AND GRANTEE NOT IN ('SYSTEM','_SYS_REPO');\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          fi
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </no_privilege_data_admin>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('no_privilege_debug' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_users' in check_list or 'all' in check_list) and '-no_privilege_debug' not in check_list %}
+  - header: '#### <no_privilege_debug>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"SELECT IS_VALID FROM GRANTED_PRIVILEGES WHERE PRIVILEGE='DEBUG' OR PRIVILEGE='ATTACH DEBUGGER';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          if [ "$value" = "0" ]; then
+            value="FALSE"
+          else 
+            value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"SELECT IS_VALID FROM GRANTED_PRIVILEGES WHERE PRIVILEGE='DEBUG' OR PRIVILEGE='ATTACH DEBUGGER';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          fi
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </no_privilege_debug>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logon_attempts_logging' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-logon_attempts_logging' not in check_list %}
+  - header: '#### <logon_attempts_logging>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = 'CONNECT';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+            value="FALSE"
+          else 
+            value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = 'CONNECT';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          fi
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </logon_attempts_logging>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('additional_logging_group_1' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-additional_logging_group_1' not in check_list %}
+  - header: '#### <additional_logging_group_1>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = 'SYSTEM CONFIGURATION CHANGE';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+            value="FALSE"
+          else 
+            value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = 'SYSTEM CONFIGURATION CHANGE';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+          fi
+          echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$value\""
+        done
+      done
+    become: true
+    footer: >
+      #### </additional_logging_group_1>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('additional_logging_group_2' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-additional_logging_group_2' not in check_list %}
+  - header: '#### <additional_logging_group_2>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"EVENT_ACTION";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          events=("GRANT ANY" "REVOKE ANY")
+          for event in "${events[@]}"; do
+            value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+              value="FALSE"
+            else 
+              value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            fi
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$event\";\"$value\""
+          done
+        done
+      done
+    become: true
+    footer: >
+      #### </additional_logging_group_2>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('additional_logging_group_4' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-additional_logging_group_4' not in check_list %}
+  - header: '#### <additional_logging_group_4>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"EVENT_ACTION";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          events=("CREATE USER" "DROP USER" "ALTER USER" "CREATE ROLE" "DROP ROLE")
+          for event in "${events[@]}"; do
+            value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+              value="FALSE"
+            else 
+              value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            fi
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$event\";\"$value\""
+          done
+        done
+      done
+    become: true
+    footer: >
+      #### </additional_logging_group_4>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('additional_logging_group_5' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-additional_logging_group_5' not in check_list %}
+  - header: '#### <additional_logging_group_5>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"EVENT_ACTION";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          events=("ENABLE AUDIT POLICY" "DISABLE AUDIT POLICY")
+          for event in "${events[@]}"; do
+            value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+              value="FALSE"
+            else 
+              value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            fi
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$event\";\"$value\""
+          done
+        done
+      done
+    become: true
+    footer: >
+      #### </additional_logging_group_5>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('additional_logging_group_13' in check_list or 'sap_hana_tech_specs' in check_list or 'sap_hana_logging' in check_list or 'all' in check_list) and '-additional_logging_group_13' not in check_list %}
+  - header: '#### <additional_logging_group_13>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"EVENT_ACTION";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          events=("BACKUP CATALOG DELETE")
+          for event in "${events[@]}"; do
+            value=$(su - "$hanauser" -c "hdbsql -quiet -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            if [ "$value" = "0" ] || [ "$value" = "FALSE" ]; then
+              value="FALSE"
+            else 
+              value=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"Select is_audit_policy_active from AUDIT_POLICIES where EVENT_ACTION = '$event';\"" | tr -d '"' | sed '1d' | cut -d' ' -f1)
+            fi
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$event\";\"$value\""
+          done
+        done
+      done
+    become: true
+    footer: >
+      #### </additional_logging_group_13>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logshipping_max_retention_size' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_replication' in check_list or 'all' in check_list) and '-logshipping_max_retention_size' not in check_list %}
+  - header: '#### <logshipping_max_retention_size>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'system_replication' and c.KEY = 'logshipping_max_retention_size'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </logshipping_max_retention_size>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logshipping_async_wait_on_buffer_full' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_replication' in check_list or 'all' in check_list) and '-logshipping_async_wait_on_buffer_full' not in check_list %}
+  - header: '#### <logshipping_async_wait_on_buffer_full>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'system_replication' and c.KEY = 'logshipping_async_wait_on_buffer_full'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </logshipping_async_wait_on_buffer_full>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logshipping_timeout' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_replication' in check_list or 'all' in check_list) and '-logshipping_timeout' not in check_list %}
+  - header: '#### <logshipping_timeout>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'system_replication' and c.KEY = 'logshipping_timeout'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </logshipping_timeout>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('operation_mode' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_replication' in check_list or 'all' in check_list) and '-operation_mode' not in check_list %}
+  - header: '#### <operation_mode>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'system_replication' and c.KEY = 'operation_mode'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </operation_mode>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('logshipping_async_buffer_size' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_replication' in check_list or 'all' in check_list) and '-logshipping_async_buffer_size' not in check_list %}
+  - header: '#### <logshipping_async_buffer_size>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'system_replication' and c.KEY = 'logshipping_async_buffer_size'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </logshipping_async_buffer_size>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('max_parallel_io_requests' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_fileio' in check_list or 'all' in check_list) and '-max_parallel_io_requests' not in check_list %}
+  - header: '#### <max_parallel_io_requests>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"SERVICE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'fileio' and c.KEY = 'max_parallel_io_requests'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </max_parallel_io_requests>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('size_kernel_io_queue' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_fileio' in check_list or 'all' in check_list) and '-size_kernel_io_queue' not in check_list %}
+  - header: '#### <size_kernel_io_queue>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"SERVICE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'fileio' and c.KEY = 'size_kernel_io_queue'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </size_kernel_io_queue>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('log_backup_timeout_s' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_persistence' in check_list or 'all' in check_list) and '-log_backup_timeout_s' not in check_list %}
+  - header: '#### <log_backup_timeout_s>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"SERVICE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'persistence' and c.KEY = 'log_backup_timeout_s'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </log_backup_timeout_s>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('log_segment_size_mb' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_persistence' in check_list or 'all' in check_list) and '-log_segment_size_mb' not in check_list %}
+  - header: '#### <log_segment_size_mb>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"SERVICE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'persistence' and c.KEY = 'log_segment_size_mb'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </log_segment_size_mb>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('max_trace_file_size' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_backup' in check_list or 'all' in check_list) and '-max_trace_file_size' not in check_list %}
+  - header: '#### <max_trace_file_size>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo "\"HANA_INSTANCE\";\"INSTANCE_STATUS\";\"HANA_TENANT\";\"TENANT_ACTIVE\";\"SERVICE\";\"VALUE\""
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'backup' and c.KEY = 'max_trace_file_size'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </max_trace_file_size>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('enable_interpreter_cache' in check_list or 'sap_hana_best_practices' in check_list or 'sap_hana_hex' in check_list or 'all' in check_list) and '-enable_interpreter_cache' not in check_list %}
+  - header: '#### <enable_interpreter_cache>'
+    command: |
+      hanainstances=($(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk '/Database name/ && /SYSTEMDB/ { gsub(",", "", $3); print substr($3, length($3) - 2) }'))
+      echo '"HANA_INSTANCE";"INSTANCE_STATUS";"HANA_TENANT";"TENANT_ACTIVE";"SERVICE";"VALUE"'
+      for hanainstance in "${hanainstances[@]}"; do
+        instance_status=$(/usr/sap/hostctrl/exe/saphostctrl -function ListDatabases | awk -v instance="$hanainstance" '/Database name/ && /SYSTEMDB/ && $3 ~ instance { print toupper($5) }')
+        hanauser=$(echo "$hanainstance" | awk '{print tolower($0) "adm"}')
+        hanatenants=($(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select DATABASE_NAME from M_DATABASES\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }'))
+        for hanatenant in "${hanatenants[@]}"; do
+          tenant_status=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_SYSTEMDB \"select ACTIVE_STATUS from M_DATABASES where DATABASE_NAME = '$hanatenant'\"" | awk -F, 'NR > 1 { gsub(/"/, "", $1); print $1 }')
+          combined_data=$(su - "$hanauser" -c "hdbsql -quiet -x -U UDC_COLLECTOR_$hanatenant \"select c.PORT, c.VALUE, s.SERVICE_NAME from M_CONFIGURATION_PARAMETER_VALUES c join M_SERVICES s on c.PORT = s.PORT where c.SECTION = 'hex' and c.KEY = 'enable_interpreter_cache'\"" | tr -d '"' | sed '1d')
+          while IFS=',' read -r port value service; do
+            service=$(echo "$service" | awk '{print toupper($0)}')
+            echo "\"$hanainstance\";\"$instance_status\";\"$hanatenant\";\"$tenant_status\";\"$service\";\"$value\""
+          done <<< "$combined_data"
+        done
+      done
+    become: true
+    footer: >
+      #### </enable_interpreter_cache>
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

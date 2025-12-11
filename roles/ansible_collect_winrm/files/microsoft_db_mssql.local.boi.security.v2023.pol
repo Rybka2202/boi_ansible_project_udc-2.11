@@ -1,0 +1,372 @@
+id:microsoft_db_mssql.1.00109901
+checkname:AO.1.9.1 - SQL-2.1 - Microsoft SQL - Surface Area Reduction - Ensure adhoc distributed queries is disabled
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Adhoc_Distributed_Queries
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00109801
+checkname:AO.1.9.2 - SQL-2.2 - Microsoft SQL - Surface Area Reduction - Check for The clr enabled option
+severity:critical
+stanzaempty:Failed
+type: match
+segment: CLR_Enabled
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00106901
+checkname:AO.1.7.5 - SQL-2.3 - Microsoft SQL - Surface Area Reduction - Ensure only explicitly assigned permissions are valid
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Cross_Database_Permissions
+stanzastart: ^(?!\"Cross_Database_Permissions\")
+stanzastop: $
+stanzacriteria: include:^"0"
+
+id:microsoft_db_mssql.1.00109301
+checkname:AO.1.8.1 - SQL-2.4 - Microsoft SQL - Surface Area Reduction - Check for The Database Mail XPs option is disabled
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Database_Mail_XPs
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00109701
+checkname:AO.1.9.3 - SQL-2.5 - Microsoft SQL - Surface Area Reduction - Check for The Ole Automation Procedures
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Ole_Automation_Procedures
+stanzastart: ^(?!\"ConfiguredValue\")
+stanzastop: $
+stanzacriteria: include:"Disabled"
+
+id:microsoft_db_mssql.1.00109101
+checkname:AO.1.8.4 - SQL-2.6 - Microsoft SQL - Surface Area Reduction - Check for The remote access option should be disabled
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Remote_Access
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00109201
+checkname:AO.1.8.2 - Microsoft SQL - Surface Area Reduction - Check for The remote admin connections option - always pass on cluster (not applicable)
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: SQL_Cluster_check
+stanzastart: ^(?!\"ConfiguredValue\")
+stanzastop: $
+stanzacriteria: include:^"Cluster\sconfigured"
+Conditions {
+    if_passed {
+        # NOT APPLICABLE FOR CLUSTER
+        type: alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type: match
+        segment: Remote_Admin_Connections
+        stanzastart: ^(?!\"name\")
+        stanzastop: $
+        stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+    }
+}
+
+id:microsoft_db_mssql.1.00109001
+checkname:AO.C.6.1.12 - SQL-2.8 - Microsoft SQL - Surface Area Reduction - Check for The scan for startup procs
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Scan_for_Startup_Procs
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00109302
+checkname:BOI - SQL-2.9 - Microsoft SQL - Surface Area Reduction - Check for The SQL Mail XPs option is disabled
+severity:critical
+stanzaempty:Failed
+type: match
+segment: SQL_Mail_XPs
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+id:microsoft_db_mssql.1.00109601
+checkname:AO.1.9.4 - SQL-2.10 - Microsoft SQL - Surface Area Reduction - Trustworthy check
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Trustworthy_check
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"DBName")\".*
+
+id:microsoft_db_mssql.1.00110101
+checkname:AO.C.6.1.2 - SQL-2.13 - Microsoft SQL - Surface Area Reduction - Check for Hide Instance option - always pass on cluster (not applicable)
+severity:critical
+stanzaempty:Failed
+conditional: ifelse::match
+segment: SQL_Cluster_check
+stanzastart: ^(?!\"ConfiguredValue\")
+stanzastop: $
+stanzacriteria: include:^"Cluster\sconfigured"
+Conditions {
+    if_passed {
+        # NOT APPLICABLE FOR CLUSTER
+        type: alwayspassed
+    }
+    if_failed {
+        severity:critical
+        stanzaempty:Failed
+        type: match
+        segment: Hide_Instance
+        stanzastart: ^(?!\"Hide_Instance_option\")
+        stanzastop: $
+        stanzacriteria: include:(?i)"(0|False)"
+    }
+}
+
+id:microsoft_db_mssql.1.00106801
+checkname:AO.1.7.7 - SQL-2.14 - Microsoft SQL - Surface Area Reduction - Ensure sa account cannot be used
+severity:critical
+stanzaempty:Failed
+type: match
+segment: SA_account_login
+stanzastart: ^(?!\"ConfiguredValue\")
+stanzastop: $
+stanzacriteria: include:"DISABLED"
+
+id:microsoft_db_mssql.1.090015
+checkname:AO.C.6.1.15 - SQL-2.15 - Microsoft SQL - Surface Area Reduction - Ensure the 'sa' Login Account has been renamed.
+severity:Critical
+stanzaempty:Failed
+type: matchvalue
+segment: sa_Login_Account_has_been_renamed
+stanzastart: ^(?!"sa_in_use")\"(\d+)
+stanzastop: $
+match:^(?!"sa_in_use")\"(\d+)\"
+criteria: max:0
+
+id:microsoft_db_mssql.1.00109303
+checkname:BOI - SQL-2.16 - Microsoft SQL - Surface Area Reduction - Check for XP cmdshell option is disabled
+severity:critical
+stanzaempty:Failed
+type: match
+segment: XP_cmd_shell
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0";"0"
+
+
+id:microsoft_db_mssql.1.00109501
+checkname:AO.1.9.5 - SQL-2.17 - Microsoft SQL - Surface Area Reduction - Database AutoClose check
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Database_AutoClose_check
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"DBName")\".*
+
+id:microsoft_db_mssql.1.00109502
+checkname:BOI - SQL-2.18 - Microsoft SQL - Surface Area Reduction - No account called 'sa'
+severity:critical
+stanzaempty:Failed
+type: match
+segment: No_SA_login
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"DBName")\".*
+
+id:microsoft_db_mssql.1.00106501
+checkname:AO.C.6.1.4 - SQL-2.19 - Microsoft SQL - Surface Area Reduction - Check for The `clr strict security` option
+severity:critical
+stanzaempty:Failed
+type: match
+segment: clr_strict_security
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"1";"1"
+
+id:microsoft_db_mssql.1.00106401
+checkname:AO.C.7.1.6 - SQL-3.1 - Microsoft SQL - Authentication and Authorization - Check for Uses **Windows Authentication** to validate attempted connections
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Windows_Authentication_Mode
+stanzastart: ^(?!\"ConfiguredValue\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"0"
+
+id:microsoft_db_mssql.1.00107001
+checkname:AO.1.7.4.2 - SQL-3.2 - Microsoft SQL - Authentication and Authorization - Ensure guest has no permissions on user databases
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Guest_Permissions
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"Database")\".*
+
+
+id:microsoft_db_mssql.1.00106301
+checkname:AO.C.7.1.1 - SQL-3.3 - Microsoft SQL - Authentication and Authorization - Check for Orphaned Users
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Orphaned_Users
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"UserName")\".*
+
+id:microsoft_db_mssql.1.00106301
+checkname:AO.C.7.1.2 - SQL-3.4 - Microsoft SQL - Authentication and Authorization - Ensure no sql authentication is used
+severity:critical
+stanzaempty: Failed
+type: match
+segment: SQL_Authentication_contained_databases
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"UserName")\".*
+
+id:microsoft_db_mssql.1.00106601
+checkname:AO.1.7.10 - SQL-3.8 - Microsoft SQL - Authentication and Authorization - Check for Public access levels
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Public_access_levels
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"class")\".*
+
+id:microsoft_db_mssql.1.00106601
+checkname:AO.C.7.1.3 - SQL-3.9 - Microsoft SQL - Authentication and Authorization - Ensure Windows BUILTIN groups are not SQL Logins
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Windows_BUILTIN_groups_no_SQL_Logins
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"name")\".*
+
+id:microsoft_db_mssql.1.00106602
+checkname:AO.C.7.1.4 - SQL-3.10 - Microsoft SQL - Authentication and Authorization - Ensure Windows local groups are not SQL Logins
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Windows_local_groups_no_SQL_Logins
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"name")\".*
+
+id:microsoft_db_mssql.1.00106603
+checkname:AO.C.7.1.5 - SQL-3.11 - Microsoft SQL - Authentication and Authorization - Ensure the public role in the msdb database is not granted access to SQL Agent proxies
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Msdb_public_SQLAgent_proxies
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"name")\".*
+
+id:microsoft_db_mssql.1.00107301
+checkname:AO.1.7.1 - SQL-4.3 - Microsoft SQL - Password Policiess - Ensure 'CHECK_POLICY' Option is set to 'ON' for All SQL Authenticated Logins
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Account_password_policy_enforcement
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"name")\".*
+
+id:microsoft_db_mssql.1.00107302
+checkname:AO.C.8.1.1 - SQL-4.2 - Microsoft SQL - Password Policiess - Ensure 'CHECK_EXPIRATION' Option is set to 'ON' for All SQL Authenticated Logins Within the Sysadmin Role
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Check_Expiration_SQLlogin_Sysadmin
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"name")\".*
+
+id:microsoft_db_mssql.1.00108201
+checkname:AO.1.2.4 - SQL-5.2 - Microsoft SQL - Audit Logging  - Ensure 'Default Trace Enabled' Server Configuration Option is set to '1'
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Default_trace_enabled
+stanzastart: ^(?!\"name\")
+stanzastop: $
+stanzacriteria: include:^(?:[^\;]*\;)"1";"1"
+
+id:microsoft_db_mssql.1.00108601
+checkname:SQL-2.12 - Microsoft SQL - Network settings - Ensure SQL Server is configured to use non-standard ports
+severity:critical
+stanzaempty:Failed
+type: match
+segment: Port_configuration
+stanzastart: ^(?!\"local_tcp_port\")
+stanzastop: $
+stanzacriteria: exclude:"1433"
+
+id:microsoft_db_mssql.1.00108101
+checkname:AO.1.2.5 - SQL-5.4 - Microsoft SQL - Audit Logging  - Ensure 'SQL Server Audit' is set to capture both 'failed' and 'successful logins'
+severity:critical
+stanzaempty:Failed
+type: match
+segment: SQL_Server_Audit
+stanzastart:^(?!\"Audit\sName\")(?:[^\;]*\;)
+stanzastop: $
+stanzacriteria: include:(?i)^(?:[^\;]*\;){6}"SUCCESS\sAND\sFAILURE"
+
+id:microsoft_db_mssql.1.00109401
+checkname:AO.1.9.6 - SQL-6.2 - Microsoft SQL - Application Development - Ensure 'CLR Assembly Permission Set' is set to 'SAFE_ACCESS' for All CLR Assemblies
+severity:critical
+stanzaempty:Failed
+type: match
+segment: CLR_Assembly_Safe
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: include:^("name";.+)|((?!"name");"SAFE_ACCESS")
+
+id: microsoft_db_mssql.1.00106201
+checkname: AO.1.8.3 - SQL-7.1 - Microsoft SQL - Encryption - Ensure 'Symmetric Key encryption algorithm' is set to 'AES_128' or higher in non-system databases
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Symmetric_Key_encryption_algorithm
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"Database_Name")\".*
+
+id: microsoft_db_mssql.1.00106101
+checkname: AO.1.8.5 - SQL-7.2 - Microsoft SQL - Encryption - Ensure Asymmetric Key Size is set to' greater than or equal to 2048' in non-system databases
+severity:critical
+stanzaempty: Failed
+type: match
+segment: Asymmetric_Key_Size
+stanzastart: ^\S+
+stanzastop: $
+stanzacriteria: exclude:^(?!"Database_Name")\".*
+
+id:microsoft_db_mssql.2.24
+checkname:SQL-7.5 - Microsoft SQL - Appendix: Additional Considerations - Ensure 'SQL Server Browser Service' is configured correctly
+severity:Info
+stanzaempty:Failed
+type: match
+segment: SQLBrowser_service_enabled_check
+stanzastart: ^(?!"StartType")\S+
+stanzastop: $
+stanzacriteria: exclude:^4

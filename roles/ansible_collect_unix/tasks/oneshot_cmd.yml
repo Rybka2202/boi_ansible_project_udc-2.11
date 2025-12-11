@@ -1,0 +1,30 @@
+---
+- name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+  ansible.builtin.shell: |
+    {{ commands.command }}
+  args:
+    executable: "{% if namebase == 'ibm_os_aix' %}/usr/bin/ksh{% else %}/bin/bash{% endif %}"
+  become: "{{ commands.become | default(omit) }}"
+  become_user: "{{ commands.become_user | default('root') }}"
+  register: cmdout
+  no_log: true
+  changed_when: false
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Debug routine
+  ansible.builtin.debug:
+    var: cmdout
+  when: udc_debug | default(False) | bool
+
+- name: Job properties
+  delegate_to: localhost
+  delegate_facts: true
+  block:
+    - name: Set custom facts
+      ansible.builtin.set_stats:
+        data:
+          segment_data: |
+            {{ commands.header }}
+            {{ cmdout.stdout | default('') }}
+            {{ commands.footer }}

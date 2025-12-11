@@ -1,0 +1,2346 @@
+<# Detailed Instructions - https://github.kyndryl.net/Kyndryl-CISO/CAR-Data-Gathering/blob/master/Active-Directory-Health-Check/
+#>
+Param (
+    $LogPath = $null,
+    $LogFile = $null,
+    [String]$AnsibleMode,
+    [String]$DeviceName,
+    [String]$ZipLog,
+    [String]$account,
+    [String]$blueid,
+    [String]$chipid,
+    [String]$location,
+    [String]$satteam,
+    [String]$hwswdomain,
+    [String]$udcmode,
+    [String]$tpchcversion,
+    [String]$buildversion
+)
+
+# SATHC variables
+$tpchc_description = "Microsoft_MW_ActiveDirectory" # Value for description
+$tpchc_identifier = "None"                          # Value for identifier
+$log_to_logfile = $true                             # Always generate log file
+$computer = ($env:COMPUTERNAME).ToLower()
+
+# Default variables
+if(!($tpchcversion)) {
+   $tpchcversion = "2.5.0"                       # Value for tpchversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -tpchversion parameter. Using default: $tpchcversion"
+}
+ # Code level for this script
+if(!($buildversion)) {
+   $buildversion	= "2.5.0.20240924"           # Value for buildversion if left empty or white space
+   Write-Host -ForegroundColor Yellow "Missing -buildversion parameter. Using default: $buildversion"
+}
+if(!($AnsibleMode)){
+    $AnsibleMode = $false
+   Write-Host -ForegroundColor Yellow "Missing -AnsibleMode parameter. Using default: $false"
+}
+if(!($DeviceName)){
+    $DeviceName = ($env:COMPUTERNAME).ToLower()
+   Write-Host -ForegroundColor Yellow "Missing -DeviceName parameter. Using default: $DeviceName (computer hostname)"
+}
+if(!($ZipLog)){
+   $ZipLog = $True
+   Write-Host -ForegroundColor Yellow "Missing -ZipLog parameter. Using default: $True"
+}
+if(!($account)){
+   $account = "SDE"
+   Write-Host -ForegroundColor Yellow "Missing -Account parameter. Using default: $account"
+}
+if(!($blueid)){
+   $blueid = "BAC9999999"
+   Write-Host -ForegroundColor Yellow "Missing -BlueID parameter. Using default: $blueid"
+}
+if(!($chipid)){
+   $chipid = "MyChip"
+   Write-Host -ForegroundColor Yellow "Missing -ChipID parameter. Using default: $chipid"
+}
+if(!($location)){
+   $location = "Tucson"
+   Write-Host -ForegroundColor Yellow "Missing -Location parameter. Using default: $location"
+}
+if(!($satteam)){
+   $satteam = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -SATTeam parameter. Using default: $satteam"
+}
+if(!($hwswdomain)){
+   $hwswdomain = "Compute"
+   Write-Host -ForegroundColor Yellow "Missing -HWSWDomain parameter. Using default: $hwswdomain"
+}
+if(!($udcmode)){
+    $udcmode = $false
+    Write-Host -ForegroundColor Yellow "Missing -UDCmode parameter. Using default: $udcmode"
+}
+if(!($LogPath)){
+    $LogPath = "$DeviceName.out"
+    Write-Host -ForegroundColor Yellow "Missing -LogPath parameter. Using default: $LogPath"
+}
+if(!($LogFile)){
+    $LogFile = "$DeviceName.log"
+    Write-Host -ForegroundColor Yellow "Missing -LogFile parameter. Using default: $LogFile"
+}
+$crt = 0
+function MsgPrint([string]$ShowStep, [string]$textMsg) {
+    if ($log_to_logfile) {
+        switch ($ShowStep.ToLower()) {
+            "info"		{Write-Output "INFO:     $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append;Write-Host "$textMsg"}
+            "highlight"	{Write-Output "HIGHLIGHT:$(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "ok"		{Write-Output "OK:       $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "error"		{Write-Output "ERROR:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "warning"	{Write-Output "WARNING:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            "filelist"	{Write-Output "FILES:    $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+            default		{Write-Output "DEFAULT:  $(get-date -format "yyyyMMdd-HHmmss") $textMsg" | Out-File $LogFile -encoding UTF8 -append}
+        }
+    }
+	return
+}
+
+function SAT-Header{
+    Write "#### <devicelist_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """Devicename"";""Deviceaddress"";""Devicetype""" | Out-File -Append -FilePath $LogPath
+    Write """$DeviceName"";""$HostIP"";""$tpchc_description""" | Out-File -Append -FilePath $LogPath
+    Write "#### </devicelist_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    Write "#### <tpchc_cfg>" | Out-File -Append -FilePath $LogPath
+    Write """tpchc_version"";""build_version"";""blue_id"";""chip_id"";""account"";""location"";""tpchc_description"";""tpchc_identifier"";""satteam"";""hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write """$tpchcversion"";""$buildversion"";""$blueid"";""$chipid"";""$account"";""$location"";""$tpchc_description"";""$tpchc_identifier"";""$satteam"";""$hwswdomain""" | Out-File -Append -FilePath $LogPath
+    Write "#### </tpchc_cfg>`r`n" | out-file -Append -FilePath $LogPath
+
+    Write "#### <policy_cfg>" | Out-File -Append -FilePath $LogPath
+    Write "#### </policy_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+
+    if ($udcmode -eq $false) {
+        $timestamp = get-date -format "yyyyMMdd-HHmmss"
+        $OS = Get-CimInstance -Class Win32_OperatingSystem
+        $OS_Version = $OS.Version
+        $PowerShell_Version = $PSVersionTable.PSVersion.tostring()
+        $iso8601DateTime = Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz"
+        Write "#### <cacf_cfg>" | Out-File -Append -FilePath $LogPath
+        Write """collected_on"";""timestamp"";""gsma_code"";""tower_version"";""os_distribution"";""os_version"";""ansible_version"";""python_version"";""powershell_version"";""udc_version"";""healthcheck_timestamp_utc""" | Out-File -Append -FilePath $LogPath
+        Write """$computer"";""$timestamp"";""$account"";"""";""Windows"";""$OS_Version"";"""";""0"";""$PowerShell_Version"";"""";""$iso8601DateTime""" | Out-File -Append -FilePath $LogPath
+        Write "#### </cacf_cfg>`r`n" | Out-File -Append -FilePath $LogPath
+    }
+}
+
+# Log variables
+$loglocation = Get-Location
+$logdir = "$loglocation\adhc-$DeviceName"
+
+# Cleaning old logs
+# Cleaning old logs
+$loglocation = Get-Location
+try{(Get-ChildItem -Path $loglocation -Filter "$DeviceName.out" -ErrorAction Stop).FullName | Remove-Item -Force -ErrorAction Stop}catch{}
+try{(Get-ChildItem -Path $loglocation -Filter "$DeviceName.log" -ErrorAction Stop).FullName | Remove-Item -Force -ErrorAction Stop}catch{}
+try{
+    Get-Item $logdir -ErrorAction Stop | Out-Null
+    Remove-Item $logdir -Recurse | Out-Null
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+catch{
+    New-Item -Path $logdir -ItemType Directory | Out-Null
+}
+
+$HostIP = (
+    Get-WmiObject Win32_NetworkAdapterConfiguration |
+    Where-Object {$_.IPAddress -ne $null -and $_.DefaultIPGateway -ne $null}
+).IPAddress[0]
+
+# Testing required PowerShell modules
+try{
+    $dn  = (Get-CIMInstance CIM_ComputerSystem ).Domain
+    $ADDomain = Get-ADDomain -Server $dn -ErrorAction Stop | Out-Null
+    $ADmodule = "enabled"
+}
+catch{
+    $ADmodule = "missing"
+}
+if ($ADmodule -eq "enabled"){
+    # ActiveDirectory module is enabled
+    try{
+        Import-Module DNSServer -ErrorAction Stop | Out-Null
+    }
+    catch{
+        Write-Host -ForegroundColor Yellow "DNSServer module is not enabled. Enable module or execute script on server with ActiveDirectory module enabled." -NoNewline
+        $DataCollectionStatus = "Warning. DNSServer module missing."
+    }
+    $DataCollectionStatus = "OK"
+}
+else{
+    # Exit. Terminate log file
+    Write-Host -ForegroundColor Red "Module ActiveDirectory is not enabled. Enable module or execute script on server with ActiveDirectory module enabled."
+
+    # SATHC header start
+    SAT-Header
+
+    $date = Get-Date -Format "yyyy-mm-ddTHH.mm.ss"
+    Write-Output $date": Not Ok. ActiveDirectory module missing" | Out-File $LogFile -encoding UTF8 -Append
+    Exit
+}
+# SATHC header start
+SAT-Header
+
+
+# Domain variables
+$dn  = (Get-CIMInstance CIM_ComputerSystem ).Domain
+$ADDomain = Get-ADDomain -Server $dn
+$DomainName = $ADDomain.DNSRoot
+$Forest = Get-ADForest -Server $dn
+$DomainDN = $ADDomain.DistinguishedName
+$DomainControllersContainer = $ADDomain.DomainControllersContainer
+
+#FSMO DCs
+$PDC = $ADDomain.PDCEmulator
+$InfrastructureMaster = $ADDomain.InfrastructureMaster
+$RIDMaster = $ADDomain.RIDMaster
+$DomainNamingMaster = $Forest.DomainNamingMaster
+$SchemaMaster = $Forest.SchemaMaster
+
+# Server role
+$computerSystem = get-wmiobject Win32_ComputerSystem -Computer $computer
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+$serverRoleString = $DomainRole[$computerSystem.DomainRole]
+$serverRole = $computerSystem.DomainRole
+
+# FSMO servers
+$FSMOservers = New-Object -TypeName PSObject
+$FSMOservers | Add-Member -MemberType NoteProperty -Name InfrastructureMaster -Value $InfrastructureMaster
+$FSMOservers | Add-Member -MemberType NoteProperty -Name PDCEmulator -Value $PDC
+$FSMOservers | Add-Member -MemberType NoteProperty -Name RIDMaster -Value $RIDMaster
+$FSMOservers | Add-Member -MemberType NoteProperty -Name DomainNamingMaster -Value $DomainNamingMaster
+$FSMOservers | Add-Member -MemberType NoteProperty -Name SchemaMaster -Value $SchemaMaster
+
+# DomainControllers
+$DomainControllers = Get-ADDomainController -Filter * -Server $DomainName | Select-Object HostName,Name,IPv4Address,IsGlobalCatalog,OperatingSystem,Site,IsReadOnly,ComputerObjectDN,LdapPort,SslPort | sort HostName
+
+# ADFineGrainedPasswordPolicy
+try{
+    $ADFineGrainedPasswordPolicy =  Get-ADFineGrainedPasswordPolicy -Filter * -ErrorAction Stop |
+    Select Name,ComplexityEnabled,LockoutDuration,LockoutObservationWindow,LockoutThreshold,MaxPasswordAge,MinPasswordAge,MinPasswordLength,PasswordHistoryCount,ReversibleEncryptionEnabled,Precedence,AppliesTo
+}
+catch{
+    $ADFineGrainedPasswordPolicy = $null
+}
+
+# AD Header
+Write "#### <ActiveDirectory_Info>" | out-file -Append -FilePath $LogPath
+$ADInfoObj = New-Object -TypeName PSObject
+$ADInfoObj | Add-Member -MemberType NoteProperty -Name Model -Value "adds"
+$ADInfoObj | Add-Member -MemberType NoteProperty -Name Type -Value $tpchc_description
+$ADInfoObj | Add-Member -MemberType NoteProperty -Name Serial -Value (($ADDomain).objectguid).guid
+$ADInfoObj | Add-Member -MemberType NoteProperty -Name Version -Value ($ADDomain).domainmode
+$ADInfoObj | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_info.csv
+Get-content -Path $logdir\$crt-AD_info.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Info>`r`n" | out-file -Append -FilePath $LogPath
+
+# Ping & WinRM connectivity tests to all domain controllers
+Write-Host
+$crt++
+MsgPrint "info" "$crt. Ping & WinRM connectivity tests to all domain controllers"
+$computerStatus = @()
+ForEach ($dc in $DomainControllers){
+    $computer = ($dc.HostName).ToLower()
+    $IPv4Address = $dc.IPv4Address
+    $computerObj = New-Object -TypeName PSObject
+    # Test ping
+    if ((Test-Connection $computer -Quiet) -eq $True) {
+        $ping = "Success"
+    }
+    else{
+        $ping = "Fail"
+    }
+
+    #Test WinRM
+    Try {
+        Test-WSMan -ComputerName $computer -UseSSL -ErrorAction stop | Out-Null
+        $winRM = "WinRMOKSSL"
+    }
+    catch{
+        Try{
+            Test-WSMan -ComputerName $computer -ErrorAction stop | Out-Null
+            $winRM = "WinRMOK"
+        }
+        catch{
+            #WinRM disabled or not running (will skip tests)
+            $winRM = "WinRMDown"
+        }
+    }
+    $computerObj | Add-Member -MemberType NoteProperty -Name HostName -Value $computer
+    $computerObj | Add-Member -MemberType NoteProperty -Name IPv4Address -Value $IPv4Address
+    $computerObj | Add-Member -MemberType NoteProperty -Name PingStatus -Value $ping
+    $computerObj | Add-Member -MemberType NoteProperty -Name WinRMstatus -Value $winRM
+    $computerStatus += $computerObj
+}
+$DomainControllersUp = $computerStatus | Where-Object {$_.WinRMstatus -eq "WinRMOK"} | select -ExpandProperty HostName
+<#
+{% if ('ActiveDirectory_DomainControllers_IPconfig' in check_list or 'all' in check_list) and '-ActiveDirectory_DomainControllers_IPconfig' not in check_list %}
+AD Domain Controllers IP configuration
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. AD Domain Controllers IP configuration"
+Write "#### <ActiveDirectory_DomainControllers_IPconfig>" | out-file -Append -FilePath $LogPath
+function Get-IPAddressConfig {
+    param(
+        [String]$computer
+    )
+    # Get server role
+    $computerSystem = get-wmiobject Win32_ComputerSystem -Computer $computer
+    $DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    $serverRoleString = $DomainRole[$computerSystem.DomainRole]
+
+    # Get IP address
+    $IPAddress = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPAddress -ne $null}
+    $IPAddress | select @{N='MachineName';E={$computer}},@{N='ServerRole';E={$serverRoleString}},@{N='InterfaceName';E={(Get-NetAdapter -InterfaceIndex $_.InterfaceIndex).Name}}, Description, @{N='DNSDomainSuffixSearchOrder';E={($_.DNSDomainSuffixSearchOrder) -join ','}}, MACAddress, InterfaceIndex,`
+    @{N='IPAddress';E={($_.IPAddress)[0]}}, @{N='IPSubnet';E={($_.IPSubnet) -join ','}}, `
+    @{N='DefaultIPGateway';E={($_.DefaultIPGateway) -join ','}},@{N='DNSServerSearchOrder';E={($_.DNSServerSearchOrder) -join ','}},`
+    DHCPEnabled, @{N='DHCPLeaseExpires';E={[Management.ManagementDateTimeConverter]::ToDateTime($_.DHCPLeaseExpires)}}, `
+    @{N='DHCPLeaseObtained';E={[Management.ManagementDateTimeConverter]::ToDateTime($_.DHCPLeaseObtained)}}, DHCPServer
+}
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-IPAddressConfig -computer $computer | select @{N='DomainName';E={$DomainName}},ServerRole,MachineName,InterfaceName,Description,DNSDomainSuffixSearchOrder,MACAddress,InterfaceIndex,IPAddress,IPSubnet,DefaultIPGateway,DNSServerSearchOrder,DHCPEnabled,DHCPLeaseExpires,DHCPLeaseObtained,DHCPServer |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_DC_IPconfig.csv
+    Get-content -Path $logdir\$crt-AD_DC_IPconfig.csv | out-file -Append -FilePath $LogPath
+    $serverRole = (Get-IPAddressConfig -computer $computer).serverRole  | sort | Get-Unique
+}
+else{
+    $IPAddressConfigArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $IPAddressConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-IPAddressConfig} -ArgumentList $computer
+        $IPAddressConfigArray += $IPAddressConfig
+    }
+    $IPAddressConfigArray | select @{N='DomainName';E={$DomainName}},ServerRole,MachineName,InterfaceName,Description,DNSDomainSuffixSearchOrder,MACAddress,InterfaceIndex,IPAddress,IPSubnet,DefaultIPGateway,DNSServerSearchOrder,DHCPEnabled,DHCPLeaseExpires,DHCPLeaseObtained,DHCPServer |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_DC_IPconfig.csv
+    Get-content -Path $logdir\$crt-AD_DC_IPconfig.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DomainControllers_IPconfig>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('ActiveDirectory_ForestLevel' in check_list or 'all' in check_list) and '-ActiveDirectory_ForestLevel' not in check_list %}
+
+AD Forest functional level
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Active Directory Forest functional level"
+$ForestLevel = $Forest.ForestMode
+Write "#### <ActiveDirectory_ForestLevel>" | out-file -Append -FilePath $LogPath
+Write """DomainName"";""ForestLevel""" | Out-File -Append -FilePath $LogPath
+Write """$DomainName"";""$ForestLevel""" | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_ForestLevel>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DomainLevel' in check_list or 'all' in check_list) and '-ActiveDirectory_DomainLevel' not in check_list %}
+
+AD Domain functional level
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Active Directory Domain functional level"
+$DomainLevel = $ADDomain.DomainMode
+Write "#### <ActiveDirectory_DomainLevel>" | out-file -Append -FilePath $LogPath
+Write """DomainName"";""DomainLevel""" | Out-File -Append -FilePath $LogPath
+Write """$DomainName"";""$DomainLevel""" | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DomainLevel>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DomainControllersForest' in check_list or 'all' in check_list) and '-ActiveDirectory_DomainControllersForest' not in check_list %}
+
+AD Domain Controllers Forest list
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. List Domain Controllers"
+$DomainControllersForest = @()
+$Domains = $Forest.Domains
+ForEach ($Domain in $Domains) {
+    try{
+        $DomainControllersList = Get-ADDomainController -server $Domain -filter * -ErrorAction Stop |
+        Select HostName,Name,IPv4Address,IsGlobalCatalog,OperatingSystem,Site,IsReadOnly,ComputerObjectDN,LdapPort,SslPort | sort HostName
+        $DomainControllersForest += $DomainControllersList
+        $DomainControllersForest | select @{N='DomainName';E={$DomainName}},* | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_DC_Forest_List.csv
+    }
+    catch{
+        MsgPrint "warning" "04. List Domain Controllers: Unable to contact servers in $Domain"
+    }
+}
+Write "#### <ActiveDirectory_DomainControllersForest>" | out-file -Append -FilePath $LogPath
+Get-Content $logdir\$crt-AD_DC_Forest_List.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DomainControllersForest>`r`n" | out-file -Append -FilePath $LogPath
+
+# AD Domain controlers from local domain
+$DomainControllers | select @{N='DomainName';E={$DomainName}},* | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_DC_List.csv
+Write "#### <ActiveDirectory_DomainControllers>" | out-file -Append -FilePath $LogPath
+Get-Content $logdir\$crt-AD_DC_List.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DomainControllers>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DcPingWinRM' in check_list or 'all' in check_list) and '-ActiveDirectory_DcPingWinRM' not in check_list %}
+
+Connectivity: Ping & WinRM tests to all Domain Controllers
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Connectivity: Ping & WinRM tests to all Domain Controllers"
+Write "#### <ActiveDirectory_DcPingWinRM>" | out-file -Append -FilePath $LogPath
+$computerStatus | select @{N='DomainName';E={$DomainName}},* | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_DC_Ping_WinRM_Connectivity.csv
+Get-Content $logdir\$crt-AD_DC_Ping_WinRM_Connectivity.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DcPingWinRM>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Logs' in check_list or 'all' in check_list) and '-ActiveDirectory_Logs' not in check_list %}
+
+Server Logs:
+##########################################################################################################
+System
+Application
+Active Directory Web Services
+Directory Service
+DFS Replication
+#>
+$crt++
+MsgPrint "info" "$crt. Server Logs (System, Application, Active Directory Web Services, Directory Service, DFS Replication)"
+Write "#### <ActiveDirectory_Logs>" | out-file -Append -FilePath $LogPath
+ForEach ($computer in $DomainControllersUp){
+    $logs = "System","Application","Active Directory Web Services","Directory Service","DFS Replication"
+    try{
+        foreach ($log in $logs){
+            Get-WinEvent -FilterHashtable @{ LogName=$Log } -Maxevents 100 -ComputerName $computer | `
+            Where-Object -FilterScript {($_.Level -eq 2) -or ($_.Level -eq 3)} | `
+            Select-Object @{N="MachineName";E={$computer}},LogName, Id, level, ProviderName, TimeCreated ,@{Name="UserName";Expression = `
+            {$_.UserId.translate([System.Security.Principal.NTAccount]).value}} | select @{N='DomainName';E={$DomainName}},* |  `
+            Export-Csv -Append -Delimiter ";" -NoTypeInformation -path $logdir\$crt-Temp.csv
+
+            Get-WinEvent -FilterHashtable @{ LogName=$Log } -Maxevents 100 -ComputerName $computer | `
+            Where-Object -FilterScript {($_.Level -eq 2) -or ($_.Level -eq 3)} | `
+            Select-Object @{N="MachineName";E={$computer}},LogName,Id, level, Message, ProviderName, TimeCreated ,@{Name="UserName";Expression = `
+            {$_.UserId.translate([System.Security.Principal.NTAccount]).value}} | select @{N='DomainName';E={$DomainName}},* |  `
+            Export-Csv -Append -Delimiter ";" -NoTypeInformation -path $logdir\$crt-Log.csv
+        }
+    }
+    catch{
+        MsgPrint "warning" "$crt. Server Logs (System, Application, Active Directory Web Services, Directory Service, DFS Replication): $computer - cannot read $log log"
+        # No events in the log
+        # write """$computer"";""cannot read $log log""" | Out-File -Append -FilePath $LogPath
+    }
+}
+Get-Content $logdir\$crt-Temp.csv | Out-File -Append -FilePath $LogPath
+Remove-Item -Path $logdir\$crt-Temp.csv
+Write "#### </ActiveDirectory_Logs>`r`n" | out-file -Append -FilePath $LogPath
+
+try{
+    $LDAPevent = Import-Csv -Path $logdir\$crt-Event_Logs.csv -ErrorAction Stop | Where-Object {$_.EventID -eq "2886"}
+        if ($LDAPevent -ne $null){
+            $events = $LDAPevent | Sort-Object MachineName -Unique | select -ExpandProperty MachineName
+            foreach ($item in $events){
+                $MachineName = $item
+                # $MachineName accepts LDAP (insecure) bindings which are not recommended. Recommended article
+                # https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd941829(v=ws.10)?redirectedfrom=MSDN
+            }
+        }
+}
+catch{
+    # Event ID 2886 missing
+}
+<#
+{% endif %}
+{% if ('ActiveDirectory_InterSites' in check_list or 'all' in check_list) and '-ActiveDirectory_InterSites' not in check_list %}
+
+AD Sites: Inter-Sites
+##########################################################################################################
+Inter-Sites Transports
+Site Links
+Costs
+Replication Interval
+#>
+$crt++
+MsgPrint "info" "$crt. AD Sites: Inter-Sites Transports, Site Links, Costs, Replication Interval"
+Write "#### <ActiveDirectory_InterSites>" | out-file -Append -FilePath $LogPath
+Get-ADObject -Filter 'objectClass -eq "siteLink"' -Searchbase (Get-ADRootDSE).ConfigurationNamingContext -Property Options, Cost, ReplInterval, SiteList, Schedule |
+Select-Object @{N='DomainName';E={($ADDomain).DNSRoot}}, @{Name="SiteLinkName";Expression={$_.Name}}, @{Name="SiteCount";Expression={$_.SiteList.Count}}, @{N='SitesIncluded';E={(($_.SiteList)).replace((",CN=Sites,CN=Configuration,"+$(($ADDomain).DistinguishedName)),"").replace("CN=","") -join ','}}, Cost, ReplInterval, @{Name="Schedule";Expression={If($_.Schedule){If(($_.Schedule -Join " ").Contains("240")){"NonDefault"}Else{"24x7"}}Else{"24x7"}}} |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Sites_Intersites.csv
+Get-Content $logdir\$crt-Sites_Intersites.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_InterSites>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Sites_Servers' in check_list or 'all' in check_list) and '-ActiveDirectory_Sites_Servers' not in check_list %}
+
+AD Sites: Sites & Servers
+##########################################################################################################
+Site names
+Servers
+Servers count
+Subnets
+Subnets
+count
+#>
+$crt++
+MsgPrint "info"  "$crt. AD Sites: Site names, Servers, Servers count, Subnets, Subnets count"
+Write "#### <ActiveDirectory_Sites_Servers>" | out-file -Append -FilePath $LogPath
+$Sites = [System.DirectoryServices.ActiveDirectory.Forest]::GetCurrentForest().Sites
+$obj = @()
+foreach ($Site in $Sites) {
+    $obj += New-Object -Type PSObject -Property (
+    @{
+        "SiteName"  = $site.Name
+        "SubNets" = $site.Subnets -Join ","
+        "SubNetsCount" = ($site.Subnets).count
+        "Servers" = $Site.Servers -Join ","
+        "ServersCount" = ($Site.Servers).count
+    }
+ )
+}
+$obj | select @{N='DomainName';E={($ADDomain).DNSRoot}},SiteName,SubNetsCount,SubNets,ServersCount,Servers |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Sites_Servers.csv
+Get-Content $logdir\$crt-Sites_Servers.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Sites_Servers>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_PriviledgedUsers' in check_list or 'all' in check_list) and '-ActiveDirectory_PriviledgedUsers' not in check_list %}
+
+Users: Priviledged Users (including non-expiring):
+##########################################################################################################
+https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/81d92bba-d22b-4a8c-908a-554ab29148ab
+
+Domain Admins
+Enterprise Admins
+Schema Admins
+Administrators
+Account Operators
+Server Operators
+Print Operators
+#>
+$crt++
+MsgPrint "info" "$crt. Users: Priviledged Users"
+$PriviledgedUsers = $null
+$PriviledgedUsers = @()
+$PriviledgedUsersArray = @()
+$DomainAdmins = (Get-ADGroup -Filter * | Where-Object {$_.sid -Like "*-512"}).name
+$EnterpriseAdmins = (Get-ADGroup -Filter * | Where-Object {$_.sid -Like "*-519"}).name
+$SchemaAdmins = (Get-ADGroup -Filter * | Where-Object {$_.sid -Like "*-518"}).name
+$ProtectedUsers = (Get-ADGroup -Filter * | Where-Object {$_.sid -Like "*-525"}).name
+$Administrators = (Get-ADGroup -Filter * | Where-Object {$_.sid -eq "S-1-5-32-544"}).name
+$AccountOperators = (Get-ADGroup -Filter * | Where-Object {$_.sid -eq "S-1-5-32-548"}).name
+$ServerOperators = (Get-ADGroup -Filter * | Where-Object {$_.sid -eq "S-1-5-32-549"}).name
+$PrintOperators = (Get-ADGroup -Filter * | Where-Object {$_.sid -eq "S-1-5-32-550"}).name
+$PriviledgedGroups = "$DomainAdmins","$EnterpriseAdmins","$SchemaAdmins","$Administrators","$AccountOperators","$ServerOperators","$PrintOperators"
+foreach($group in $priviledgedGroups){
+    $groupMembers = (Get-ADGroup -Identity $group -Properties Members -Server $env:COMPUTERNAME).Members | Get-ADObject -Server $env:COMPUTERNAME | select Name,ObjectClass,DistinguishedName
+    foreach ($item in $groupMembers){
+        $userClass = $item.ObjectClass
+        $userAccount = $item.DistinguishedName
+        if($item.ObjectClass -eq "group"){
+            # Group
+            $groupUsers = Get-ADGroupMember -Identity $userAccount -Recursive | Where-Object {$_.distinguishedName -like "*$DomainDN"} | ForEach-Object {
+            (Get-ADUser -Identity $_.distinguishedName | Where-Object {$_.Enabled -eq $True}).DistinguishedName}
+            $PriviledgedUsers += $groupUsers
+        }
+        else{
+            # User
+            $PriviledgedUsers += $userAccount
+        }
+    }
+}
+$PriviledgedUsersUnique = $PriviledgedUsers | Sort-Object | Get-Unique | Select-String -pattern 'H`|ForeignSecurityPrincipals' -notmatch
+foreach ($user in $PriviledgedUsersUnique) {
+    $PriviledgedUsersArray += Get-ADObject -Identity $user.Line | Get-ADUser -Properties SamAccountName,Description,PasswordNeverExpires,PasswordLastSet,LastLogonDate |
+    Select SamAccountName,Description,PasswordNeverExpires,PasswordLastSet,LastLogonDate,@{N='Groups';E={((Get-ADPrincipalGroupMembership -Identity $user.Line |
+    Where-Object {$_.name -eq "$DomainAdmins" -or $_.name -eq "$EnterpriseAdmins" -or $_.name -eq "$SchemaAdmins" -or $_.name -eq "$Administrators" -or $_.name -eq "$AccountOperators" -or $_.name -eq "$ServerOperators" -or $_.name -eq "$PrintOperators" -or $_.name -eq "$ProtectedUsers"}).name) -join ","}} |
+    Select @{N='DomainName';E={$DomainName}},SamAccountName,Description,PasswordNeverExpires,PasswordLastSet,LastLogonDate,Groups,@{N='AccountSensitiveNotDelegated';E={(Get-ADUser $user.Line -Properties AccountNotDelegated).AccountNotDelegated}},@{N='ProtectedUsers';E={if((Get-ADPrincipalGroupMembership -Identity $user.Line).name | Where-Object {$_ -like "Protected Users"}){$true}else{$false}}}
+}
+$PriviledgedUsersArray | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-PriviledgedUsers.csv
+Write "#### <ActiveDirectory_PriviledgedUsers>" | out-file -Append -FilePath $LogPath
+Get-Content $logdir\$crt-PriviledgedUsers.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_PriviledgedUsers>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Users' in check_list or 'all' in check_list) and '-ActiveDirectory_Users' not in check_list %}
+
+Users information
+##########################################################################################################
+Total user accounts
+Active accounts
+Disabled accounts
+Password never expire
+Password not required
+With change password at next logon
+Password not changed in last 12 months
+Accounts with expiration date
+Users not logged last 90 days
+Users in "Users" container
+Do not require Kerberos preauthentication
+Managed Service Accounts
+#>
+$crt++
+MsgPrint "info" "$crt. Users information"
+Write "#### <ActiveDirectory_Users>" | out-file -Append -FilePath $LogPath
+$UsersContainer = (Get-ADUser -SearchBase "CN=Users,$DomainDN" -Filter 'ObjectClass -eq "user" -and enabled -eq $True ' | where {$_.SamAccountName -notmatch "(\$)$" -and $_.sid -notmatch "^S-1-5-21-.+-500$" }).SamAccountName
+$NoKerbPreAuth = Get-ADUser -LdapFilter "(&(objectclass=user)(objectcategory=user)(useraccountcontrol:1.2.840.113556.1.4.803:=4194304))" -properties *
+$OutputObj = New-Object -Type PSObject
+$OutputObj | Add-Member -MemberType NoteProperty -Name DomainName -Value $DomainName
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersTotal -Value (@(Get-ADUser -Filter *)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersActive -Value (@(Get-ADUser -Filter 'Enabled -eq $true')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersDisabled -Value (@(Get-ADUser -Filter 'Enabled -eq $false -and SamAccountName -ne "krbtgt" -and SamAccountName -ne "Guest" -and SamAccountName -ne "DefaultAccount"')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersPasswordNeverExpire -Value (@(Get-ADUser -filter 'PasswordNeverExpires -eq $true -and enabled -eq $true')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersPasswordNotRequired -Value (@(Get-ADUser -filter 'PasswordNotRequired -eq $true -and enabled -eq $true')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersChangePassword -Value (@(Get-ADUser -Filter 'pwdLastSet -eq 0 -and Enabled -eq $true')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersPasswdNotChanged365d -Value (@(Get-ADUser -filter 'Enabled -eq $True -and passwordneverexpires -eq $false' -Properties passwordlastset | Where-Object {$_.passwordlastset -le (Get-Date).AddDays(-365)})).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersAccountExpire -Value (@(Get-ADUser -Filter 'enabled -eq $true -and AccountExpirationDate -ne 0')).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersNotLoggedOn90d -Value (@(Get-ADUser -Filter 'Enabled -eq $True' -Properties * | Where-Object {$_.LastLogonDate -le (Get-Date).AddDays(-90)})).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersContainer -Value ($UsersContainer).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name NoKerberosPreAuthentication -Value ($NoKerbPreAuth).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ManagedServiceAccounts -Value (@(Get-ADServiceAccount -filter *)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name UsersSIDHistory -Value (@(Get-ADUser -Properties SamAccountName,SIDHistory -Filter 'enabled -eq $true -and SIDHistory -like "*"').SamAccountName).count
+$OutputObj | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_Users.csv
+Get-Content $logdir\$crt-AD_Users.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Users>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Windows_Computers' in check_list or 'all' in check_list) and '-ActiveDirectory_Windows_Computers' not in check_list %}
+
+Computers information
+##########################################################################################################
+Total Windows Computers Inventory - include disabled
+Total active (severs + workstations) - to do
+Windows Servers active - to do
+Windows Servers active non-supported
+Windows workstations active - to do
+Windows workstations active non-supported
+Servers: No contact in last 90 days
+Workstations: No contact in last 90 days
+Computers with Unconstrained Kerberos Delegation enabled
+#>
+$crt++
+MsgPrint "info" "$crt. Computers information"
+Write "#### <ActiveDirectory_Computers>" | out-file -Append -FilePath $LogPath
+$DaysFilter = (([datetime]::Now).AddDays(-90))
+$InventoryWindows = Get-ADComputer -Filter 'operatingsystem -like "*Windows*" -and servicePrincipalName -notlike "MSClusterVirtualServer*"' -Properties operatingsystem,enabled,name
+$InventoryEnabled = $InventoryWindows | Where-Object {$_.enabled -eq "true"}
+$ServersEnabled = $InventoryEnabled | Where-Object {$_.operatingsystem -like "*Windows server*"}
+$ServersNotSupported = $ServersEnabled |  where-object {$_.Operatingsystem -notlike "*2012*" -and $_.Operatingsystem -notlike "*2016*" -and $_.Operatingsystem -notlike "*2019*"  -and $_.Operatingsystem -notlike "*2022*"}
+$WorkstationsEnabled = $InventoryEnabled | Where-Object {$_.operatingsystem -notlike "*server*"}
+$WorkstationsNotSupported = $WorkstationsEnabled |  where-object {$_.Operatingsystem -notlike "*8*" -and $_.Operatingsystem -notlike "*10*" -and $_.Operatingsystem -notlike "*11*"}
+$OldComputers = Get-ADComputer -Filter 'operatingsystem -like "*windows*" -and Enabled -eq $true -and WhenChanged -lt $DaysFilter' -Properties name,operatingsystem
+$ServersNotUsed = $OldComputers | Where-Object {$_.operatingsystem -like "*Windows server*"}
+$WorkstationsNotUsed = $OldComputers | Where-Object {$_.operatingsystem -notlike "*Windows server*"}
+$ComputersContainer = (Get-ADcomputer -SearchBase "CN=Computers,$DomainDN" -Filter 'enabled -eq "True"').name
+$ComputersUnconstrainedDelegation = (Get-ADObject -Filter {
+    (UserAccountControl -BAND 0x0080000) -or
+    (UserAccountControl -BAND 0x1000000) -or
+    (msDS-AllowedToDelegateTo -like '*')
+} -Properties * | Where-Object {$_.ObjectClass -eq "computer" -and $_.DistinguishedName -notlike "*OU=Domain Controllers*"}).name
+$OutputObj = New-Object -Type PSObject
+$OutputObj | Add-Member -MemberType NoteProperty -Name DomainName -Value $DomainName
+$OutputObj | Add-Member -MemberType NoteProperty -Name ComputersTotal -Value (@($InventoryWindows)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ComputersActive -Value (@($InventoryEnabled)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ServersEnabled -Value (@($ServersEnabled)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ServersNotSupported -Value (@($ServersNotSupported)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name WorkstationsEnabled -Value (@($WorkstationsEnabled)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name WorkstationsNotSupported -Value (@($WorkstationsNotSupported)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ServersNotUsed -Value (@($ServersNotUsed)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name WorkstationsNotUsed -Value (@($WorkstationsNotUsed)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ComputersUnconstrainedKerberos -Value (@($ComputersUnconstrainedDelegation)).count
+$OutputObj | Add-Member -MemberType NoteProperty -Name ComputersContainer -Value (@($ComputersContainer)).count
+$OutputObj | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_Computers.csv
+Get-Content $logdir\$crt-AD_Computers.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Computers>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_AdminSDHolder_Permissions' in check_list or 'all' in check_list) and '-ActiveDirectory_AdminSDHolder_Permissions' not in check_list %}
+
+AdminSDHolder permissions status
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. AdminSDHolder permissions status"
+Write "#### <ActiveDirectory_AdminSDHolder_Permissions>" | out-file -Append -FilePath $LogPath
+$AdminSDHolder = (Get-Acl AD:"CN=AdminSDHolder,CN=System,$DomainDN").Access |
+Select @{N='DomainName';E={$DomainName}}, IdentityReference, IsInherited, InheritanceFlags, PropagationFlags, ObjectType, ActiveDirectoryRights, InheritanceType, ObjectFlags, AccessControlType, InheritedObjectType
+$AdminSDHolder | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AdminSDHolder_permissions.csv
+Get-Content $logdir\$crt-AdminSDHolder_permissions.csv -ErrorAction Stop | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_AdminSDHolder_Permissions>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Fine_Grained_Password_Policies' in check_list or 'all' in check_list) and '-ActiveDirectory_Fine_Grained_Password_Policies' not in check_list %}
+
+Do you have Fine-Grained Password Policies defined?
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Fine-Grained Password Policies"
+Write "#### <ActiveDirectory_Fine_Grained_Password_Policies>" | out-file -Append -FilePath $LogPath
+if ($ADFineGrainedPasswordPolicy -ne $null){
+    $ADFineGrainedPasswordPolicy | Select @{N='DomainName';E={$DomainName}},Name,ComplexityEnabled,LockoutDuration,LockoutObservationWindow,LockoutThreshold,MaxPasswordAge,MinPasswordAge,MinPasswordLength,PasswordHistoryCount,ReversibleEncryptionEnabled,Precedence |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Fine_Grained_Password_Policies.csv
+    Get-Content $logdir\$crt-Fine_Grained_Password_Policies.csv | Out-File -Append -FilePath $LogPath
+}
+Else{
+    MsgPrint "warning" "$crt. Fine-Grained Password Policies: 0 (none)"
+    Write "Fine-Grained Password Policies: 0 (none)" | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Fine_Grained_Password_Policies>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Fine_Grained_Password_Policies_Details' in check_list or 'all' in check_list) and '-ActiveDirectory_Fine_Grained_Password_Policies_Details' not in check_list %}
+
+What are Fine-Grained Password Policies details?
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Fine-Grained Password Policies details"
+Write "#### <ActiveDirectory_Fine_Grained_Password_Policies_Details>" | out-file -Append -FilePath $LogPath
+function get-recursiveInfo{
+    param(
+    $item,
+    $parent ="" ,
+    $ppatk
+     )
+    $objs = Get-ADObject -Identity $item -Properties *
+    foreach($obj in $objs){
+        if($obj.ObjectClass -eq "group"){
+            $obj| select SamAccountName | Export-Csv -Delimiter ";" -Append -NoTypeInformation -Path $ppatk ####
+            $Global:noofGroups += 1
+            $Global:vGroupNames += $obj.sAMAccountName
+            $members = Get-ADGroupMember $obj.DistinguishedName
+            foreach($member in $members){
+                get-recursiveInfo -item $member.DistinguishedName -parent $obj.sAMAccountName -ppatk $ppatk
+            }
+        }
+         else{
+            $obj| select SamAccountName | Export-Csv -Delimiter ";" -Append -NoTypeInformation -Path $ppatk ####
+            if($parent -ne ""){
+                $Global:noofUsersinGroups += 1
+            }
+            else{
+                $Global:noofDirectUsers += 1
+            }
+            $Global:noofTotalUsers += 1
+        }
+    }
+}
+$FineGrainedPasswordPolicyArray = @()
+$noofGroups = 0
+$noofUsersinGroups = 0
+$noofDirectUsers = 0
+$noofTotalUsers = 0
+$vGroupNames = @()
+
+if ($null -ne $ADFineGrainedPasswordPolicy){
+    foreach($policy in $ADFineGrainedPasswordPolicy){
+        $FineGrainedPasswordPolicyObj = New-Object -TypeName PSObject
+        $policyName = $policy.Name
+        $FineGrainedPasswordPolicyObj | Add-Member -MemberType NoteProperty -Name PolicyName -Value $policyName
+        $FineGrainedPolicyUsers = New-Item -ItemType "file" -Force -Path "$logdir\$crt-Fine_Grained_Password_Policy_Users-$policyName.csv"
+        $Global:noofGroups = 0
+        $Global:noofUsersinGroups = 0
+        $Global:noofDirectUsers = 0
+        $Global:noofTotalUsers = 0
+        $Global:vGroupNames = @()
+        foreach ($item in $policy.AppliesTo){
+            get-recursiveInfo -item $item -ppatk $FineGrainedPolicyUsers
+        }
+
+        $jGroups = $Global:vGroupNames -join ","
+        $FineGrainedPasswordPolicyObj | Add-Member -MemberType NoteProperty -Name Groups -Value $jGroups
+        $FineGrainedPasswordPolicyObj | Add-Member -MemberType NoteProperty -Name GroupsMembers -Value $Global:noofUsersinGroups
+        $FineGrainedPasswordPolicyObj | Add-Member -MemberType NoteProperty -Name DirectMembers -Value $Global:noofDirectUsers
+        $FineGrainedPasswordPolicyObj | Add-Member -MemberType NoteProperty -Name TotalMembers -Value $Global:noofTotalUsers
+        $FineGrainedPasswordPolicyArray += $FineGrainedPasswordPolicyObj
+  }
+}
+Else{
+    MsgPrint "warning" "$crt. Fine-Grained Password Policies details: 0 (none)"
+    Write "Fine-Grained Password Policies details: 0 (none)" | out-file -Append -FilePath $LogPath
+}
+$FineGrainedPasswordPolicyArray | Select @{N='DomainName';E={$DomainName}},* |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-Fine_Grained_Password_Policy_Details.csv
+Get-Content $logdir\$crt-Fine_Grained_Password_Policy_Details.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Fine_Grained_Password_Policies_Details>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Password_Policy' in check_list or 'all' in check_list) and '-ActiveDirectory_Password_Policy' not in check_list %}
+
+Provide Domain Password Policy/Policies
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Provide Domain Password Policy/Policies"
+Write "#### <ActiveDirectory_Password_Policy>" | out-file -Append -FilePath $LogPath
+$DomainPasswordPolicy = Get-ADDefaultDomainPasswordPolicy |
+Select @{Name='DomainName';Expression={$DomainName}},ComplexityEnabled,@{Name='LockoutDuration';Expression={$_.LockoutDuration.Minutes}},@{Name='ResetAccountLockedAfter';Expression={$_.LockoutObservationWindow.Minutes}},LockoutThreshold,@{Name='MaxPasswordAge';Expression={$_.MaxPasswordAge.Days}},@{Name='MinPasswordAge';Expression={$_.MinPasswordAge.Days}},MinPasswordLength,PasswordHistoryCount,ReversibleEncryptionEnabled
+$DomainPasswordPolicy | Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_Domain_Password_Policy.csv
+Get-Content $logdir\$crt-AD_Domain_Password_Policy.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Password_Policy>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Recycle_Bin' in check_list or 'all' in check_list) and '-ActiveDirectory_Recycle_Bin' not in check_list %}
+
+AD Recycle Bin feature enabled?
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. AD Recycle Bin feature"
+Write "#### <ActiveDirectory_Recycle_Bin>" | out-file -Append -FilePath $LogPath
+$ADconfig = ",CN=Configuration,"+$DomainDN
+$ADRecycleBin = Get-ADOptionalFeature -Filter 'name -like "Recycle Bin Feature"' | select-object EnabledScopes -ExpandProperty EnabledScopes
+if ($ADRecycleBin){
+    $ADRecycleBinStatus = "Enabled"
+}
+else{
+    $ADRecycleBinStatus = "Disabled"
+    MsgPrint "warning" "$crt. AD Recycle Bin Feature is not enabled"
+}
+Write """DomainName"";""Message""" | out-file -Append -FilePath $LogPath
+Write """$DomainName"";""$ADRecycleBinStatus""" | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Recycle_Bin>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('ActiveDirectory_DCDiag_tests' in check_list or 'all' in check_list) and '-ActiveDirectory_DCDiag_tests' not in check_list %}
+
+DCDIAG: complete tests
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DCDiag: complete tests"
+function Get-DCDiagComplete {
+    param(
+        [String]$computer
+    )
+    $dcdiag = @()
+    $result = dcdiag /s:$computer
+    $result | select-string -pattern '\. (.*) \b(passed|failed)\b test (.*)' | foreach {
+        $dcdiagObj = New-Object -TypeName PSObject
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name TestName -Value $_.Matches.Groups[3].Value
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name TestResult -Value $_.Matches.Groups[2].Value
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name Entity -Value $_.Matches.Groups[1].Value
+        $dcdiag += $dcdiagObj
+    }
+    $dcdiag
+}
+
+Write "#### <ActiveDirectory_DCDiag_tests>" | out-file -Append -FilePath $LogPath
+#$computer = ($env:COMPUTERNAME).ToLower()
+$dn  = (Get-CIMInstance CIM_ComputerSystem ).Domain
+$ADDomain = Get-ADDomain -Server $dn
+Get-DCDiagComplete -computer $ADDomain.PDCEmulator |  Select @{N='DomainName';E={$DomainName}},MachineName,TestName,TestResult,Entity |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_DCDiag_complete.csv
+Get-Content $logdir\$crt-AD_DCDiag_complete.csv | out-file -Append -FilePath $LogPath
+$DCDiagCompleteArray | Select @{N='DomainName';E={$DomainName}},MachineName,TestName,TestResult,Entity |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_DCDiag_complete.csv
+Get-Content $logdir\$crt-AD_DCDiag_complete.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DCDiag_tests>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('ActiveDirectory_Replication_Summary' in check_list or 'all' in check_list) and '-ActiveDirectory_Replication_Summary' not in check_list %}
+
+Replication: show replications summary
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Replication: show replications summary"
+# Get the replication info
+$myRepInfo = @(repadmin /replsum * /bysrc /bydest /sort:delta)
+$cleanRepInfo = @()
+
+# Strip off last 4 lines because they are not needed
+for ($i=10; $i -lt ($myRepInfo.Count-4); $i++) {
+    if($myRepInfo[$i] -ne ""){
+        # Remove empty lines from our array.
+        $myRepInfo[$i] -replace '\s+', " " | Out-Null
+        $cleanRepInfo += $myRepInfo[$i]
+    }
+}
+$finalRepInfo = @()
+foreach ($line in $cleanRepInfo) {
+    $splitRepInfo = $line -split '\s+',8
+    if ($splitRepInfo[0] -eq "Source") { $repType = "Source" }
+    if ($splitRepInfo[0] -eq "Destination") { $repType = "Destination" }
+    if ($splitRepInfo[1] -notmatch "DSA") {
+        # Create an Object and populate it with our values.
+        $objRepValues = New-Object System.Object
+        $objRepValues | Add-Member -type NoteProperty -name DSAType -value $repType # Source or Destination DSA
+        $objRepValues | Add-Member -type NoteProperty -name Hostname  -value $splitRepInfo[1] # Hostname
+        $objRepValues | Add-Member -type NoteProperty -name Delta  -value $splitRepInfo[2] # Largest Delta
+        $objRepValues | Add-Member -type NoteProperty -name Fails -value $splitRepInfo[3] # Failures
+        $objRepValues | Add-Member -type NoteProperty -name Total -value $splitRepInfo[5] # Totals
+        $objRepValues | Add-Member -type NoteProperty -name PctError  -value $splitRepInfo[6] # % errors
+        $objRepValues | Add-Member -type NoteProperty -name ErrorMsg  -value $splitRepInfo[7] # Error code
+        $finalRepInfo += $objRepValues
+    }
+}
+$finalRepInfo | select @{N='DomainName';E={$DomainName}},* | Export-Csv -Delimiter ";" -NoTypeInformation $logdir\$crt-AD_Replication_Summary.csv
+Write "#### <ActiveDirectory_Replication_Summary>" | out-file -Append -FilePath $LogPath
+Get-Content $logdir\$crt-AD_Replication_Summary.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Replication_Summary>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Replication_Show' in check_list or 'all' in check_list) and '-ActiveDirectory_Replication_Show' not in check_list %}
+
+Replication: show replications
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Replication: show replications"
+$repadmin = repadmin /showrepl * /csv 2>$null
+$repadmin = $repadmin -replace ("showrepl_COLUMNS","ReplicationHealth")
+$repadmin = $repadmin -replace ("showrepl_INFO","info")
+$repadmin = $repadmin -replace ("showrepl_ERROR","error")
+$repadmin | ConvertFrom-Csv | select @{N='DomainName';E={$DomainName}},* |
+Export-Csv -NoTypeInformation -Delimiter ";" $logdir\$crt-AD_Replication_Show.csv
+Write "#### <ActiveDirectory_Replication_Show>" | out-file -Append -FilePath $LogPath
+Get-Content $logdir\$crt-AD_Replication_Show.csv | Out-File -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Replication_Show>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Replication_Failures' in check_list or 'all' in check_list) and '-ActiveDirectory_Replication_Failures' not in check_list %}
+
+Replication: show replication failures
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Replication: show replication failures"
+Write "#### <ActiveDirectory_Replication_Failures>" | out-file -Append -FilePath $LogPath
+$myRepInfo = @(repadmin /failcache)
+$cleanRepInfo = @()
+$RepInfo = @()
+for ($i=4; $i -lt ($myRepInfo.Count+2); $i++) {
+    if($myRepInfo[$i] -ne ""){
+        # Remove empty lines from our array
+        $myRepInfo[$i] -replace '\s+', " " | Out-Null
+        $cleanRepInfo += $myRepInfo[$i]
+        $cleanRepInfo = $cleanRepInfo -replace "=",""
+        $cleanRepInfo = $cleanRepInfo -replace "For information about network troubleshooting, see Windows Help.",""
+    }
+}
+
+foreach ($line in $cleanRepInfo) {
+    $splitRepInfo = $line -split '\s+',2
+    $splitRepInfo = $splitRepInfo.trim() -ne ""
+    $RepInfo += $splitRepInfo
+}
+
+if ($RepInfo -like "*error*"){
+    $Failures = "Fail"
+    $FailuresValue = "$RepInfo"
+}
+else{
+    $Failures = "OK"
+    $FailuresValue = "n/a"
+}
+$RepadminObj = New-Object -TypeName PSObject
+$RepadminObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+$RepadminObj | Add-Member -MemberType NoteProperty -Name Status -Value $Failures
+$RepadminObj | Add-Member -MemberType NoteProperty -Name FailureValue -Value $FailuresValue
+$RepadminObj | select @{N='DomainName';E={$DomainName}},* |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_Show_replication_failures.csv
+Get-Content $logdir\$crt-AD_Show_replication_failures.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Replication_Failures>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Intersite_Routes' in check_list or 'all' in check_list) and '-ActiveDirectory_Intersite_Routes' not in check_list %}
+
+Replication show inter-site messaging routes
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Replication: show inter-site messaging routes"
+repadmin /showism > $logdir\$crt-AD_Show_Intersite_Routes.txt
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_DCDiag' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_DCDiag' not in check_list %}
+
+DNS: DCDiag verify records of all DCs in _msdcs zone
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: DCDiag verify records of all DCs in _msdcs zone. This will take some time..."
+function Get-DNSDCDiag {
+    param(
+        [String]$computer
+    )
+    $dcdiag = @()
+    $result = dcdiag /s:$computer /e /test:dns
+    $result | select-string -pattern '\. (.*) \b(passed|failed)\b test (.*)' | foreach {
+        $dcdiagObj = New-Object -TypeName PSObject
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name TestName -Value $_.Matches.Groups[3].Value
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name TestResult -Value $_.Matches.Groups[2].Value
+        $dcdiagObj | Add-Member -MemberType NoteProperty -Name Entity -Value $_.Matches.Groups[1].Value
+        $dcdiag += $dcdiagObj
+    }
+    $dcdiag
+}
+Write "#### <ActiveDirectory_DNS_DCDiag>" | out-file -Append -FilePath $LogPath
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DNSDCDiag -computer $computer | select @{N="DomainName";E={$DomainName}},MachineName,TestName,TestResult,Entity |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_DCDiag.csv
+    Get-Content $logdir\$crt-DNS_DCDiag.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DNSDCDiagArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $DNSDCDiag = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-DNSDCDiag} -ArgumentList $computer
+        $DNSDCDiagArray += $DNSDCDiag
+    }
+    $DNSDCDiagArray  | select @{N="DomainName";E={$DomainName}},MachineName,TestName,TestResult,Entity |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_DCDiag.csv
+    Get-Content $logdir\$crt-DNS_DCDiag.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DNS_DCDiag>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_SRV_zones' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_SRV_zones' not in check_list %}
+
+DNS: SRV records test
+##########################################################################################################
+_ldap in {SiteName}._sites.dc._msdcs.contoso.com
+_kerberos {SiteName}._sites.dc._msdcs.contoso.com
+_ldap in _tcp.dc._msdcs.contoso.com
+_kerberos in _tcp.dc._msdcs.contoso.com
+_ldap in {domain-guid].domains._msdcs.contoso.com
+record type A in gc._msdcs.contoso.com
+_ldap in _tcp.{SiteName}._sites.gc._msdcs.contoso.com
+_ldap in _tcp.gc._msdcs.contoso.com
+_ldap for PDC in _tcp.pdc._msdcs.contoso.com
+#>
+$crt++
+MsgPrint "info" "$crt. DNS: SRV records test"
+Write "#### <ActiveDirectory_DNS_SRV_zones>" | out-file -Append -FilePath $LogPath
+function Get-DNSSRVzones {
+    param(
+        [String]$computer
+    )
+    Get-WmiObject -Namespace root/microsoftdns -q "select * from MicrosoftDNS_SRvtype" -ComputerName $computer |
+    Where-Object {($_.domainname -imatch "$DomainName") -or ($_.srvdomainname -imatch "$DomainName")} |
+    sort SRVDomainName | select SRVDomainName, DomainName, OwnerName, Port, ContainerName
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DNSSRVzones -computer $computer | select @{N="DomainName";E={$DomainName}},@{N="MachineName";E={$_.SRVDomainName}},@{N="SRVRecord";E={$_.DomainName}},OwnerName,Port,ContainerName |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_SRV_zones.csv
+    Get-Content $logdir\$crt-DNS_SRV_zones.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DNSSRVzones = Invoke-Command -ComputerName $PDC -ScriptBlock ${function:Get-DNSSRVzones} -ArgumentList $PDC
+    $DNSSRVzones | select @{N="DomainName";E={$DomainName}},@{N="MachineName";E={$_.SRVDomainName}},@{N="SRVRecord";E={$_.DomainName}},OwnerName,Port,ContainerName |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_SRV_zones.csv
+    Get-Content $logdir\$crt-DNS_SRV_zones.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DNS_SRV_zones>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_Server_Scavenging' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_Server_Scavenging' not in check_list %}
+
+DNS: Is DNS Server Scavenging set?
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Server Scavenging"
+Write "#### <ActiveDirectory_DNS_Server_Scavenging>" | out-file -Append -FilePath $LogPath
+function Get-DNSServerScavengingConfig {
+    param(
+        [String]$computer
+    )
+    $DNSserverScavengingObj = New-Object -TypeName PSObject
+    if ({Get-Module -ListAvailable -Name DnsServer}){
+        # DNS module installed
+        $DNSServerScavenging = Get-DnsServerScavenging -computername $computer
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name DNSmodule -Value "true"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name ScavengingState -Value $DNSServerScavenging.ScavengingState
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name LastScavengeTime -Value $DNSServerScavenging.LastScavengeTime
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name NoRefreshInterval -Value $DNSServerScavenging.NoRefreshInterval
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name RefreshInterval -Value $DNSServerScavenging.RefreshInterval
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name ScavengingInterval -Value $DNSServerScavenging.ScavengingInterval
+    }
+    else {
+        # DNS module not installed
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name DNSmodule -Value "false"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name ScavengingState -Value "n/a"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name LastScavengeTime -Value "n/a"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name NoRefreshInterval -Value "n/a"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name RefreshInterval -Value "n/a"
+        $DNSserverScavengingObj | Add-Member -MemberType NoteProperty -Name ScavengingInterval -Value "n/a"
+    }
+    $DNSserverScavengingObj
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DNSServerScavengingConfig -computer $computer | Select @{N='DomainName';E={$DomainName}},MachineName,DNSmodule,ScavengingState,LastScavengeTime,NoRefreshInterval,ScavengingInterval |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Server_scavenging.csv
+    Get-Content $logdir\$crt-DNS_Server_scavenging.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DNSServerScavengingArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $DNSServerScavenging = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-DNSServerScavengingConfig} -ArgumentList $computer
+     $DNSServerScavengingArray += $DNSServerScavenging
+    }
+    $DNSServerScavengingArray | Select @{N='DomainName';E={$DomainName}},MachineName,DNSmodule,ScavengingState,LastScavengeTime,NoRefreshInterval,ScavengingInterval |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Server_scavenging.csv
+    Get-Content $logdir\$crt-DNS_Server_scavenging.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DNS_Server_Scavenging>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_Zones_Scavenging' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_Zones_Scavenging' not in check_list %}
+
+DNS: Is Zones Scavenging set?
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Zones Scavenging"
+Write "#### <ActiveDirectory_DNS_Zones_Scavenging>" | Out-File -Append -FilePath $LogPath
+function Get-DNSZonesAging {
+    param(
+        [String]$computer
+    )
+    $DNSZonesAging = @()
+    if ({Get-Module -ListAvailable -Name DnsServer}){
+        # DNS module installed
+        $dnsZones = Get-DnsServerZone -computername $computer | Where-Object {$_.ZoneName -notlike "*.in-addr.arpa" -and $_.ZoneName -ne "TrustAnchors" -and $_.IsAutoCreated -eq $false -and $_.ZoneType -ne "Forwarder"}
+        foreach ($zone in $dnsZones) {
+            $DnsServerZoneAgingObj = New-Object -TypeName PSObject
+            $DnsServerZoneAging = Get-DnsServerZoneAging -ComputerName $computer -Name $zone.zonename
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name DNSmodule -Value "true"
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name ZoneName -Value $zone.zonename
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name AgingEnabled -Value $DnsServerZoneAging.AgingEnabled
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name AvailForScavengeTime -Value $DnsServerZoneAging.AvailForScavengeTime
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name NoRefreshInterval -Value $DnsServerZoneAging.NoRefreshInterval
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name RefreshInterval -Value $DnsServerZoneAging.RefreshInterval
+            $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name ScavengeServers -Value $DnsServerZoneAging.ScavengeServers
+            $DNSZonesAging +=$DnsServerZoneAgingObj
+        }
+    }
+    else{
+        # DNS module not installed
+        $DnsServerZoneAgingObj = New-Object -TypeName PSObject
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name DNSmodule -Value "false"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name ZoneName -Value "n/a"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name AgingEnabled -Value "n/a"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name AvailForScavengeTime -Value "n/a"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name NoRefreshInterval -Value "n/a"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name RefreshInterval -Value "n/a"
+        $DnsServerZoneAgingObj | Add-Member -MemberType NoteProperty -Name ScavengeServers -Value "n/a"
+        $DNSZonesAging +=$DnsServerZoneAgingObj
+    }
+    $DNSZonesAging
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DNSZonesAging -computer $computer | Select @{N='DomainName';E={$DomainName}},MachineName,DNSmodule,ZoneName,AgingEnabled,AvailForScavengeTime,NoRefreshInterval,RefreshInterval,ScavengeServers |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Zones_scavenging.csv
+    Get-Content $logdir\$crt-DNS_Zones_scavenging.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DNSZonesAgingArray = $null
+    $DNSServerScavengingArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $DNSZonesAging = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-DNSZonesAging} -ArgumentList $computer
+     $DNSZonesAgingArray += $DNSZonesAging
+    }
+    $DNSZonesAgingArray | Select @{N='DomainName';E={$DomainName}},* |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Zones_scavenging.csv
+    Get-Content $logdir\$crt-DNS_Zones_scavenging.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DNS_Zones_Scavenging>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_Forward_Zones' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_Forward_Zones' not in check_list %}
+
+DNS: Export Forward Lookup zones
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Export Forward Lookup zones"
+Write "#### </ActiveDirectory_DNS_Forward_Zones>" | Out-File -Append -FilePath $LogPath
+Get-DnsServerZone -computername $computer | Where-Object {$_.ZoneName -notlike "*.in-addr.arpa" -and $_.ZoneName -ne "TrustAnchors" -and $_.IsAutoCreated -eq $false} |
+Select @{N="DomainName";E={$DomainName}}, ZoneName, ZoneType, DistinguishedName, IsAutoCreated, IsDsIntegrated, IsPaused, IsReadOnly, IsReverseLookupZone, IsShutdown, DirectoryPartitionName, DynamicUpdate, IgnorePolicies, IsSigned, IsWinsEnabled, Notify, ReplicationScope, SecureSecondaries, ZoneFile, NotifyServers, SecondaryServers, AllowedDcForNsRecordsAutoCreation |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_Forward_zones.csv
+Get-Content $logdir\$crt-DNS_Forward_zones.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DNS_Forward_Zones>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_Reverse_Zones' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_Reverse_Zones' not in check_list %}
+
+DNS: Export Reverse Lookup zones
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Export Reverse Lookup zones"
+Write "#### </ActiveDirectory_DNS_Reverse_Zones>" | Out-File -Append -FilePath $LogPath
+Get-DnsServerZone -computername $computer | Where-Object {$_.ZoneName -like "*.in-addr.arpa" -and $_.ZoneName -ne "TrustAnchors" -and $_.IsAutoCreated -eq $false} |
+Select @{N="DomainName";E={$DomainName}}, ZoneName, ZoneType, DistinguishedName, IsAutoCreated, IsDsIntegrated, IsPaused, IsReadOnly, IsReverseLookupZone, IsShutdown, DirectoryPartitionName, DynamicUpdate, IgnorePolicies, IsSigned, IsWinsEnabled, Notify, ReplicationScope, SecureSecondaries, ZoneFile, NotifyServers, SecondaryServers, AllowedDcForNsRecordsAutoCreation |
+Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DNS_Reverse_zones.csv
+Get-Content $logdir\$crt-DNS_Reverse_zones.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DNS_Reverse_Zones>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DC_DNS_A_record' in check_list or 'all' in check_list) and '-ActiveDirectory_DC_DNS_A_record' not in check_list %}
+
+DNS: Verify all DCs have A record in DNS
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Verify all DCs have A record in DNS"
+Write "#### <ActiveDirectory_DC_DNS_A_record>" | Out-File -Append -FilePath $LogPath
+Write """DomainName"";""MachineName;""DNSRecord""" | Out-File -Append -FilePath $LogPath
+ForEach ($computer in $DomainControllers.hostname){
+    try{
+        $record = (Resolve-DnsName $computer -Type A -ErrorAction Stop).name
+        Write """$DomainName"";""$computer"";""OK""" | Out-File -Append -FilePath $LogPath
+    }
+    catch{
+        Write """$DomainName"";""$computer"";""missing""" | Out-File -Append -FilePath $LogPath
+        MsgPrint "warning" "$crt. DNS: Verify all DCs have A record in DNS: $computer missing A record"
+    }
+}
+Write "#### </ActiveDirectory_DC_DNS_A_record>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DC_DNS_PTR_record' in check_list or 'all' in check_list) and '-ActiveDirectory_DC_DNS_PTR_record' not in check_list %}
+
+DNS: Verify DNS PTR records for domain controllers
+##########################################################################################################>
+#>
+$crt++
+MsgPrint "info" "$crt. DNS: Verify DNS PTR records for domain controllers"
+Write "#### <ActiveDirectory_DC_DNS_PTR_record>" | Out-File -Append -FilePath $LogPath
+function Get-DNSPTRrecord {
+    param(
+        [String]$computer
+    )
+    $DNSPTRrecordsArray = @()
+    $ComputerIPAddress = (Get-ADComputer $computer -Properties *).ipv4address
+    $ReverseIPSuffix = $ComputerIPAddress.Split(".")
+    [array]::reverse($ReverseIPSuffix)
+    $ReverseIPSuffix = $ReverseIPSuffix -join "."
+    $ptr = "$ReverseIPSuffix.in-addr.arpa"
+    try{
+        Resolve-DnsName $ptr -ErrorAction Stop | Out-Null
+        $DNSPTRrecord = @([pscustomobject]@{
+            MachineName = $computer
+            IPAddress = $ComputerIPAddress;
+            PTRrecord = "True";
+            PTRvalue = $ptr
+        })
+        $DNSPTRrecordsArray += $DNSPTRrecord
+    }
+    catch{
+        MsgPrint "error" "$crt. DNS: $_"
+        $DNSPTRrecordError = @([pscustomobject]@{
+            MachineName = $computer
+            IPAddress = $ComputerIPAddress
+            PTRrecord = "False"
+            PTRvalue = "n/a"
+        })
+        $DNSPTRrecordsArray += $DNSPTRrecordError
+    }
+    $DNSPTRrecordsArray
+}
+
+$DNSPTRrecordArray = $null
+$DNSPTRrecordArray = @()
+foreach ($computer in $DomainControllers){
+    $computer = ($computer.Name).ToLower()
+    $DNSPTRrecords = Get-DNSPTRrecord -computer $computer
+    $DNSPTRrecordArray += $DNSPTRrecords
+}
+$DNSPTRrecordArray | Select @{N='DomainName';E={$DomainName}},MachineName,IPAddress,PTRrecord,PTRvalue |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_PTR_record.csv
+Get-Content $logdir\$crt-DNS_PTR_record.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_DC_DNS_PTR_record>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DNS_Internet_Resolve' in check_list or 'all' in check_list) and '-ActiveDirectory_DNS_Internet_Resolve' not in check_list %}
+
+DNS: Verify DNS on DC can resolve internet names
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DNS: Verify DNS on DC can resolve internet names"
+function Get-DNSInternetResolve {
+    param(
+        [String]$computer
+    )
+    $DNSInternetResolveObj = New-Object -TypeName PSObject
+    try{
+        # Not supported on Windows Server 2008 because DNSServer AD module needs at least Windows Server 2012
+        $member = Resolve-DnsName -server $computer -Name "www.bing.com" -DnsOnly -QuickTimeout -ErrorAction Stop
+        $DNSInternetResolveObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DNSInternetResolveObj | Add-Member -MemberType NoteProperty -Name DNSInternetResolve -Value "Yes"
+    }
+    catch{
+        $DNSInternetResolveObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DNSInternetResolveObj | Add-Member -MemberType NoteProperty -Name DNSInternetResolve -Value "No"
+    }
+    $DNSInternetResolveObj
+}
+Write "#### <ActiveDirectory_DNS_Internet_Resolve>" | Out-File -Append -FilePath $LogPath
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DNSInternetResolve $computer | Select @{N='DomainName';E={$DomainName}},MachineName,DNSInternetResolve |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Resolve_Test.csv
+    Get-Content $logdir\$crt-DNS_Resolve_Test.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DNSInternetResolveArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $DNSInternetResolve = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-DNSInternetResolve} -ArgumentList $computer
+        $DNSInternetResolveArray += $DNSInternetResolve
+    }
+    $DNSInternetResolveArray | Select @{N='DomainName';E={$DomainName}},MachineName,DNSInternetResolve |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DNS_Resolve_Test.csv
+    Get-Content $logdir\$crt-DNS_Resolve_Test.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DNS_Internet_Resolve>`r`n" | Out-File -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('ActiveDirectory_DHCPserversAuthorized' in check_list or 'all' in check_list) and '-ActiveDirectory_DHCPserversAuthorized' not in check_list %}
+
+DHCP: Verify at least one DHCP is authorized in domain
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DHCP: List DHCP servers authorized in AD and ping each"
+Write "#### <ActiveDirectory_DHCPserversAuthorized>" | out-file -Append -FilePath $LogPath
+$DHCPallServers = @()
+try{
+    $DhcpServers = Get-ADObject -SearchBase "cn=configuration,$DomainDN" -Filter "objectclass -eq 'dhcpclass' -AND Name -ne 'dhcproot'" | sort name -Descending | select name
+    if ($DhcpServers -ne $null){
+        ForEach ($computer in $DhcpServers) {
+        $DHCPobj = New-Object psobject
+            $computer = $computer.name
+            $computer = $computer.replace($DomainName,'');$computer = $computer.replace('.','')
+            Get-ADComputer $computer -Properties Name,IPv4Address,OperatingSystem | select Name,IPv4Address,OperatingSystem |
+            ForEach{
+                $Name = $_.Name
+                $IPv4Address = $_.IPv4Address
+                $OperatingSystem = $_.OperatingSystem
+                if ((Test-Connection $Name -Quiet) -eq $True){
+                    $pingStatus = "Success"
+                }
+                else{
+                    $pingStatus = "Fail"
+                }
+            }
+            $DHCPobj | Add-Member -MemberType NoteProperty -Name 'MachineName' -Value $Name
+            $DHCPobj | Add-Member -MemberType NoteProperty -Name 'IPv4Address' -Value $IPv4Address
+            $DHCPobj | Add-Member -MemberType NoteProperty -Name 'OperatingSystem' -Value $OperatingSystem
+            $DHCPobj | Add-Member -MemberType NoteProperty -Name 'PingStatus' -Value $pingStatus
+            $DHCPallServers += $DHCPobj
+        }
+    $DHCPallServers | Select @{N='DomainName';E={$DomainName}},* |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-DHCP_Servers_authorized.csv
+    Get-Content $logdir\$crt-DHCP_Servers_authorized.csv | Out-File -Append -FilePath $LogPath
+    }
+}
+catch{
+    MsgPrint "warning" "$crt. DHCP: List DHCP servers authorized in AD and ping each: none (0)"
+    Write "DHCP Servers authorized: none (0)" | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DHCPserversAuthorized>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DHCP_DC' in check_list or 'all' in check_list) and '-ActiveDirectory_DHCP_DC' not in check_list %}
+
+DHCP: Verify if DHCP is installed on DC
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. DHCP: Verify if DHCP is installed on DC"
+Write "#### <ActiveDirectory_DHCP_DC>" | out-file -Append -FilePath $LogPath
+function Get-DHCPServerDC {
+    param(
+        [String]$computer
+    )
+    $DHCPServerDCObj = New-Object -TypeName PSObject
+    $DHCP = (Get-Service -ComputerName $computer | Where-Object {$_.name -eq "DHCPServer"}).Name
+    if ($DHCP){
+        $DHCPServerDCObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DHCPServerDCObj | Add-Member -MemberType NoteProperty -Name DHCPServer -Value "Yes"
+    }
+    else{
+        $DHCPServerDCObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $DHCPServerDCObj | Add-Member -MemberType NoteProperty -Name DHCPServer -Value "No"
+    }
+    $DHCPServerDCObj
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-DHCPServerDC $computer | Select @{N='DomainName';E={$DomainName}},MachineName,DHCPServer |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DHCP_installed_on_DC.csv
+    Get-Content $logdir\$crt-DHCP_installed_on_DC.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $DHCPServerDCArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $DHCPServerDC = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-DHCPServerDC} -ArgumentList $computer
+        $DHCPServerDCArray += $DHCPServerDC
+    }
+    $DHCPServerDCArray | Select @{N='DomainName';E={$DomainName}},MachineName,DHCPServer |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DHCP_installed_on_DC.csv
+    Get-Content $logdir\$crt-DHCP_installed_on_DC.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DHCP_DC>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Internet_Access' in check_list or 'all' in check_list) and '-ActiveDirectory_Internet_Access' not in check_list %}
+
+Verify if PDC can reach internet
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Verify if DC can reach internet"
+Write "#### <ActiveDirectory_Internet_Access>" | out-file -Append -FilePath $LogPath
+if ($AnsibleMode -eq "true"){
+    $computerTest = ($env:COMPUTERNAME).ToLower()
+}
+else{
+    $computerTest = $pdc
+}
+
+$computerSystem = get-wmiobject Win32_ComputerSystem -Computer $computerTest
+$DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+$serverRoleString = $DomainRole[$computerSystem.DomainRole]
+$serverRole = $computerSystem.DomainRole
+$InternetTestobj = New-Object psobject
+try{
+    Test-Connection -Source $computerTest -ComputerName www.microsoft.com -ErrorAction Stop | Out-Null
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'InternetTest' -Value "Reachable" # can reach www.microsoft.com
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'Website' -Value "www.microsoft.com"
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'ServerRole' -Value $serverRoleString
+}
+catch{
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'InternetTest' -Value "NotReachable" # can not reach www.microsoft.com
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'Website' -Value "www.microsoft.com"
+    $InternetTestobj | Add-Member -MemberType NoteProperty -Name 'ServerRole' -Value $serverRoleString
+}
+$InternetTestobj | Select @{N='DomainName';E={$DomainName}},@{N='MachineName';E={$computerTest}},InternetTest,Website,ServerRole |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DC_Internet_Access.csv
+Get-Content $logdir\$crt-DC_Internet_Access.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Internet_Access>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Trusts' in check_list or 'all' in check_list) and '-ActiveDirectory_Trusts' not in check_list %}
+
+AD Trusts
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Active Directory Trusts"
+Write "#### </ActiveDirectory_Trusts>" | out-file -Append -FilePath $LogPath
+try{
+    $AdTrust = Get-ADTrust -Filter * -ErrorAction Stop | select Direction,DisallowTransivity,ForestTransitive,IntraForest,IsTreeParent,IsTreeRoot,Name,ObjectClass,SelectiveAuthentication,SIDFilteringForestAware,SIDFilteringQuarantined,Source,Target,TGTDelegation,TrustAttributes,TrustedPolicy,TrustingPolicy,TrustType,UplevelOnly,UsesAESKeys,UsesRC4Encryption
+    $AdTrust | Select @{N='DomainName';E={$DomainName}},* | Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_Trusts.csv
+    Get-Content $logdir\$crt-AD_Trusts.csv | out-file -Append -FilePath $LogPath
+}
+catch{
+    MsgPrint "info" "$crt. Active Directory Trusts: none (0)"
+    Write "Active Directory Trusts: none (0)" | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Trusts>`r`n" | out-file -Append -FilePath $LogPath
+<#{% endif %}
+{% if ('ActiveDirectory_FSMO' in check_list or 'all' in check_list) and '-ActiveDirectory_FSMO' not in check_list %}
+
+FSMO: List FSMO servers
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. FSMO: FSMO servers"
+Write "#### <ActiveDirectory_FSMO>" | out-file -Append -FilePath $LogPath
+$FSMOservers | select @{N='DomainName';E={$DomainName}},PDCEmulator,InfrastructureMaster,RIDMaster,DomainNamingMaster,SchemaMaster |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_FSMO.csv
+Get-Content $logdir\$crt-AD_FSMO.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_FSMO>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_FSMO_Connectivity' in check_list or 'all' in check_list) and '-ActiveDirectory_FSMO_Connectivity' not in check_list %}
+
+FSMO: FSMO servers connectivity
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. FSMO: FSMO servers connectivity"
+Write "#### <ActiveDirectory_FSMO_Connectivity>" | out-file -Append -FilePath $LogPath
+$FSMOserversConnectivity = New-Object -TypeName PSObject
+$FSMOservers = $InfrastructureMaster,$PDC,$RIDMaster,$DomainNamingMaster,$PDCEmulator | sort | Get-Unique
+ForEach ($computer in $FSMOservers){
+    $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+    if ((Test-Connection $computer -Quiet) -eq $True){
+        $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name PingStatus -Value "Success"
+    }
+    else{
+        $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name PingStatus -Value "Fail"
+    }
+    #Test WinRM
+    Try{
+        Test-WSMan -ComputerName $computer -UseSSL -ErrorAction Stop | Out-Null
+        $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name WinRMStatus -Value "WinRMOKSSL"
+    }
+    catch{
+        Try{
+            Test-WSMan -ComputerName $computer -ErrorAction Stop | Out-Null
+            $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name WinRMStatus -Value "WinRMOK"
+        }
+        catch{
+            MsgPrint "warning" "$crt. FSMO: List FSMO servers and verify each is reachable: $computer - WinRM fails."
+            $FSMOserversConnectivity | Add-Member -MemberType NoteProperty -Name WinRMStatus -Value "WinRMDown"
+        }
+    }
+}
+$FSMOserversConnectivity | select @{N='DomainName';E={$DomainName}},MachineName,PingStatus,WinRMStatus |
+Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-AD_FSMO_Connectivity.csv
+Get-Content $logdir\$crt-AD_FSMO_Connectivity.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_FSMO_Connectivity>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Services' in check_list or 'all' in check_list) and '-ActiveDirectory_Services' not in check_list %}
+
+Services: Verify all Active Directory services are running
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Services: Verify all Active Directory services are running"
+Write "#### <ActiveDirectory_Services>" | out-file -Append -FilePath $LogPath
+function Get-ADServices {
+    param(
+        [String]$computer
+    )
+    Get-WMIObject Win32_Service |
+    Where-Object {$_.name -eq "ADWS" -or $_.name -eq "NTDS" -or $_.name -eq "DFSR" -or $_.name -eq "Dhcp" -or $_.name -eq "DNS" -or $_.name -eq "gpsvc" -or $_.name -eq "IsmServ" -or $_.name -eq "Kdc"  -or $_.name -eq "Netlogon"  -or $_.name -eq "W32Time"  -or $_.name -eq "RpcSs"  -or $_.name -eq "Dfs"} |
+    Select-Object @{N="DomainName";E={$DomainName}},@{Name='MachineName';Expression={$computer}},State,StartMode,Name
+}
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-ADServices -computer $computer | Select-Object @{N="DomainName";E={$DomainName}},MachineName,State,StartMode,Name |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_services.csv
+    Get-content -Path $logdir\$crt-AD_services.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $ADServicesArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $ADServices = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-ADServices} -ArgumentList $computer
+     $ADServicesArray += $ADServices
+    }
+    $ADServicesArray | Select-Object @{N="DomainName";E={$DomainName}},MachineName,State,StartMode,Name |
+    Export-Csv -Delimiter ";" -NoTypeInformation -Path $logdir\$crt-AD_services.csv
+    Get-content -Path $logdir\$crt-AD_services.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Services>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Time_Config' in check_list or 'all' in check_list) and '-ActiveDirectory_Time_Config' not in check_list %}
+
+Time: Verify PDC sync time to external source
+#########################################################################>
+<# https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystem
+https://social.technet.microsoft.com/wiki/contents/articles/50924.active-directory-time-synchronization.aspx
+##########################################################################
+0x01 - use special poll interval SpecialInterval
+0x02 - UseAsFallbackOnly
+0x04 - send request as SymmetricActive mode
+0x08 - send request as Client mode
+0x05 - system is configured to sync with an external time source.
+0XA  - system will not sync with any external time source but would sync with itself.
+Use case:
+Standalone Workstation    (0)
+Member Workstation        (1)
+Standalone Server         (2)
+Member Server             (3)
+Backup Domain Controller  (4)
+Primary Domain Controller (5)
+##########################################################################>
+$crt++
+MsgPrint "info" "$crt. Time: Verify DC Time config"
+Write "#### <ActiveDirectory_Time_Config>" | out-file -Append -FilePath $LogPath
+function Get-WindowsTimeConfig($Computer) {
+    $time = (Get-Date -Format "dd.MM.yyyy HH:mm:ss (K)")
+    $computerSystem = Get-CimInstance Win32_ComputerSystem
+    $DomainRole = ("Standalone Workstation","Member Workstation","Standalone Server","Member Server","Backup Domain Controller","Primary Domain Controller")
+    $serverRoleString = $DomainRole[$computerSystem.DomainRole]
+    $serverRole = $computerSystem.DomainRole
+    $ServiceStatus = [string](Get-Service -Name W32Time -ErrorAction Stop).Status
+
+    try{
+        # Using GPO configuration is stored below
+        Get-Item "HKLM:\SOFTWARE\Policies\Microsoft\W32time\Parameters" -ErrorAction Stop | Out-Null
+        try{
+            $NTPserverType = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\W32time\Parameters" -ErrorAction Stop).Type
+        }
+        catch{
+            $NTPserverType = "missing"
+        }
+    }
+    catch{
+        try{
+            # Using w32tm.exe configuration is stored below
+            Get-Item "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" -ErrorAction Stop | Out-Null
+            $NTPserverType = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" -ErrorAction Stop).Type
+        }
+        catch{
+            $NTPserverType = "missing"
+        }
+    }
+
+    # Using w32tm cmd instead of registry for better accuracy
+    $NTPserverConfig = & 'w32tm' '/query', '/source'
+    if ($NTPserverType -eq "NoSync"){
+        $BestPractice = "False"
+    }
+
+    if ($NTPserverType -eq "AllSync"){
+        # PDC
+        if ($serverRole -eq 5){
+            $BestPractice = "False"
+        }
+        else{
+            # Standalone server or workstation not PDC
+            if ($serverRole -eq 0 -or $serverRole -eq 2){
+                # Check NTP Server config
+                if ($null -eq $NTPserverConfig){
+                    $BestPractice = "False"
+                }
+                else{
+                    $BestPractice = "True"
+                }
+            }
+            else{
+                $BestPractice = "True"
+            }
+        }
+    }
+
+    if ($NTPserverType -eq "NTP"){
+        # Standalone workstation, standalone server or PDC
+        if ($serverRole -eq 2 -or $serverRole -eq 0 -or $serverRole -eq 5){
+            if ($NTPserverConfig -eq $null){
+                $BestPractice = "False"
+            }
+            else{
+                $BestPractice = "True"
+            }
+        }
+        else{
+            # Domain Member server or workstation
+            $BestPractice = "False"
+        }
+    }
+
+    if ($NTPserverType -eq "NT5DS"){
+        # Domain Member server or workstation or backup domain controller
+        if ($serverRole -eq 1 -or $serverRole -eq 3 -or $serverRole -eq 4){
+            $BestPractice = "True"
+        }
+        else{
+            $BestPractice = "False"
+        }
+    }
+
+    if ($ServiceStatus -ne "Running") {
+        $BestPractice = "False"
+    }
+    $NtpObj = New-Object psobject
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'MachineName' -Value $computer
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'ServerRole' -Value $serverRoleString
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'ServiceStatus' -Value $ServiceStatus
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'NTPserverType' -Value $NTPserverType
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'NTPserverConfig' -Value $NTPserverConfig
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'BestPractice' -Value $BestPractice
+    $NtpObj | Add-Member -MemberType NoteProperty -Name 'Time' -Value $time
+    $NtpObj
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-WindowsTimeConfig -computer $computer | select @{N='DomainName';E={$DomainName}},MachineName,ServerRole,NTPserverType,NTPserverConfig,BestPractice,ServiceStatus,Time |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Time_Config.csv
+    Get-Content $logdir\$crt-Time_Config.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $NtpArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $NtpConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-WindowsTimeConfig} -ArgumentList $computer
+     $NtpArray += $NtpConfig
+    }
+    $NtpArray | select @{N='DomainName';E={$DomainName}},MachineName,ServerRole,NTPserverType,NTPserverConfig,BestPractice,ServiceStatus,Time |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Time_Config.csv
+    Get-Content $logdir\$crt-Time_Config.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Time_Config>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_LDAPS_Log_Config' in check_list or 'all' in check_list) and '-ActiveDirectory_LDAPS_Log_Config' not in check_list %}
+
+LDAPS auditing check
+##########################################################################################################>
+# https://support.microsoft.com/en-us/help/4520412/2020-ldap-channel-binding-and-ldap-signing-requirements-for-windows
+$crt++
+MsgPrint "info" "$crt. LDAPS auditing check"
+Write "#### <ActiveDirectory_LDAPS_Log_Config>" | out-file -Append -FilePath $LogPath
+function Get-LDAPsLogconfig {
+    param(
+        [String]$computer
+    )
+    $LDAPsLogSObj = New-Object psobject
+    $LDAPvalue = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics\").("16 LDAP Interface Events")
+    $result = switch ($LDAPvalue) {
+        "1"  {"minimal"; break} # LDAP Bind Logging is minimal
+        "2"  {"enabled"; break} # LDAP Bind Logging is enabled
+        "3"  {"extensive"; break} # LDAP Bind Logging is extensive
+        "4"  {"verbose"; break} # LDAP Bind Logging is verbose
+        "5"  {"internal"; break} # LDAP Bind Logging is internal = logs all events
+        default {"disabled"; break} # LDAP Bind Logging is disabled (Default)
+    }
+    $LDAPsLogSObj | Add-Member -MemberType NoteProperty -Name 'MachineName' -Value $computer
+    $LDAPsLogSObj | Add-Member -MemberType NoteProperty -Name 'LDAPsLogConfig' -Value $result
+    $LDAPsLogSObj | Add-Member -MemberType NoteProperty -Name 'LDAPvalue' -Value $LDAPvalue
+    $LDAPsLogSObj
+}
+
+if ($AnsibleMode -eq "true"){
+    Get-LDAPsLogconfig -computer $computer | select @{N='DomainName';E={$DomainName}},MachineName,LDAPsLogConfig,LDAPvalue |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-LDAPS_Log_Config.csv
+    Get-Content $logdir\$crt-LDAPS_Log_Config.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $LDAPSArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $LDAPsLogConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-LDAPsLogconfig} -ArgumentList $computer
+        $LDAPSArray += $LDAPsLogConfig
+    }
+    $LDAPSArray | select @{N='DomainName';E={$DomainName}},MachineName,LDAPsLogConfig,LDAPvalue |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-LDAPS_Log_Config.csv
+    Get-Content $logdir\$crt-LDAPS_Log_Config.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_LDAPS_Log_Config>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Zerologon' in check_list or 'all' in check_list) and '-ActiveDirectory_Zerologon' not in check_list %}
+
+Check enforcement mode for zerologon
+##########################################################################################################>
+# https://support.microsoft.com/en-us/topic/how-to-manage-the-changes-in-netlogon-secure-channel-connections-associated-with-cve-2020-1472-f7e8cc17-0309-1d6a-304e-5ba73cd1a11e
+$crt++
+MsgPrint "info" "$crt. Enforcement Mode check for zerologon"
+Write "#### <ActiveDirectory_Zerologon>" | out-file -Append -FilePath $LogPath
+function Get-ZeroLogonConfig {
+    param(
+    [String]$computer
+    )
+    $ZeroLogonObj = New-Object psobject
+    $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'MachineName' -Value $computer
+    try{
+        # Test if registry key with DWORD "FullSecureChannelProtection" exists and what is its value
+        $ZeroLogonValue = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" -Name "FullSecureChannelProtection" -ErrorAction Stop |
+        select "FullSecureChannelProtection").FullSecureChannelProtection
+        if ($ZeroLogonValue -eq "1"){
+            # 1 = enables enforcement mode. DCs will deny vulnerable Netlogon secure channel connections
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'FullSecureChannelProtection' -Value $ZeroLogonValue
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'Enforcement' -Value "Enabled"
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'BestPractice' -Value "True"
+        }
+            if ($ZeroLogonValue -eq "0"){
+            # 0 = DC will allow vulnerable Netlogon secure channel connections from non-Windows devices
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'FullSecureChannelProtection' -Value $ZeroLogonValue
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'Enforcement' -Value "Disabled"
+            $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'BestPractice' -Value "False"
+        }
+    }
+    catch{
+        # Key does not exists. August 2020 security patch missing
+        $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'FullSecureChannelProtection' -Value "Missing"
+        $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'Enforcement' -Value "Disabled"
+        $ZeroLogonObj | Add-Member -MemberType NoteProperty -Name 'BestPractice' -Value "False"
+    }
+    $ZeroLogonObj
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-ZeroLogonConfig -computer $computer | select @{N='DomainName';E={$DomainName}},MachineName,FullSecureChannelProtection |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Zerologon.csv
+    Get-Content $logdir\$crt-Zerologon.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $ZeroLogonConfigArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $ZeroLogonConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-ZeroLogonConfig} -ArgumentList $computer
+     $ZeroLogonConfigArray += $ZeroLogonConfig
+    }
+    $ZeroLogonConfigArray | select @{N='DomainName';E={$DomainName}},MachineName,FullSecureChannelProtection,BestPractice |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Zerologon.csv
+    Get-Content $logdir\$crt-Zerologon.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Zerologon>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DiskSpaceFree' in check_list or 'all' in check_list) and '-ActiveDirectory_DiskSpaceFree' not in check_list %}
+
+What is free disk percentage space on OS and NTDS partition
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. What is free disk percentage space on OS ond NTDS partition"
+Write "#### <ActiveDirectory_DiskSpaceFree>" | out-file -Append -FilePath $LogPath
+function Get-NTDSDiskConfig {
+    param(
+        [String]$computer
+    )
+    $NTDSObj = New-Object -TypeName PSObject
+    $NTDSObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+    try{
+        # Test if registry key with Reg_SZD "DSA Database File" exists and what is its value
+        $NTDSpath =  "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters"
+        $NTDSValue = (Get-ItemProperty -Path $NTDSpath -Name "DSA Database File" -ErrorAction Stop)."DSA Database File"
+        $NTDSpart=$NTDSValue.substring(0,2)
+        if ($NTDSpart -eq "C:"){
+            $SystemDisk = Get-WMIObject Win32_Logicaldisk -filter "deviceid='C:'" |
+            select @{Name="SystemDisk";Expression={$_.DeviceID}},@{Name="SizeGB";Expression={$_.Size/1GB -as [int]}},@{Name="FreeGB";Expression={[math]::Round($_.Freespace/1GB,2)}},@{Name="FreePercentage";Expression={[math]::Round($_.Freespace/$_.Size*100,0)}}
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDisk -Value $SystemDisk.SystemDisk
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskSizeGB -Value $SystemDisk.SizeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreeGB -Value $SystemDisk.FreeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreePercentage -Value $SystemDisk.FreePercentage
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDisk -Value "SystemDisk"
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskSizeGB -Value "SystemDisk"
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreeGB -Value "SystemDisk"
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreePercentage -Value "SystemDisk"
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSLocation -Value "SystemDisk"
+            $NTDSObj
+        }
+        else{
+            $SystemDisk = Get-WMIObject Win32_Logicaldisk -filter "deviceid='C:'" |
+            select @{Name="SystemDisk";Expression={$_.DeviceID}},@{Name="SizeGB";Expression={$_.Size/1GB -as [int]}},@{Name="FreeGB";Expression={[math]::Round($_.Freespace/1GB,2)}},@{Name="Free%";Expression={[math]::Round($_.Freespace/$_.Size*100,0)}}
+            $NTDSDisk = Get-WMIObject Win32_Logicaldisk -filter "deviceid='$NTDSpart'" |
+            select @{Name="NTDSDisk";Expression={$_.DeviceID}},@{Name="SizeGB";Expression={$_.Size/1GB -as [int]}},@{Name="FreeGB";Expression={[math]::Round($_.Freespace/1GB,2)}},@{Name="Free%";Expression={[math]::Round($_.Freespace/$_.Size*100,0)}}
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDisk -Value $SystemDisk.SystemDisk
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskSizeGB -Value $SystemDisk.SizeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreeGB -Value $SystemDisk.FreeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreePercentage -Value $SystemDisk.FreePercentage
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDisk -Value $NTDSDisk.SystemDisk
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskSizeGB -Value $NTDSDisk.SizeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreeGB -Value $NTDSDisk.FreeGB
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreePercentage -Value $NTDSDisk.FreePercentage
+            $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSLocation -Value "NotSystemDisk"
+            $NTDSObj
+        }
+    }
+    catch{
+        # Key does not exist
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDisk -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskSizeGB -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreeGB -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name SystemDiskFreePercentage -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDisk -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskSizeGB -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreeGB -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSDiskFreePercentage -Value "MissingRegistryKey"
+        $NTDSObj | Add-Member -MemberType NoteProperty -Name NTDSLocation -Value "MissingRegistryKey"
+        $NTDSObj
+    }
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-NTDSDiskConfig -computer $computer | select @{N='DomainName';E={$DomainName}},MachineName,SystemDisk,SystemDiskSizeGB,SystemDiskFreeGB,SystemDiskFreePercentage,NTDSDisk,NTDSDiskSizeGB,NTDSDiskFreeGB,NTDSDiskFreePercentage,NTDSLocation |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DiskSpaceFree.csv
+    Get-Content $logdir\$crt-DiskSpaceFree.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $NTDSDiskConfigArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $NTDSDiskConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-NTDSDiskConfig} -ArgumentList $computer
+     $NTDSDiskConfigArray += $NTDSDiskConfig
+    }
+    $NTDSDiskConfigArray | select @{N='DomainName';E={$DomainName}},MachineName,SystemDisk,SystemDiskSizeGB,SystemDiskFreeGB,SystemDiskFreePercentage,NTDSDisk,NTDSDiskSizeGB,NTDSDiskFreeGB,NTDSDiskFreePercentage,NTDSLocation |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-DiskSpaceFree.csv
+    Get-Content $logdir\$crt-DiskSpaceFree.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_DiskSpaceFree>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Bitlocker_Recovery' in check_list or 'all' in check_list) and '-ActiveDirectory_Bitlocker_Recovery' not in check_list %}
+
+Check optional feature Bitlocker Recovery
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Check optional feature Bitlocker Recovery"
+Write "#### <ActiveDirectory_Bitlocker_Recovery>" | out-file -Append -FilePath $LogPath
+$BitLockerRecoveryObj = New-Object -TypeName PSObject
+$WindowsComputers = Get-adcomputer -filter '(operatingsystem -like "*Windows*") -and (enabled -eq "true")' | Select-Object -ExpandProperty DistinguishedName
+$n = 0
+ForEach ($item in $WindowsComputers){
+    $ADobj = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $item -Properties 'msFVE-RecoveryPassword' |
+    Select-Object Name,msFVE-RecoveryPassword
+    if ($Adobj -ne $null){
+        $n++
+    }
+}
+if ($n -gt 0){
+    $BitLockerRecoveryObj | Add-Member -MemberType NoteProperty -Name BitLockerRecovery -Value "Used"
+    $BitLockerRecoveryObj | Add-Member -MemberType NoteProperty -Name Computers -Value $n
+}
+else{
+    $BitLockerRecoveryObj | Add-Member -MemberType NoteProperty -Name BitLockerRecovery -Value "Unused"
+    $BitLockerRecoveryObj | Add-Member -MemberType NoteProperty -Name Computers -Value "0"
+}
+$BitLockerRecoveryObj | select @{N='DomainName';E={$DomainName}},* | Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-BitLockerRecovery.csv
+Get-Content $logdir\$crt-BitLockerRecovery.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_Bitlocker_Recovery>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_GPOs_Modified' in check_list or 'all' in check_list) and '-ActiveDirectory_GPOs_Modified' not in check_list %}
+
+GPOs modified last 30 days
+##########################################################################################################>
+# Days
+$Days = "30"
+$crt++
+MsgPrint "info" "$crt. GPOs modified last $Days days"
+Write "#### <ActiveDirectory_GPOs_Modified>" | out-file -Append -FilePath $LogPath
+# Load GroupPolicy Module
+if (!(Get-Module GroupPolicy)) {Import-Module GroupPolicy}
+$GPO = Get-GPO -All | Where-Object {$_.ModificationTime -gt (Get-Date).AddDays(-$Days)} |
+sort ModificationTime -Descending | Select-Object -Property DisplayName, ModificationTime, Owner
+if ($GPO -ne $null) {
+    $GPOlogs = "$logdir\$crt-GPOs-Modified-last-$Days-days"
+    New-Item -Path $GPOlogs -ItemType Directory -Force:$true | Out-Null
+    $GPO | Export-Csv -Delimiter ";" -NoTypeInformation $GPOlogs\GPO-Modified-last-$Days-days.csv
+    foreach ($item in $GPO){
+        $gpoName = $item.DisplayName
+        Get-GPOReport $gpoName -ReportType Html -Path $GPOlogs\$gpoName.html
+    }
+    Write "GPOs modified last $days days: $(($GPO).count)" | out-file -Append -FilePath $LogPath
+}
+else{
+    Write "No GPOs modified last $days days." | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_GPOs_Modified>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_DefaultDomainPolicy_DefaultDomainControllersPolicy' in check_list or 'all' in check_list) and '-ActiveDirectory_DefaultDomainPolicy_DefaultDomainControllersPolicy' not in check_list %}
+
+Default Domain & Domain Controllers Policies
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Default Domain & Domain Controllers Policies"
+$DefaultDomainPolicy = Get-GPO -Guid "31b2f340-016d-11d2-945f-00c04fb984f9"
+$DefaultDomainControllersPolicy = Get-GPO -Guid "6ac1786c-016f-11d2-945f-00c04fb984f9"
+Get-GPOReport $DefaultDomainPolicy.DisplayName -ReportType Html -Path $logdir\$crt-AD_GPO_DefaultDomainPolicy.html
+Get-GPOReport $DefaultDomainControllersPolicy.DisplayName -ReportType Html -Path $logdir\$crt-AD_GPO_DefaultDomainControllersPolicy.html
+<#
+{% endif %}
+{% if ('ActiveDirectory_WindowsServerBackup_Summary' in check_list or 'all' in check_list) and '-ActiveDirectory_WindowsServerBackup_Summary' not in check_list %}
+
+Windows Server Backup Configuration
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Windows Server Backup Configuration"
+Write "#### <ActiveDirectory_WindowsServerBackup_Summary>" | out-file -Append -FilePath $LogPath
+function Get-WindowsBackupConfig {
+    param(
+        [String]$computer
+    )
+    # Check Windows Server Backup Installed
+    Import-Module ServerManager
+    $WBackupFeature = Get-WindowsFeature | Where-Object {$_.installed -eq "Installed" -and $_.name -eq "Windows-Server-Backup"}
+    If ($WBackupFeature){
+        # Windows Server Backup Installed
+        $Policy = Get-WBPolicy
+        if ($Policy){
+            $Volumes = Get-WmiObject win32_volume | select DriveLetter, DeviceID
+            foreach($Volume in $Volumes){
+                $DeviceID = $Volume.DeviceID
+                $DeviceID = $DeviceID.Substring(0,$DeviceID.Length-1)
+                $BTarget = (Get-WBSummary).LastSuccessfulBackupTargetPath
+                if ($BTarget -eq $DeviceID){
+                    $BackupTargetPath = $Volume.DriveLetter+"\WindowsImageBackup\"+$env:COMPUTERNAME
+                }
+            }
+            # Windows Server Backup Summary
+            $WBSummary = Get-WBSummary |
+            Select-Object @{Name='MachineName';Expression={$computer}},@{Name='WindowsServerBackup';Expression={'Installed'}},@{Name='Policy';Expression={'True'}},@{Name='ActualBackupTargetPath';Expression={$BackupTargetPath}},*
+            $Policy = $Policy | select @{Name='MachineName';Expression={$computer}},@{Name='Schedule';Expression={$_.Schedule -join ','}},@{Name='BackupTargets';Expression={$_.BackupTargets -join ','}},@{Name='VolumesToBackup';Expression={$_.VolumesToBackup -join ','}},@{Name='FilesSpecsToBackup';Expression={$_.FilesSpecsToBackup -join ','}},@{Name='FilesSpecsToExclude';Expression={$_.FilesSpecsToExclude -join ','}},@{Name='ComponentsToBackup';Expression={$_.ComponentsToBackup -join ','}},BMR,SystemState,OverwriteOldFormatVhd,VssBackupOptions
+            foreach ($obj in $WBSummary) {
+                $obj | Add-Member -MemberType NoteProperty -Name 'Schedule' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).Schedule
+                $obj | Add-Member -MemberType NoteProperty -Name 'BackupTargets' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).BackupTargets
+                $obj | Add-Member -MemberType NoteProperty -Name 'VolumesToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).VolumesToBackup
+                $obj | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).FilesSpecsToBackup
+                $obj | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToExclude' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).FilesSpecsToExclude
+                $obj | Add-Member -MemberType NoteProperty -Name 'ComponentsToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).ComponentsToBackup
+                $obj | Add-Member -MemberType NoteProperty -Name 'BareMetalRecovery' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).BMR
+                $obj | Add-Member -MemberType NoteProperty -Name 'SystemState' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).SystemState
+                $obj | Add-Member -MemberType NoteProperty -Name 'OverwriteOldFormatVhd' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).OverwriteOldFormatVhd
+                $obj | Add-Member -MemberType NoteProperty -Name 'VssBackupOptions' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).VssBackupOptions
+            }
+            $WBSummary
+        }
+        Else{
+            $Volumes = Get-WmiObject win32_volume | select DriveLetter, DeviceID
+            foreach($Volume in $Volumes){
+                $DeviceID = $Volume.DeviceID
+                $DeviceID = $DeviceID.Substring(0,$DeviceID.Length-1)
+                $BTarget = (Get-WBSummary).LastSuccessfulBackupTargetPath
+                if ($BTarget -eq $DeviceID){
+                    $BackupTargetPath = $Volume.DriveLetter+"\WindowsImageBackup\"+$env:COMPUTERNAME
+                }
+            }
+            # Windows Server Backup installed, but no backup policy
+            $WBSummary = Get-WBSummary |
+            Select-Object @{Name='MachineName';Expression={$computer}},@{Name='WindowsServerBackup';Expression={'Installed'}},@{Name='Policy';Expression={'False'}},@{Name='ActualBackupTargetPath';Expression={$BackupTargetPath}},*
+            $Policy = $Policy | select @{Name='MachineName';Expression={$computer}},@{Name='Schedule';Expression={$_.Schedule -join ','}},@{Name='BackupTargets';Expression={$_.BackupTargets -join ','}},@{Name='VolumesToBackup';Expression={$_.VolumesToBackup -join ','}},@{Name='FilesSpecsToBackup';Expression={$_.FilesSpecsToBackup -join ','}},@{Name='FilesSpecsToExclude';Expression={$_.FilesSpecsToExclude -join ','}},@{Name='ComponentsToBackup';Expression={$_.ComponentsToBackup -join ','}},BMR,SystemState,OverwriteOldFormatVhd,VssBackupOptions
+            foreach ($item in $WBSummary) {
+                foreach ($obj in $item) {
+                    $obj | Add-Member -MemberType NoteProperty -Name 'Schedule' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).Schedule
+                    $obj | Add-Member -MemberType NoteProperty -Name 'BackupTargets' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).BackupTargets
+                    $obj | Add-Member -MemberType NoteProperty -Name 'VolumesToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).VolumesToBackup
+                    $obj | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).FilesSpecsToBackup
+                    $obj | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToExclude' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).FilesSpecsToExclude
+                    $obj | Add-Member -MemberType NoteProperty -Name 'ComponentsToBackup' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).ComponentsToBackup
+                    $obj | Add-Member -MemberType NoteProperty -Name 'BareMetalRecovery' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).BMR
+                    $obj | Add-Member -MemberType NoteProperty -Name 'SystemState' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).SystemState
+                    $obj | Add-Member -MemberType NoteProperty -Name 'OverwriteOldFormatVhd' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).OverwriteOldFormatVhd
+                    $obj | Add-Member -MemberType NoteProperty -Name 'VssBackupOptions' -Value ($Policy | Where-Object { $_.Id -eq $obj.Id }).VssBackupOptions
+                }
+            }
+            write $WBSummary
+        }
+    }
+    Else{
+        # Windows Server Backup not installed
+        $WBSummary = New-Object psobject
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'MachineName' -Value $computer
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'WindowsServerBackup' -Value 'NotInstalled'
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'Policy' -Value 'False'
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'ActualBackupTargetPath' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'NextBackupTime' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'NumberOfVersions' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastSuccessfulBackupTime' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastSuccessfulBackupTargetPath' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastSuccessfulBackupTargetLabel' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastBackupTime' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastBackupTarget' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'DetailedMessage' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastBackupResultHR' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'LastBackupResultDetailedHR' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'CurrentOperationStatus' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'Schedule' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'BackupTargets' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'VolumesToBackup' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToBackup' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'FilesSpecsToExclude' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'ComponentsToBackup' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'BareMetalRecovery' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'SystemState' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'OverwriteOldFormatVhd' -Value "n/a"
+        $WBSummary | Add-Member -MemberType NoteProperty -Name 'VssBackupOptions' -Value "n/a"
+        $WBSummary
+    }
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-WindowsBackupConfig -computer $computer | select @{N='DomainName';E={$DomainName}},MachineName,WindowsServerBackup,Policy,ActualBackupTargetPath,NextBackupTime,NumberOfVersions,LastSuccessfulBackupTime,LastSuccessfulBackupTargetPath,LastSuccessfulBackupTargetLabel,LastBackupTime,LastBackupTarget,DetailedMessage,LastBackupResultHR,LastBackupResultDetailedHR,CurrentOperationStatus,Schedule,BackupTargets,VolumesToBackup,FilesSpecsToBackup,FilesSpecsToExclude,ComponentsToBackup,BareMetalRecovery,SystemState,OverwriteOldFormatVhd,VssBackupOptions |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-WindowsServerBackup_Summary.csv
+    Get-Content $logdir\$crt-WindowsServerBackup_Summary.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $WindowsBackupConfigArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $WindowsBackupConfig = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-WindowsBackupConfig} -ArgumentList $computer
+        $WindowsBackupConfigArray += $WindowsBackupConfig
+    }
+    $WindowsBackupConfigArray | select @{N='DomainName';E={$DomainName}},MachineName,WindowsServerBackup,Policy,ActualBackupTargetPath,NextBackupTime,NumberOfVersions,LastSuccessfulBackupTime,LastSuccessfulBackupTargetPath,LastSuccessfulBackupTargetLabel,LastBackupTime,LastBackupTarget,DetailedMessage,LastBackupResultHR,LastBackupResultDetailedHR,CurrentOperationStatus,Schedule,BackupTargets,VolumesToBackup,FilesSpecsToBackup,FilesSpecsToExclude,ComponentsToBackup,BareMetalRecovery,SystemState,OverwriteOldFormatVhd,VssBackupOptions |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-WindowsServerBackup_Summary.csv
+    Get-Content $logdir\$crt-WindowsServerBackup_Summary.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_WindowsServerBackup_Summary>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_Windows_Last_Update' in check_list or 'all' in check_list) and '-ActiveDirectory_Windows_Last_Update' not in check_list %}
+
+Windows Updates report
+##########################################################################################################
+
+Operation values:
+1 = Installation
+2 = Uninstallation
+3 = Other
+
+Resultcode values:
+0 = Not Started
+1 = In Progress
+2 = Succeeded
+3 = Succeeded With Errrors
+4 = Failed
+5 = Aborted
+#>
+$crt++
+MsgPrint "info" "$crt. Windows Updates"
+Write "#### <ActiveDirectory_Windows_Last_Update>" | Out-File -Append -FilePath $LogPath
+function Get-WindowsUpdates {
+    param(
+        [String]$computer
+    )
+    try{
+        $SessionWU = New-Object -ComObject "Microsoft.Update.Session" -ErrorAction Stop
+        $Searcher = $SessionWU.CreateUpdateSearcher()
+        $historyCount = $Searcher.GetTotalHistoryCount()
+        $UpdateHistory = $Searcher.QueryHistory(0, $historyCount)
+        $KBs = @()
+        foreach ($Update in $UpdateHistory) {
+            [regex]::match($Update.Title,'(KB[0-9]{6,7})').value | Where-Object {$_ -ne ""} | foreach {
+                $KB = New-Object -TypeName PSObject
+                $KB | Add-Member -MemberType NoteProperty -Name KB -Value $_
+                $KB | Add-Member -MemberType NoteProperty -Name Title -Value $Update.Title
+                $KB | Add-Member -MemberType NoteProperty -Name Date -Value $Update.Date
+                $KB | Add-Member -MemberType NoteProperty -Name Operation -Value $Update.Operation
+                $KB | Add-Member -MemberType NoteProperty -Name ResultCode -Value $Update.Resultcode
+                $KBs += $KB
+            }
+        }
+        $KBs | select @{Name='MachineName';Expression={$computer}},KB,Title,Date,Operation,ResultCode | Sort-Object -Property Date -Descending
+    }
+    catch{
+    }
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    $WindowsUpdatesObj = New-Object -TypeName PSObject
+    $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+    try{
+        $WindowsUpdatesAll = Get-WindowsUpdates -computer $computer
+        If ($WindowsUpdatesAll -ne $null){
+            $WindowsUpdatesDefender = $WindowsUpdatesAll | Where-Object {$_.Title -like "*Security Intelligence Update for Microsoft Defender Antivirus*"}
+            $WindowsUpdatesDefender | Export-Csv -Append -NoTypeInformation -Delimiter ";" $logdir\$crt-Windows_Updates_Defender.csv
+            $WindowsUpdates = $WindowsUpdatesAll | Where-Object {$_.Title -notlike "*Security Intelligence Update for Microsoft Defender Antivirus*"}
+            $WindowsUpdates | Export-Csv -Append -NoTypeInformation -Delimiter ";" $logdir\$crt-Windows_Updates.csv
+            $LastUpdate = $WindowsUpdates[0].Date
+            $lastBootTime=([Management.ManagementDateTimeConverter]::ToDateTime((Get-WmiObject Win32_OperatingSystem).LastBootUpTime)).DateTime
+            $DaysSinceReboot = (New-TimeSpan -Start $lastBootTime -End (Get-Date)).Days
+            $DaysSinceUpdate = (New-TimeSpan -Start $LastUpdate -End (Get-Date)).Days
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value $LastUpdate
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value $lastBootTime
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value $DaysSinceReboot
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value $DaysSinceUpdate
+        }
+        else{
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value "NoUpdates"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value "n/a"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value "n/a"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value "n/a"
+        }
+    }
+    catch{
+        $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value "Microsoft.Update.Session.Fail"
+        $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value "n/a"
+        $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value "n/a"
+        $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value "n/a"
+    }
+    $WindowsUpdatesObj | Select @{N='DomainName';E={$DomainName}},* |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Windows_Last_Update.csv
+    Get-Content $logdir\$crt-Windows_Last_Update.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $WindowsUpdatesArray = @()
+    foreach ($computer in $DomainControllersUp){
+        $WindowsUpdatesObj = New-Object -TypeName PSObject
+        $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        try{
+            $WindowsUpdatesAll = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-WindowsUpdates} -ArgumentList $computer -ErrorAction Stop
+            If ($WindowsUpdatesAll -ne $null){
+                $WindowsUpdatesDefender = $WindowsUpdatesAll | Where-Object {$_.Title -like "*Security Intelligence Update for Microsoft Defender Antivirus*"}
+                $WindowsUpdatesDefender | Export-Csv -Append -NoTypeInformation -Delimiter ";" $logdir\$crt-Windows_Updates_Defender.csv
+                $WindowsUpdates = $WindowsUpdatesAll | Where-Object {$_.Title -notlike "*Security Intelligence Update for Microsoft Defender Antivirus*"}
+                $WindowsUpdates | Export-Csv -Append -NoTypeInformation -Delimiter ";" $logdir\$crt-Windows_Updates.csv
+                $LastUpdate = $WindowsUpdates[0].Date
+                $lastBootTime=([Management.ManagementDateTimeConverter]::ToDateTime((Get-WmiObject Win32_OperatingSystem).LastBootUpTime)).DateTime
+                $DaysSinceReboot = (New-TimeSpan -Start $lastBootTime -End (Get-Date)).Days
+                $DaysSinceUpdate = (New-TimeSpan -Start $LastUpdate -End (Get-Date)).Days
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value $LastUpdate
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value $lastBootTime
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value $DaysSinceReboot
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value $DaysSinceUpdate
+            }
+            else{
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value "NoUpdates"
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value "n/a"
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value "n/a"
+                $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value "n/a"
+            }
+        }
+        catch{
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastUpdate -Value "WinRMFail"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name LastBootTime -Value "n/a"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceReboot -Value "n/a"
+            $WindowsUpdatesObj | Add-Member -MemberType NoteProperty -Name DaysSinceUpdate -Value "n/a"
+        }
+        $WindowsUpdatesArray += $WindowsUpdatesObj
+    }
+    $WindowsUpdatesArray | Select @{N='DomainName';E={$DomainName}},* |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-Windows_Last_Update.csv
+    Get-Content $logdir\$crt-Windows_Last_Update.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_Windows_Last_Update>`r`n" | Out-File -Append -FilePath $LogPath
+<#
+{% endif %}
+{% if ('ActiveDirectory_EventLog_Policy' in check_list or 'all' in check_list) and '-ActiveDirectory_EventLog_Policy' not in check_list %}
+
+Eventlogs policy
+##########################################################################################################
+https://docs.microsoft.com/en-us/windows/win32/eventlog/eventlog-key
+
+System MaxSize
+System Retention
+System AutoBackup
+Application MaxSize
+Application Retention
+Application AutoBackup
+Security MaxSize
+Security Retention
+Security AutoBackup
+#>
+$crt++
+MsgPrint "info" "$crt. Eventlogs policy"
+Write "#### <ActiveDirectory_EventLog_Policy>" | out-file -Append -FilePath $logpath
+function Get-EventPolicy {
+    param(
+        [String]$computer
+    )
+    try{
+        $RegKey = Get-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\System" -ErrorAction Stop
+        If($RegKey.GetValue("MaxSize") -eq $null) {
+            $SysMaxSize = ""
+        } else {
+            $SysMaxSize = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\System" -Name "MaxSize" | select "MaxSize").MaxSize
+        }
+        If($RegKey.GetValue("Retention") -eq $null) {
+            $SysRetention = ""
+        } else {
+            $SysRetention = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\System" -Name "Retention" | select "Retention").Retention
+        }
+        If($RegKey.GetValue("AutoBackupLogFiles") -eq $null) {
+            $SysAutobackup = ""
+        } else {
+            $SysAutobackup = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\System" -Name "AutoBackupLogFiles" | select "AutoBackupLogFiles").AutoBackupLogFiles
+        }
+        $RegKey = Get-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application"
+        If($RegKey.GetValue("MaxSize") -eq $null) {
+            $AppMaxSize = ""
+        } else {
+            $AppMaxSize = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "MaxSize" | select "MaxSize").MaxSize
+        }
+        If($RegKey.GetValue("Retention") -eq $null) {
+            $AppRetention = ""
+        } else {
+            $AppRetention = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "Retention" | select "Retention").Retention
+        }
+        If($RegKey.GetValue("AutoBackupLogFiles") -eq $null) {
+            $AppAutobackup = ""
+        } else {
+            $AppAutobackup = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "AutoBackupLogFiles" | select "AutoBackupLogFiles").AutoBackupLogFiles
+        }
+        $RegKey = Get-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Security"
+        If($RegKey.GetValue("MaxSize") -eq $null) {
+            $SecMaxSize = ""
+        } else {
+            $SecMaxSize = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "MaxSize" | select "MaxSize").MaxSize
+        }
+        If($RegKey.GetValue("Retention") -eq $null) {
+            $SecRetention = ""
+        } else {
+            $SecRetention = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "Retention" | select "Retention").Retention
+        }
+        If($RegKey.GetValue("AutoBackupLogFiles") -eq $null) {
+            $SecAutoBackup = ""
+        } else {
+            $SecAutoBackup = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Eventlog\Application" -Name "AutoBackupLogFiles" | select "AutoBackupLogFiles").AutoBackupLogFiles
+        }
+        $OutputObj = New-Object -TypeName PSobject
+        $OutputObj | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $OutputObj | Add-Member -MemberType NoteProperty -Name System_MaxSize -Value $SysMaxSize
+        $OutputObj | Add-Member -MemberType NoteProperty -Name System_Retention -Value $SysRetention
+        $OutputObj | Add-Member -MemberType NoteProperty -Name System_AutoBackup -Value $SysAutobackup
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Application_MaxSize -Value $AppMaxSize
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Application_Retention -Value $AppRetention
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Application_AutoBackup -Value $AppAutobackup
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Security_MaxSize -Value $SecMaxSize
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Security_Retention -Value $SecRetention
+        $OutputObj | Add-Member -MemberType NoteProperty -Name Security_AutoBackup -Value $SecAutobackup
+        $OutputObj
+    }
+    catch {
+        $EvntPol = New-Object -TypeName PSobject
+        $EvntPol | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+        $EvntPol | Add-Member -MemberType NoteProperty -Name System_MaxSize -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name System_Retention -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name System_AutoBackup -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Application_MaxSize -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Application_Retention -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Application_AutoBackup -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Security_MaxSize -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Security_Retention -Value "n/a"
+        $EvntPol | Add-Member -MemberType NoteProperty -Name Security_AutoBackup -Value "n/a"
+        $EvntPol
+    }
+}
+
+if ($AnsibleMode -eq "true"){
+    $computer = ($env:COMPUTERNAME).ToLower()
+    Get-EventPolicy -computer $computer | select @{N="DomainName";E={$DomainName}},MachineName,System_MaxSize,System_Retention,System_AutoBackup,Application_MaxSize,Application_Retention,Application_AutoBackup,Security_MaxSize,Security_Retention,Security_AutoBackup |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-EventLog_Policy.csv
+    Get-Content $logdir\$crt-EventLog_Policy.csv | out-file -Append -FilePath $LogPath
+}
+else{
+    $EventPolicyArray = @()
+    foreach ($computer in $DomainControllersUp){
+        try{
+            $EventPolicy = Invoke-Command -ComputerName $computer -ScriptBlock ${function:Get-EventPolicy} -ArgumentList $computer -ErrorAction Stop
+            $EventPolicyArray += $EventPolicy
+        }
+        catch{
+            $EvntPol = New-Object -TypeName PSobject
+            $EvntPol | Add-Member -MemberType NoteProperty -Name MachineName -Value $computer
+            $EvntPol | Add-Member -MemberType NoteProperty -Name System_MaxSize -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name System_Retention -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name System_AutoBackup -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Application_MaxSize -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Application_Retention -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Application_AutoBackup -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Security_MaxSize -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Security_Retention -Value "WinRMfail"
+            $EvntPol | Add-Member -MemberType NoteProperty -Name Security_AutoBackup -Value "WinRMfail"
+            $EventPolicyArray += $EvntPol
+        }
+    }
+    $EventPolicyArray | select @{N="DomainName";E={$DomainName}},MachineName,System_MaxSize,System_Retention,System_AutoBackup,Application_MaxSize,Application_Retention,Application_AutoBackup,Security_MaxSize,Security_Retention,Security_AutoBackup |
+    Export-Csv -NoTypeInformation -Delimiter ";" -Path $logdir\$crt-EventLog_Policy.csv
+    Get-Content $logdir\$crt-EventLog_Policy.csv | out-file -Append -FilePath $LogPath
+}
+Write "#### </ActiveDirectory_EventLog_Policy>`r`n" | out-file -Append -FilePath $logpath
+
+
+<#
+{% endif %}
+{% if ('ActiveDirectory_AuditPolicies' in check_list or 'all' in check_list) and '-ActiveDirectory_AuditPolicies' not in check_list %}
+
+Advanced Audit Policy Configuration
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Advanced Audit Policy Configuration"
+Write "#### <ActiveDirectory_AuditPolicies>" | out-file -Append -FilePath $LogPath
+$auditpol = auditpol /get /Category:* /r | ConvertFrom-Csv |
+select @{N="MachineName";E={$computer}}, @{N="AuditPolicy";E={$_.subcategory}}, @{N="Value";E={$_."inclusion setting"}} | sort AuditPolicy
+$auditpol | Export-Csv -Delimiter ";" -NoTypeInformation $logdir\$crt-Audit-Policies.csv
+Get-Content $logdir\$crt-Audit-Policies.csv | out-file -Append -FilePath $LogPath
+Write "#### </ActiveDirectory_AuditPolicies>`r`n" | out-file -Append -FilePath $LogPath
+<#
+{% endif %}
+
+Compressing the logs (Compress-Archive requires PowerShell 5+)
+##########################################################################################################>
+$crt++
+MsgPrint "info" "$crt. Data collection compression and cleanup"
+# Convert to UTF8
+$lines = Get-Content $logpath
+$lines | Out-File $logpath -encoding UTF8
+$date = Get-Date -Format "yyyy-mm-ddTHH.mm.ss"
+Write-Output $date": Data collection status: $DataCollectionStatus" | Out-File $LogFile -encoding UTF8 -Append
+Copy-Item -Path $LogPath -Destination $logdir
+Copy-Item -Path $LogFile -Destination $logdir
+if ($ZipLog -eq $True) {
+    $TimeStamp = Get-Date -Format yyyyMMdd-HHmmss
+    if (($PSVersionTable.PSVersion).Major -lt 5){
+        Write-Host
+        Write-Host "Please zip folder ""$logdir"" and collect for further analysis." -ForegroundColor green
+    }
+    else{
+        Write-Host
+        Compress-Archive -Path $logdir* -CompressionLevel Optimal -DestinationPath $logdir-$TimeStamp-report.zip -Force
+        Remove-Item -path $logdir -recurse
+        Write-Host "Please collect $logdir-$TimeStamp-report.zip for further analysis." -ForegroundColor green
+        Write-Host
+    }
+}
+Else {
+    Write-Host "$crt. Cleaning working folder/files"
+    Remove-Item -path $logdir -recurse
+}
