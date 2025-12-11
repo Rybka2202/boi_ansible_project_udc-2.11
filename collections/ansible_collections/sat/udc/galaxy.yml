@@ -1,0 +1,27 @@
+namespace: sat
+
+name: udc
+
+version: 2.11.0
+
+readme: README.md
+
+authors:
+    - David Kapitany <david.kapitany@kyndryl.com>
+
+description: Internal collection only utilized by SAT and UDC
+
+license_file: https://github.kyndryl.net/Continuous-Engineering/CE-Documentation/blob/master/files/LICENSE.md
+
+tags:
+    - infrastructure
+    - security
+    - cloud
+    - linux
+    - windows
+
+dependencies: {}
+
+repository: https://github.kyndryl.net/Continuous-Engineering/ansible_project_udc
+
+issues: https://kyndryleu.service-now.com/pl_tools

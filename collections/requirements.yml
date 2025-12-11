@@ -1,0 +1,26 @@
+---
+collections:
+  - name: community.general
+    version: 10.3.0
+  - name: ansible.utils
+    version: 5.1.2
+  - name: ansible.netcommon
+    version: 7.1.0
+  - name: ansible.windows
+    version: 2.7.0
+  - name: community.windows
+    version: 2.3.0
+  - name: cisco.aci
+    version: 2.10.1
+  - name: cisco.asa
+    version: 6.1.0
+  - name: cisco.ios
+    version: 9.1.1
+  - name: cisco.iosxr
+    version: 10.3.0
+  - name: cisco.nxos
+    version: 9.3.0
+  - name: junipernetworks.junos
+    version: 9.1.0
+  - name: community.vmware
+    version: 4.8.2
