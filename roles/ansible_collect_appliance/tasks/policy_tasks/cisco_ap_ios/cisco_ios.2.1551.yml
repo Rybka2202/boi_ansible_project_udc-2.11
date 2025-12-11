@@ -1,0 +1,24 @@
+- name: Remediate cisco_ios.2.1551
+  cisco.ios.ios_service:
+    config:
+      tcp_small_servers:
+        enable: false
+      udp_small_servers:
+        enable: false
+    state: "deleted"
+  become: "{{ commands.become | default('false') }}"
+  become_method: "{{ commands.become_method | default('enable') }}"
+
+- name: Save running config to startup config
+  cisco.ios.ios_config:
+    save_when: always  # Save the configuration after making the change
+  become: "{{ commands.become | default('false') }}"
+  become_method: "{{ commands.become_method | default('enable') }}"
+
+# Fallback:
+# use the below command to enable tcp small server services if enabled
+# service tcp-small-servers
+#
+# Validation:
+# Use the below command to check if the service is disabled
+# show run | in service

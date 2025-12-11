@@ -1,0 +1,67 @@
+---
+# We are simply ignoring ANY errors here - they will be caught in the gather.yml section
+- name: Cisco-specific permission checks
+  when:
+    - '"cisco" in namebase'
+    - ansible_network_os is defined
+  block:
+    - name: Get permissions
+      ansible.netcommon.cli_command:
+        command: show privilege
+      become: false
+      register: cisco_perm
+      no_log: true
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Turn off privilege escalation if privilege level is already 15
+      ansible.builtin.set_fact:
+        udc_privilege_escalation: false
+      when: cisco_perm.stdout is defined and (cisco_perm.stdout | regex_search('[0-9]*$') == "15")
+
+# delegation_target is localhost - runs in the Execution Environment
+- name: Data collection prepare block
+  delegate_to: "{{ delegation_target }}"
+  block:
+    - name: NX-OS specific time settings
+      when: namebase == 'cisco_ap_nxos'
+      block:
+        - name: Set nxos_start_date
+          ansible.builtin.set_fact:
+            nxos_start_date: >-
+              {{ lookup('ansible.builtin.pipe',
+              'python3 -c "from datetime import datetime, timedelta; print((datetime.now() - timedelta(hours=24)).strftime(\"%Y %b %d %H:%M:%S\"))"') }}
+
+    - name: Find the variable templates
+      ansible.builtin.find:
+        paths: '{{ role_path }}/templates'
+        patterns: '{{ namebase }}.global.j2'
+        use_regex: true
+      register: vars_list
+
+    - name: Generate the check_list files from templates
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "/tmp/{{ item[:-3] | basename }}.yml"
+        force: true
+        mode: "0600"
+      loop: "{{ vars_list.files | map(attribute='path') | list }}"
+
+    - name: Load global checks to run
+      ansible.builtin.include_vars:
+        file: "/tmp/{{ namebase }}.global.yml"
+      no_log: true
+
+    - name: Initialize settings_global
+      ansible.builtin.set_fact:
+        settings: "{{ settings_global }}"
+
+- name: Block for gathering data
+  block:
+    - name: Gather data
+      ansible.builtin.include_tasks: tasks/oneshot_cmd.yml
+      loop: "{{ settings }}"
+      loop_control:
+        loop_var: commands

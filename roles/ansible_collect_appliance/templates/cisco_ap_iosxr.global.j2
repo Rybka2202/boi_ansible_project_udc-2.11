@@ -1,0 +1,199 @@
+---
+settings_global:
+{% if ('chk01' in check_list or 'show_run_aaa' in check_list or 'all' in check_list) and '-chk01' not in check_list %}
+  - header: '#### <show_run_aaa>'
+    command: 'show running-config aaa'
+    footer: >
+      #### </show_run_aaa>
+
+{% endif %}
+
+{% if ('chk02' in check_list or 'show_line_console' in check_list or 'all' in check_list) and '-chk02' not in check_list %}
+  - header: '#### <show_line_console>'
+    command: 'show running-config line console'
+    footer: >
+      #### </show_line_console>
+
+{% endif %}
+{% if ('chk03' in check_list or 'show_line_default' in check_list or 'all' in check_list) and '-chk03' not in check_list %}
+  - header: '#### <show_line_default>'
+    command: 'show running-config line default'
+    footer: >
+      #### </show_line_default>
+
+{% endif %}
+{% if ('chk04' in check_list or 'show_passwordpolicy' in check_list or 'all' in check_list) and '-chk04' not in check_list %}
+  - header: '#### <show_passwordpolicy>'
+    command: 'show aaa passwordpolicy pwd15'
+    footer: >
+      #### </show_passwordpolicy>
+
+{% endif %}
+{% if ('chk05' in check_list or 'show_log' in check_list or 'all' in check_list) and '-chk05' not in check_list %}
+  - header: '#### <show_log>'
+    command: 'show running-config logging'
+    footer: >
+      #### </show_log>
+
+{% endif %}
+{% if ('chk06' in check_list or 'show_archive_log' in check_list or 'all' in check_list) and '-chk06' not in check_list %}
+  - header: '#### <show_archive_log>'
+    command: 'show running-config logging archive'
+    footer: >
+      #### </show_archive_log>
+
+{% endif %}
+{% if ('chk07' in check_list or 'show_timestamp' in check_list or 'all' in check_list) and '-chk07' not in check_list %}
+  - header: '#### <show_timestamp>'
+    command: 'show running-config service timestamps debug datetime'
+    footer: >
+      #### </show_timestamp>
+
+{% endif %}
+{% if ('chk08' in check_list or 'show_hostname' in check_list or 'all' in check_list) and '-chk08' not in check_list %}
+  - header: '#### <show_hostname>'
+    command: 'show running-config hostname'
+    footer: >
+      #### </show_hostname>
+
+{% endif %}
+{% if ('chk09' in check_list or 'show_domain' in check_list or 'all' in check_list) and '-chk09' not in check_list %}
+  - header: '#### <show_domain>'
+    command: 'show running-config domain'
+    footer: >
+      #### </show_domain>
+
+{% endif %}
+{% if ('chk10' in check_list or 'show_dhcp' in check_list or 'all' in check_list) and '-chk10' not in check_list %}
+  - header: '#### <show_dhcp>'
+    command: 'show running-config dhcp ipv4'
+    footer: >
+      #### </show_dhcp>
+
+{% endif %}
+{% if ('chk11' in check_list or 'show_source_route' in check_list or 'all' in check_list) and '-chk11' not in check_list %}
+  - header: '#### <show_source_route>'
+    command: 'show running-config ipv4 source-route'
+    footer: >
+      #### </show_source_route>
+
+{% endif %}
+{% if ('chk12' in check_list or 'show_running_config' in check_list or 'all' in check_list) and '-chk12' not in check_list %}
+  - header: '#### <show_running_config>'
+    command: 'show running-config'
+    footer: >
+      #### </show_running_config>
+
+{% endif %}
+{% if ('chk13' in check_list or 'show_access_lists' in check_list or 'all' in check_list) and '-chk13' not in check_list %}
+  - header: '#### <show_access_lists>'
+    command: 'show access-lists'
+    footer: >
+      #### </show_access_lists>
+
+{% endif %}
+{% if ('chk14' in check_list or 'show_ntp' in check_list or 'all' in check_list) and '-chk14' not in check_list %}
+  - header: '#### <show_ntp>'
+    command: 'show running-config ntp'
+    footer: >
+      #### </show_ntp>
+
+{% endif %}
+{% if ('chk15' in check_list or 'show_interfaces' in check_list or 'all' in check_list) and '-chk15' not in check_list %}
+  - header: '#### <show_interfaces>'
+    command: 'show ip int brief'
+    footer: >
+      #### </show_interfaces>
+
+{% endif %}
+{% if ('chk16' in check_list or 'show_cdp' in check_list or 'all' in check_list) and '-chk16' not in check_list %}
+  - header: '#### <show_cdp>'
+    command: 'show running-config cdp'
+    footer: >
+      #### </show_cdp>
+
+{% endif %}
+{% if ('chk17' in check_list or 'show_ipv4' in check_list or 'all' in check_list) and '-chk17' not in check_list %}
+  - header: '#### <show_ipv4>'
+    command: 'show ipv4 interface mgmtEth 0/RP0/CPU0/0'
+    footer: >
+      #### </show_ipv4>
+
+{% endif %}
+{% if ('chk18' in check_list or 'show_loopback_int' in check_list or 'all' in check_list) and '-chk18' not in check_list %}
+  - header: '#### <show_loopback_int>'
+    command: 'show running-config int'
+    footer: >
+      #### </show_loopback_int>
+
+{% endif %}
+{% if ('chk19' in check_list or 'show_snmp' in check_list or 'all' in check_list) and '-chk19' not in check_list %}
+  - header: '#### <show_snmp>'
+    command: 'show running-config snmp'
+    footer: >
+      #### </show_snmp>
+
+{% endif %}
+{% if ('chk20' in check_list or 'show_eigrp' in check_list or 'all' in check_list) and '-chk20' not in check_list %}
+  - header: '#### <show_eigrp>'
+    command: 'show running-config router eigrp'
+    footer: >
+      #### </show_eigrp>
+
+{% endif %}
+{% if ('chk21' in check_list or 'show_ospf' in check_list or 'all' in check_list) and '-chk21' not in check_list %}
+  - header: '#### <show_ospf>'
+    command: 'show running-config router ospf'
+    footer: >
+      #### </show_ospf>
+
+{% endif %}
+{% if ('chk22' in check_list or 'show_bgp' in check_list or 'all' in check_list) and '-chk22' not in check_list %}
+  - header: '#### <show_bgp>'
+    command: 'show running-config router bgp'
+    footer: >
+      #### </show_bgp>
+
+{% endif %}
+{% if ('chk23' in check_list or 'show_banner' in check_list or 'all' in check_list) and '-chk23' not in check_list %}
+  - header: '#### <show_banner>'
+    command: 'show run banner'
+    footer: >
+      #### </show_banner>
+
+{% endif %}
+{% if ('chk24' in check_list or 'show_security_key' in check_list or 'all' in check_list) and '-chk24' not in check_list %}
+  - header: '#### <show_security_key>'
+    command: 'Show crypto key mypubkey rsa'
+    footer: >
+      #### </show_security_key>
+
+{% endif %}
+{% if ('chk25' in check_list or 'show_ssh' in check_list or 'all' in check_list) and '-chk25' not in check_list %}
+  - header: '#### <show_ssh>'
+    command: 'show running-config ssh'
+    footer: >
+      #### </show_ssh>
+
+{% endif %}
+{% if ('chk26' in check_list or 'show_user' in check_list or 'all' in check_list) and '-chk26' not in check_list %}
+  - header: '#### <show_user>'
+    command: 'show running-config username'
+    footer: >
+      #### </show_user>
+
+{% endif %}
+{% if ('chk27' in check_list or 'show_version' in check_list or 'all' in check_list) and '-chk27' not in check_list %}
+  - header: '#### <show_version>'
+    command: 'show version'
+    footer: >
+      #### </show_version>
+
+{% endif %}
+{% if ('chk28' in check_list or 'show_inventory' in check_list or 'all' in check_list) and '-chk28' not in check_list %}
+  - header: '#### <show_inventory>'
+    command: 'show inventory'
+    footer: >
+      #### </show_inventory>
+
+{% endif %}

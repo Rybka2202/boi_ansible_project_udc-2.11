@@ -1,0 +1,327 @@
+---
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 01
+#	Command: showversion
+#	Look for:
+#
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'showversion'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 02
+#	Command: showvv_showcols
+#	Look for:
+#
+{% if ('showvv_showcols' in check_list or 'all' in check_list) and '-showvv_showcols' not in check_list %}
+  - header: '#### <showvv_showcols>'
+    command: 'showvv -showcols Id,Name,Rd,Mstr,VV_WWN,Prov,Type,UsrCPG,SnpCPG,Tot_Rsvd_MB,VSize_MB'
+    footer: >
+      #### </showvv_showcols>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 03
+#	Command: showvv
+#	Look for:
+#
+{% if ('showvv' in check_list or 'all' in check_list) and '-showvv' not in check_list %}
+  - header: '#### <showvv>'
+    command: 'showvv'
+    footer: >
+      #### </showvv>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 04
+#	Command: showsys
+#	Look for:
+#
+{% if ('showsys' in check_list or 'all' in check_list) and '-showsys' not in check_list %}
+  - header: '#### <showsys>'
+    command: 'showsys'
+    footer: >
+      #### </showsys>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 05
+#	Command: showsys_d
+#	Look for:
+#
+{% if ('showsys_d' in check_list or 'all' in check_list) and '-showsys_d' not in check_list %}
+  - header: '#### <showsys_d>'
+    command: 'showsys -d'
+    footer: >
+      #### </showsys_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 06
+#	Command: showcpg_sdg
+#	Look for:
+#
+{% if ('showcpg_sdg' in check_list or 'all' in check_list) and '-showcpg_sdg' not in check_list %}
+  - header: '#### <showcpg_sdg>'
+    command: 'showcpg -sdg'
+    footer: >
+      #### </showcpg_sdg>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 07
+#	Command: showpd
+#	Look for:
+#
+{% if ('showpd' in check_list or 'all' in check_list) and '-showpd' not in check_list %}
+  - header: '#### <showpd>'
+    command: 'showpd'
+    footer: >
+      #### </showpd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 08
+#	Command: showpd_i
+#	Look for:
+#
+{% if ('showpd_i' in check_list or 'all' in check_list) and '-showpd_i' not in check_list %}
+  - header: '#### <showpd_i>'
+    command: 'showpd -i'
+    footer: >
+      #### </showpd_i>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 09
+#	Command: showport
+#	Look for:
+#
+{% if ('showport' in check_list or 'all' in check_list) and '-showport' not in check_list %}
+  - header: '#### <showport>'
+    command: 'showport'
+    footer: >
+      #### </showport>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+#	Command: showvlun_lvw
+#	Look for:
+#
+{% if ('showvlun_lvw' in check_list or 'all' in check_list) and '-showshowvlun_lvwport' not in check_list %}
+  - header: '#### <showvlun_lvw>'
+    command: 'showvlun -lvw -a'
+    footer: >
+      #### </showvlun_lvw>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+#	Command: showhost_d
+#	Look for:
+#
+{% if ('showhost_d' in check_list or 'all' in check_list) and '-showhost_d' not in check_list %}
+  - header: '#### <showhost_d>'
+    command: 'showhost -d'
+    footer: >
+      #### </showhost_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+#	Command: showhost
+#	Look for:
+#
+{% if ('showhost' in check_list or 'all' in check_list) and '-showhost' not in check_list %}
+  - header: '#### <showhost>'
+    command: 'showhost'
+    footer: >
+      #### </showhost>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+#	Command: showport_sfp
+#	Look for:
+#
+{% if ('showport_sfp' in check_list or 'all' in check_list) and '-showport_sfp' not in check_list %}
+  - header: '#### <showport_sfp>'
+    command: 'showport -sfp'
+    footer: >
+      #### </showport_sfp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 14
+#	Command: showsshbanner
+#	Look for:
+#
+{% if ('showsshbanner' in check_list or 'all' in check_list) and '-showsshbanner' not in check_list %}
+  - header: '#### <showsshbanner>'
+    command: 'showsshbanner'
+    footer: >
+      #### </showsshbanner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+#	Command: shownode
+#	Look for:
+#
+{% if ('shownode' in check_list or 'all' in check_list) and '-shownode' not in check_list %}
+  - header: '#### <shownode>'
+    command: 'shownode'
+    footer: >
+      #### </shownode>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+#	Command: shownode_d
+#	Look for:
+#
+{% if ('shownode_d' in check_list or 'all' in check_list) and '-shownode_d' not in check_list %}
+  - header: '#### <shownode_d>'
+    command: 'shownode -d'
+    footer: >
+      #### </shownode_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+#	Command: controlencryption_status_d
+#	Look for:
+#
+{% if ('controlencryption_status_d' in check_list or 'all' in check_list) and '-controlencryption_status_d' not in check_list %}
+  - header: '#### <controlencryption_status_d>'
+    command: 'controlencryption status -d'
+    footer: >
+      #### </controlencryption_status_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+#	Command: showencryption_d
+#	Look for:
+#
+{% if ('showencryption_d' in check_list or 'all' in check_list) and '-showencryption_d' not in check_list %}
+  - header: '#### <showencryption_d>'
+    command: 'showencryption -d'
+    footer: >
+      #### </showencryption_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+#	Command: checkhealth
+#	Look for:
+#
+{% if ('checkhealth' in check_list or 'all' in check_list) and '-checkhealth' not in check_list %}
+  - header: '#### <checkhealth>'
+    command: 'checkhealth -svc -detail'
+    footer: >
+      #### </checkhealth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+#	Command: showbattery
+#	Look for:
+#
+{% if ('showbattery' in check_list or 'all' in check_list) and '-showbattery' not in check_list %}
+  - header: '#### <showbattery>'
+    command: 'showbattery'
+    footer: >
+      #### </showbattery>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+#	Command: showrcopy
+#	Look for:
+#
+{% if ('showrcopy' in check_list or 'all' in check_list) and '-showrcopy' not in check_list %}
+  - header: '#### <showrcopy>'
+    command: 'showrcopy'
+    footer: >
+      #### </showrcopy>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+#	Command: showuser
+#	Look for:
+#
+{% if ('showuser' in check_list or 'all' in check_list) and '-showuser' not in check_list %}
+  - header: '#### <showuser>'
+    command: 'showuser'
+    footer: >
+      #### </showuser>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 23
+#       Command: showsys
+#       Look for:
+#
+{% if ('showsys_param' in check_list or 'all' in check_list) and '-showsys_param' not in check_list %}
+  - header: '#### <showsys_param>'
+    command: 'showsys -param'
+    footer: >
+      #### </showsys_param>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 24
+#       Command: showwsapi
+#       Look for:
+#
+{% if ('showwsapi_d' in check_list or 'all' in check_list) and '-showwsapi_d' not in check_list %}
+  - header: '#### <showwsapi_d>'
+    command: 'showwsapi -d'
+    footer: >
+      #### </showwsapi_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 25
+#       Command: shownet
+#       Look for:
+#
+{% if ('shownet_d' in check_list or 'all' in check_list) and '-shownet_d' not in check_list %}
+  - header: '#### <shownet_d>'
+    command: 'shownet -d'
+    footer: >
+      #### </shownet_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 26
+#       Command: showbanner
+#       Look for:
+#
+{% if ('showbanner' in check_list or 'all' in check_list) and '-showbanner' not in check_list %}
+  - header: '#### <showbanner>'
+    command: 'showbanner'
+    footer: >
+      #### </showbanner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 27
+#       Command: showcim
+#       Look for:
+#
+{% if ('showcim_pol' in check_list or 'all' in check_list) and '-showcim_pol' not in check_list %}
+  - header: '#### <showcim_pol>'
+    command: 'showcim -pol'
+    footer: >
+      #### </showcim_pol>
+
+{% endif %}

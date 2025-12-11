@@ -1,0 +1,584 @@
+---
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 100 SAT section - NO command
+{% if ('TPCREPORT.PRF_HOURLYDAILY_SVC_SYSTEM' in check_list or 'all' in check_list) and '-TPCREPORT.PRF_HOURLYDAILY_SVC_SYSTEM' not in check_list %}
+  - header: '#### <TPCREPORT.PRF_HOURLYDAILY_SVC_SYSTEM>'
+    command: 'echo Spectrum Control device id not available.'
+    footer: >
+      #### </TPCREPORT.PRF_HOURLYDAILY_SVC_SYSTEM>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 1
+{% if ('lsemailserver' in check_list or 'all' in check_list) and '-lsemailserver' not in check_list %}
+  - header: '#### <lsemailserver>'
+    command: 'lsemailserver -delim :'
+    footer: >
+      #### </lsemailserver>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 2
+{% if ('lsemailuser' in check_list or 'all' in check_list) and '-lsemailuser' not in check_list %}
+  - header: '#### <lsemailuser>'
+    command: 'lsemailuser -delim :'
+    footer: >
+      #### </lsemailuser>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 3
+{% if ('lsfabric' in check_list or 'all' in check_list) and '-lsfabric' not in check_list %}
+  - header: '#### <lsfabric>'
+    command: 'lsfabric -delim :'
+    footer: >
+      #### </lsfabric>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 4
+{% if ('lshostvdiskmap' in check_list or 'all' in check_list) and '-lshostvdiskmap' not in check_list %}
+  - header: '#### <lshostvdiskmap>'
+    command: 'lshostvdiskmap -delim :'
+    footer: >
+      #### </lshostvdiskmap>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 5
+{% if ('lssnmpserver' in check_list or 'all' in check_list) and '-lssnmpserver' not in check_list %}
+  - header: '#### <lssnmpserver>'
+    command: 'lssnmpserver -delim :'
+    footer: >
+      #### </lssnmpserver>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 6
+{% if ('lssyslogserver' in check_list or 'all' in check_list) and '-lssyslogserver' not in check_list %}
+  - header: '#### <lssyslogserver>'
+    command: 'lssyslogserver -delim :'
+    footer: >
+      #### </lssyslogserver>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 7
+{% if ('lsuser' in check_list or 'all' in check_list) and '-lsuser' not in check_list %}
+  - header: '#### <lsuser>'
+    command: 'lsuser -delim :'
+    footer: >
+      #### </lsuser>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 9
+{% if ('lssystem' in check_list or 'all' in check_list) and '-lssystem' not in check_list %}
+  - header: '#### <lssystem>'
+    command: 'lssystem -delim :'
+    footer: >
+      #### </lssystem>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+{% if ('lsusergrp' in check_list or 'all' in check_list) and '-lsusergrp' not in check_list %}
+  - header: '#### <lsusergrp>'
+    command: 'lsusergrp -delim :'
+    footer: >
+      #### </lsusergrp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+{% if ('lsquorum' in check_list or 'all' in check_list) and '-lsquorum' not in check_list %}
+  - header: '#### <lsquorum>'
+    command: 'lsquorum -delim :'
+    footer: >
+      #### </lsquorum>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+{% if ('lsrcconsistgrp' in check_list or 'all' in check_list) and '-lsrcconsistgrp' not in check_list %}
+  - header: '#### <lsrcconsistgrp>'
+    command: 'lsrcconsistgrp -delim :'
+    footer: >
+      #### </lsrcconsistgrp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+{% if ('lsrcrelationship' in check_list or 'all' in check_list) and '-lsrcrelationship' not in check_list %}
+  - header: '#### <lsrcrelationship>'
+    command: 'lsrcrelationship -delim :'
+    footer: >
+      #### </lsrcrelationship>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 14
+{% if ('lsenclosure' in check_list or 'all' in check_list) and '-lsenclosure' not in check_list %}
+  - header: '#### <lsenclosure>'
+    command: 'lsenclosure -delim :'
+    footer: >
+      #### </lsenclosure>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+{% if ('finderr' in check_list or 'all' in check_list) and '-finderr' not in check_list %}
+  - header: '#### <finderr>'
+    command: 'finderr'
+    footer: >
+      #### </finderr>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+{% if ('lseventlog_alert' in check_list or 'all' in check_list) and '-lseventlog_alert' not in check_list %}
+  - header: '#### <lseventlog_alert>'
+    command: 'lseventlog -fixed yes -filtervalue status=alert -delim :'
+    footer: >
+      #### </lseventlog_alert>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+{% if ('lsenclosureslot' in check_list or 'all' in check_list) and '-lsenclosureslot' not in check_list %}
+  - header: '#### <lsenclosureslot>'
+    command: 'lsenclosureslot -delim :'
+    footer: >
+      #### </lsenclosureslot>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+{% if ('lsenclosurebattery' in check_list or 'all' in check_list) and '-lsenclosurebattery' not in check_list %}
+  - header: '#### <lsenclosurebattery>'
+    command: 'lsenclosurebattery -delim :'
+    footer: >
+      #### </lsenclosurebattery>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+{% if ('lscurrentuser' in check_list or 'all' in check_list) and '-lscurrentuser' not in check_list %}
+  - header: '#### <lscurrentuser>'
+    command: 'lscurrentuser -delim ":"'
+    footer: >
+      #### </lscurrentuser>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+{% if ('lsportfc' in check_list or 'all' in check_list) and '-lsportfc' not in check_list %}
+  - header: '#### <lsportfc>'
+    command: 'lsportfc -delim :'
+    footer: >
+      #### </lsportfc>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+{% if ('lsenclosurecanister' in check_list or 'all' in check_list) and '-lsenclosurecanister' not in check_list %}
+  - header: '#### <lsenclosurecanister>'
+    command: 'lsenclosurecanister -delim :'
+    footer: >
+      #### </lsenclosurecanister>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 23
+{% if ('lsenclosurepsu' in check_list or 'all' in check_list) and '-lsenclosurepsu' not in check_list %}
+  - header: '#### <lsenclosurepsu>'
+    command: 'lsenclosurepsu -delim :'
+    footer: >
+      #### </lsenclosurepsu>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 24
+{% if ('lssevdiskcopy' in check_list or 'all' in check_list) and '-lssevdiskcopy' not in check_list %}
+  - header: '#### <lssevdiskcopy>'
+    command: 'lssevdiskcopy -delim :'
+    footer: >
+      #### </lssevdiskcopy>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 25
+{% if ('lspartnership' in check_list or 'all' in check_list) and '-lspartnership' not in check_list %}
+  - header: '#### <lspartnership>'
+    command: 'lspartnership -delim :'
+    footer: >
+      #### </lspartnership>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 26
+{% if ('lsvdiskcopy' in check_list or 'all' in check_list) and '-lsvdiskcopy' not in check_list %}
+  - header: '#### <lsvdiskcopy>'
+    command: 'lsvdiskcopy -delim :'
+    footer: >
+      #### </lsvdiskcopy>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 27
+{% if ('lssecurity' in check_list or 'all' in check_list) and '-lssecurity' not in check_list %}
+  - header: '#### <lssecurity>'
+    command: 'lssecurity -delim :'
+    footer: >
+      #### </lssecurity>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 28
+{% if ('lsldap' in check_list or 'all' in check_list) and '-lsldap' not in check_list %}
+  - header: '#### <lsldap>'
+    command: 'lsldap -delim :'
+    footer: >
+      #### </lsldap>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 29
+{% if ('lsldapserver' in check_list or 'all' in check_list) and '-lsldapserver' not in check_list %}
+  - header: '#### <lsldapserver>'
+    command: 'lsldapserver -delim :'
+    footer: >
+      #### </lsldapserver>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 30
+{% if ('lsdumps' in check_list or 'all' in check_list) and '-lsdumps' not in check_list %}
+  - header: '#### <lsdumps>'
+    command: 'lsdumps -delim :'
+    footer: >
+      #### </lsdumps>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 31
+{% if ('lsiscsiauth' in check_list or 'all' in check_list) and '-lsiscsiauth' not in check_list %}
+  - header: '#### <lsiscsiauth>'
+    command: 'lsiscsiauth -delim :'
+    footer: >
+      #### </lsiscsiauth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 33
+{% if ('ls_fcmap' in check_list or 'all' in check_list) and '-ls_fcmap' not in check_list %}
+  - header: '#### <ls_fcmap>'
+    command: 'lsfcmap -delim :'
+    footer: >
+      #### </ls_fcmap>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 34
+{% if ('lsencryption' in check_list or 'all' in check_list) and '-lsencryption' not in check_list %}
+  - header: '#### <lsencryption>'
+    command: 'lsencryption -delim :'
+    footer: >
+      #### </lsencryption>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 35
+{% if ('lsdriveclass' in check_list or 'all' in check_list) and '-lsdriveclass' not in check_list %}
+  - header: '#### <lsdriveclass>'
+    command: 'lsdriveclass -delim :'
+    footer: >
+      #### </lsdriveclass>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 36
+{% if ('lsvdiskaccess' in check_list or 'all' in check_list) and '-lsvdiskaccess' not in check_list %}
+  - header: '#### <lsvdiskaccess>'
+    command: 'lsvdiskaccess -delim :'
+    footer: >
+      #### </lsvdiskaccess>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 37
+{% if ('lskeyserver' in check_list or 'all' in check_list) and '-lskeyserver' not in check_list %}
+  - header: '#### <lskeyserver>'
+    command: 'lskeyserver -delim :'
+    footer: >
+      #### </lskeyserver>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 38
+{% if ('lssystemcert' in check_list or 'all' in check_list) and '-lssystemcert' not in check_list %}
+  - header: '#### <lssystemcert>'
+    command: 'lssystemcert -delim :'
+    footer: >
+      #### </lssystemcert>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 39
+{% if ('lssystemip' in check_list or 'all' in check_list) and '-lssystemip' not in check_list %}
+  - header: '#### <lssystemip>'
+    command: 'lssystemip -delim :'
+    footer: >
+      #### </lssystemip>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 40
+{% if ('lsmdisk' in check_list or 'all' in check_list) and '-lsmdisk' not in check_list %}
+  - header: '#### <lsmdisk>'
+    command: 'lsmdisk -delim :'
+    footer: >
+      #### </lsmdisk>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsmdisk -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 41
+{% if ('lsdrive' in check_list or 'all' in check_list) and '-lsdrive' not in check_list %}
+  - header: '#### <lsdrive>'
+    command: 'lsdrive -delim :'
+    footer: >
+      #### </lsdrive>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsdrive -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 42
+{% if ('lsarray' in check_list or 'all' in check_list) and '-lsarray' not in check_list %}
+  - header: '#### <lsarray>'
+    command: 'lsarray -delim :'
+    footer: >
+      #### </lsarray>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsarray -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 43
+{% if ('lsiogrp' in check_list or 'all' in check_list) and '-lsiogrp' not in check_list %}
+  - header: '#### <lsiogrp>'
+    command: 'lsiogrp -delim :'
+    footer: >
+      #### </lsiogrp>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsiogrp -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 44
+{% if ('lsmdiskgrp' in check_list or 'all' in check_list) and '-lsmdiskgrp' not in check_list %}
+  - header: '#### <lsmdiskgrp>'
+    command: 'lsmdiskgrp -delim :'
+    footer: >
+      #### </lsmdiskgrp>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsmdiskgrp -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 45
+{% if ('lscontroller' in check_list or 'all' in check_list) and '-lscontroller' not in check_list %}
+  - header: '#### <lscontroller>'
+    command: 'lscontroller -delim :'
+    footer: >
+      #### </lscontroller>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lscontroller -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 46
+{% if ('lsvdisk' in check_list or 'all' in check_list) and '-lsvdisk' not in check_list %}
+  - header: '#### <lsvdisk>'
+    command: 'lsvdisk -delim :'
+    footer: >
+      #### </lsvdisk>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsvdisk -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 47
+{% if ('lshost' in check_list or 'all' in check_list) and '-lshost' not in check_list %}
+  - header: '#### <lshost>'
+    command: 'lshost -delim :'
+    footer: >
+      #### </lshost>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lshost -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 48
+{% if ('lsportip' in check_list or 'all' in check_list) and '-lsportip' not in check_list %}
+  - header: '#### <lsportip>'
+    command: 'lsportip -delim :'
+    footer: >
+      #### </lsportip>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsportip -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 49
+{% if ('lsmdiskextent' in check_list or 'all' in check_list) and '-lsmdiskextent' not in check_list %}
+  - header: '#### <lsmdiskextent>'
+    command: 'lsmdisk -delim :'
+    footer: >
+      #### </lsmdiskextent>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsmdiskextent -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 50
+{% if ('lsnodecanister' in check_list or 'all' in check_list) and '-lsnodecanister' not in check_list %}
+  - header: '#### <lsnodecanister>'
+    command: 'lsnodecanister -delim :'
+    footer: >
+      #### </lsnodecanister>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsnodecanister -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 51
+{% if ('lsnodecanistervpd' in check_list or 'all' in check_list) and '-lsnodecanistervpd' not in check_list %}
+  - header: '#### <lsnodecanistervpd>'
+    command: 'lsnodecanister -delim :'
+    footer: >
+      #### </lsnodecanistervpd>
+
+    sat_delimiter: ':'
+    sat_element: 0
+    subcommand: 'lsnodecanistervpd -delim :'
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 52
+{% if ('lscloudcallhome' in check_list or 'all' in check_list) and '-lscloudcallhome' not in check_list %}
+  - header: '#### <lscloudcallhome>'
+    command: 'lscloudcallhome -delim :'
+    footer: >
+      #### </lscloudcallhome>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 54
+{% if ('iogrp_count' in check_list or 'all' in check_list) and '-iogrp_count' not in check_list %}
+  - header: '#### <iogrp_count>'
+    command: 'lsvdisk -nohdr -filtervalue function=master | while read x y z; do echo "${y}:$(lsvdiskaccess -nohdr ${x} | wc -l)"; done'
+    footer: >
+      #### </iogrp_count>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 55
+{% if ('lssafeguardedschedule' in check_list or 'all' in check_list) and '-lssafeguardedschedule' not in check_list %}
+  - header: '#### <lssafeguardedschedule>'
+    command: 'lssafeguardedschedule -delim :'
+    footer: >
+      #### </lssafeguardedschedule>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 56
+{% if ('lssafeguardedpolicy' in check_list or 'all' in check_list) and '-lssafeguardedpolicy' not in check_list %}
+  - header: '#### <lssafeguardedpolicy>'
+    command: 'lssafeguardedpolicy -delim :'
+    footer: >
+      #### </lssafeguardedpolicy>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 56
+{% if ('lsvolumegroup' in check_list or 'all' in check_list) and '-lsvolumegroup' not in check_list %}
+  - header: '#### <lsvolumegroup>'
+    command: 'lsvolumegroup -delim :'
+    footer: >
+      #### </lsvolumegroup>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 57
+{% if ('lsvolumegroupsnapshot' in check_list or 'all' in check_list) and '-lsvolumegroupsnapshot' not in check_list %}
+  - header: '#### <lsvolumegroupsnapshot>'
+    command: 'lsvolumegroupsnapshot -delim :'
+    footer: >
+      #### </lsvolumegroupsnapshot>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Disabled Check 01
+#{% if ('lscluster' in check_list or 'all' in check_list) and '-lscluster' not in check_list %}
+#  - header: '#### <lscluster>'
+#    command: 'lscluster -Y'
+#    footer: >
+#      #### </lscluster>
+#
+#{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 8
+#{% if ('lssoftwareupgradestatus' in check_list or 'all' in check_list) and '-lssoftwareupgradestatus' not in check_list %}
+#  - header: '#### <lssoftwareupgradestatus>'
+#    command: 'lssoftwareupgradestatus -delim :'
+#    footer: >
+#      #### </lssoftwareupgradestatus>
+#
+#{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+{% if ('testldapserver' in check_list or 'all' in check_list) and '-testldapserver' not in check_list %}
+  - header: '#### <testldapserver>'
+    command: 'testldapserver'
+    footer: >
+      #### </testldapserver>
+
+    rc: 0
+{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 32
+#{% if ('lsnodebattery' in check_list or 'all' in check_list) and '-lsnodebattery' not in check_list %}
+#  - header: '#### <lsnodebattery>'
+#    command: 'lsnodebattery -delim :'
+#    footer: >
+#      #### </lsnodebattery>
+#
+#{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 53
+#{% if ('lsnodevpd' in check_list or 'all' in check_list) and '-lsnodevpd' not in check_list %}
+#  - header: '#### <lsnodevpd>'
+#    command: 'lsnode -delim :'
+#    footer: >
+#      #### </lsnodevpd>
+#
+#{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

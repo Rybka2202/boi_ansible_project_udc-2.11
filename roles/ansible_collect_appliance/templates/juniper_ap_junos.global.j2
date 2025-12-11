@@ -1,0 +1,262 @@
+---
+settings_global:
+#Check 01
+{% if ('configuration_system_login_password' in check_list or 'all' in check_list) and '-configuration_system_login_password' not in check_list %}
+  - header: '#### <configuration_system_login_password>'
+    command: 'show configuration system login password'
+    footer: >
+      #### </configuration_system_login_password>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 02
+{% if ('configuration_system_tacplus-server' in check_list or 'all' in check_list) and '-configuration_system_tacplus-server' not in check_list %}
+  - header: '#### <configuration_system_tacplus-server>'
+    command: 'show configuration system tacplus-server'
+    footer: >
+      #### </configuration_system_tacplus-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 03
+{% if ('configuration_system_services' in check_list or 'all' in check_list) and '-configuration_system_services' not in check_list %}
+  - header: '#### <configuration_system_services>'
+    command: 'show configuration system services | display set'
+    footer: >
+      #### </configuration_system_services>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 04
+{% if ('configuration_system_login' in check_list or 'all' in check_list) and '-configuration_system_login' not in check_list %}
+  - header: '#### <configuration_system_login>'
+    command: 'show configuration system login'
+    footer: >
+      #### </configuration_system_login>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 05
+{% if ('configuration_system' in check_list or 'all' in check_list) and '-configuration_system' not in check_list %}
+  - header: '#### <configuration_system>'
+    command: 'show configuration system'
+    footer: >
+      #### </configuration_system>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 06
+{% if ('configuration_system_radius-server' in check_list or 'all' in check_list) and '-configuration_system_radius-server' not in check_list %}
+  - header: '#### <configuration_system_radius-server>'
+    command: 'show configuration system radius-server'
+    footer: >
+      #### </configuration_system_radius-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 07
+{% if ('configuration_interfaces_lo0' in check_list or 'all' in check_list) and '-configuration_interfaces_lo0' not in check_list %}
+  - header: '#### <configuration_interfaces_lo0>'
+    command: 'show configuration interfaces lo0'
+    footer: >
+      #### </configuration_interfaces_lo0>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 08
+{% if ('configuration_snmp' in check_list or 'all' in check_list) and '-configuration_snmp' not in check_list %}
+  - header: '#### <configuration_snmp>'
+    command: 'show configuration snmp'
+    footer: >
+      #### </configuration_snmp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 09
+{% if ('configuration_system_login_message' in check_list or 'all' in check_list) and '-configuration_system_login_message' not in check_list %}
+  - header: '#### <configuration_system_login_message>'
+    command: 'show configuration system login message'
+    footer: >
+      #### </configuration_system_login_message>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+{% if ('configuration_system_services_ssh' in check_list or 'all' in check_list) and '-configuration_system_services_ssh' not in check_list %}
+  - header: '#### <configuration_system_services_ssh>'
+    command: 'show configuration system services ssh'
+    footer: >
+      #### </configuration_system_services_ssh>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+{% if ('configuration_protocols' in check_list or 'all' in check_list) and '-configuration_protocols' not in check_list %}
+  - header: '#### <configuration_protocols>'
+    command: 'show configuration protocols'
+    footer: >
+      #### </configuration_protocols>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+{% if ('configuration_interfaces' in check_list or 'all' in check_list) and '-configuration_interfaces' not in check_list %}
+  - header: '#### <configuration_interfaces>'
+    command: 'show configuration interfaces'
+    footer: >
+      #### </configuration_interfaces>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+{% if ('configuration_system_ntp' in check_list or 'all' in check_list) and '-configuration_system_ntp' not in check_list %}
+  - header: '#### <configuration_system_ntp>'
+    command: 'show configuration system ntp'
+    footer: >
+      #### </configuration_system_ntp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+{% if ('cli' in check_list or 'all' in check_list) and '-cli' not in check_list %}
+  - header: '#### <cli>'
+    command: 'show cli'
+    footer: >
+      #### </cli>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+{% if ('configuration_system_login_retry-options' in check_list or 'all' in check_list) and '-configuration_system_login_retry-options' not in check_list %}
+  - header: '#### <configuration_system_login_retry-options>'
+    command: 'show configuration system login retry-options'
+    footer: >
+      #### </configuration_system_login_retry-options>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+{% if ('configuration_system_syslog' in check_list or 'all' in check_list) and '-configuration_system_syslog' not in check_list %}
+  - header: '#### <configuration_system_syslog>'
+    command: 'show configuration system syslog'
+    footer: >
+      #### </configuration_system_syslog>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+{% if ('configuration_system_archival_configuration_archive-sites' in check_list or 'all' in check_list) and '-configuration_system_archival_configuration_archive-sites' not in check_list %}
+  - header: '#### <configuration_system_archival_configuration_archive-sites>'
+    command: 'show configuration system archival configuration archive-sites'
+    footer: >
+      #### </configuration_system_archival_configuration_archive-sites>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+{% if ('configuration_system_archival' in check_list or 'all' in check_list) and '-configuration_system_archival' not in check_list %}
+  - header: '#### <configuration_system_archival>'
+    command: 'show configuration system archival'
+    footer: >
+      #### </configuration_system_archival>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+{% if ('configuration_system_ports' in check_list or 'all' in check_list) and '-configuration_system_ports' not in check_list %}
+  - header: '#### <configuration_system_ports>'
+    command: 'show configuration system ports'
+    footer: >
+      #### </configuration_system_ports>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+{% if ('configuration_system_time-zone' in check_list or 'all' in check_list) and '-configuration_system_time-zone' not in check_list %}
+  - header: '#### <configuration_system_time-zone>'
+    command: 'show configuration system time-zone'
+    footer: >
+      #### </configuration_system_time-zone>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+{% if ('configuration_host-name' in check_list or 'all' in check_list) and '-configuration_host-name' not in check_list %}
+  - header: '#### <configuration_host-name>'
+    command: 'show configuration system host-name'
+    footer: >
+      #### </configuration_host-name>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 23
+{% if ('configuration_routing-options' in check_list or 'all' in check_list) and '-configuration_routing-options' not in check_list %}
+  - header: '#### <configuration_routing-options>'
+    command: 'show configuration routing-options'
+    footer: >
+      #### </configuration_routing-options>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 24
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'show version'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 25
+{% if ('chassis_hardware' in check_list or 'all' in check_list) and '-chassis_hardware' not in check_list %}
+  - header: '#### <chassis_hardware>'
+    command: 'show chassis hardware'
+    footer: >
+      #### </chassis_hardware>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 26
+{% if ('show_system_uptime' in check_list or 'all' in check_list) and '-show_system_uptime' not in check_list %}
+  - header: '#### <show_system_uptime>'
+    command: 'show system uptime'
+    footer: >
+      #### </show_system_uptime>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 27
+{% if ('configure_commit_check' in check_list or 'all' in check_list) and '-configure_commit_check' not in check_list %}
+  - header: '#### <configure_commit_check>'
+    command: 'configure'
+    footer: >
+      #### </configure_commit_check>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{#                                                   Below this are new checks as part of an MI                                                               #}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_system_memory' in check_list or 'all' in check_list) and '-show_system_memory' not in check_list %}
+  - header: '#### <show_system_memory>'
+    command: 'show system memory'
+    footer: >
+      #### </show_system_memory>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_system_storage' in check_list or 'all' in check_list) and '-show_system_storage' not in check_list %}
+  - header: '#### <show_system_storage>'
+    command: 'show system storage'
+    footer: >
+      #### </show_system_storage>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_interfaces_extensive' in check_list or 'all' in check_list) and '-show_interfaces_extensive' not in check_list %}
+  - header: '#### <show_interfaces_extensive>'
+    command: 'show interfaces extensive'
+    footer: >
+      #### </show_interfaces_extensive>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

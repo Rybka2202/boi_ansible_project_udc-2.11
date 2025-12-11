@@ -1,0 +1,267 @@
+---
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 01
+#	Command: showversion
+#	Look for:
+#
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'showversion -csvtable'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 02
+#	Command: showvv_showcols
+#	Look for:
+#
+{% if ('showvv_showcols' in check_list or 'all' in check_list) and '-showvv_showcols' not in check_list %}
+  - header: '#### <showvv_showcols>'
+    command: 'showvv -showcols Id,Name,Rd,Mstr,VV_WWN,Prov,Type,UsrCPG,SnpCPG,Tot_Rsvd_MB,VSize_MB -csvtable'
+    footer: >
+      #### </showvv_showcols>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 03
+#	Command: showvv
+#	Look for:
+#
+{% if ('showvv' in check_list or 'all' in check_list) and '-showvv' not in check_list %}
+  - header: '#### <showvv>'
+    command: 'showvv -csvtable'
+    footer: >
+      #### </showvv>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 04
+#	Command: showsys
+#	Look for:
+#
+{% if ('showsys' in check_list or 'all' in check_list) and '-showsys' not in check_list %}
+  - header: '#### <showsys>'
+    command: 'showsys -csvtable'
+    footer: >
+      #### </showsys>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 05
+#	Command: showsys_d
+#	Look for:
+#
+{% if ('showsys_d' in check_list or 'all' in check_list) and '-showsys_d' not in check_list %}
+  - header: '#### <showsys_d>'
+    command: 'showsys -d -csvtable'
+    footer: >
+      #### </showsys_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 06
+#	Command: showcpg_sdg
+#	Look for:
+#
+{% if ('showcpg_sdg' in check_list or 'all' in check_list) and '-showcpg_sdg' not in check_list %}
+  - header: '#### <showcpg_sdg>'
+    command: 'showcpg -sdg -csvtable'
+    footer: >
+      #### </showcpg_sdg>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 07
+#	Command: showpd
+#	Look for:
+#
+{% if ('showpd' in check_list or 'all' in check_list) and '-showpd' not in check_list %}
+  - header: '#### <showpd>'
+    command: 'showpd -csvtable'
+    footer: >
+      #### </showpd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 08
+#	Command: showpd_i
+#	Look for:
+#
+{% if ('showpd_i' in check_list or 'all' in check_list) and '-showpd_i' not in check_list %}
+  - header: '#### <showpd_i>'
+    command: 'showpd -i -csvtable'
+    footer: >
+      #### </showpd_i>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 09
+#	Command: showport
+#	Look for:
+#
+{% if ('showport' in check_list or 'all' in check_list) and '-showport' not in check_list %}
+  - header: '#### <showport>'
+    command: 'showport -csvtable'
+    footer: >
+      #### </showport>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+#	Command: showvlun_lvw
+#	Look for:
+#
+{% if ('showvlun_lvw' in check_list or 'all' in check_list) and '-showshowvlun_lvwport' not in check_list %}
+  - header: '#### <showvlun_lvw>'
+    command: 'showvlun -lvw -a -csvtable'
+    footer: >
+      #### </showvlun_lvw>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+#	Command: showhost_d
+#	Look for:
+#
+{% if ('showhost_d' in check_list or 'all' in check_list) and '-showhost_d' not in check_list %}
+  - header: '#### <showhost_d>'
+    command: 'showhost -d -csvtable'
+    footer: >
+      #### </showhost_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+#	Command: showhost
+#	Look for:
+#
+{% if ('showhost' in check_list or 'all' in check_list) and '-showhost' not in check_list %}
+  - header: '#### <showhost>'
+    command: 'showhost -csvtable'
+    footer: >
+      #### </showhost>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+#	Command: showport_sfp
+#	Look for:
+#
+{% if ('showport_sfp' in check_list or 'all' in check_list) and '-showport_sfp' not in check_list %}
+  - header: '#### <showport_sfp>'
+    command: 'showport -sfp -csvtable'
+    footer: >
+      #### </showport_sfp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 14
+#	Command: showsshbanner
+#	Look for:
+#
+{% if ('showsshbanner' in check_list or 'all' in check_list) and '-showsshbanner' not in check_list %}
+  - header: '#### <showsshbanner>'
+    command: 'showsshbanner -csvtable'
+    footer: >
+      #### </showsshbanner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+#	Command: shownode
+#	Look for:
+#
+{% if ('shownode' in check_list or 'all' in check_list) and '-shownode' not in check_list %}
+  - header: '#### <shownode>'
+    command: 'shownode -csvtable'
+    footer: >
+      #### </shownode>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+#	Command: shownode_d
+#	Look for:
+#
+{% if ('shownode_d' in check_list or 'all' in check_list) and '-shownode_d' not in check_list %}
+  - header: '#### <shownode_d>'
+    command: 'shownode -d -csvtable'
+    footer: >
+      #### </shownode_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+#	Command: controlencryption_status_d
+#	Look for:
+#
+{% if ('controlencryption_status_d' in check_list or 'all' in check_list) and '-controlencryption_status_d' not in check_list %}
+  - header: '#### <controlencryption_status_d>'
+    command: 'controlencryption status -d -csvtable'
+    footer: >
+      #### </controlencryption_status_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+#	Command: showencryption_d
+#	Look for:
+#
+{% if ('showencryption_d' in check_list or 'all' in check_list) and '-showencryption_d' not in check_list %}
+  - header: '#### <showencryption_d>'
+    command: 'showencryption -d -csvtable'
+    footer: >
+      #### </showencryption_d>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+#	Command: checkhealth
+#	Look for:
+#
+{% if ('checkhealth' in check_list or 'all' in check_list) and '-checkhealth' not in check_list %}
+  - header: '#### <checkhealth>'
+    command: 'checkhealth -svc -detail -csvtable'
+    footer: >
+      #### </checkhealth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+#	Command: showbattery
+#	Look for:
+#
+{% if ('showbattery' in check_list or 'all' in check_list) and '-showbattery' not in check_list %}
+  - header: '#### <showbattery>'
+    command: 'showbattery -csvtable'
+    footer: >
+      #### </showbattery>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+#	Command: showrcopy
+#	Look for:
+#
+{% if ('showrcopy' in check_list or 'all' in check_list) and '-showrcopy' not in check_list %}
+  - header: '#### <showrcopy>'
+    command: 'showrcopy -csvtable'
+    footer: >
+      #### </showrcopy>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+#	Command: showuser
+#	Look for:
+#
+{% if ('showuser' in check_list or 'all' in check_list) and '-showuser' not in check_list %}
+  - header: '#### <showuser>'
+    command: 'showuser -csvtable'
+    footer: >
+      #### </showuser>
+
+{% endif %}

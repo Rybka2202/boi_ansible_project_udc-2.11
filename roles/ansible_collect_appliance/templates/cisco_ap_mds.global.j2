@@ -1,0 +1,452 @@
+---
+settings_global:
+#Check 01
+{% if ('show_topology' in check_list or 'all' in check_list) and '-show_topology' not in check_list %}
+  - header: '#### <show_topology>'
+    command: 'show topology'
+    footer: >
+      #### </show_topology>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+#Check 02
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'show version'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+#Check 03
+{% if ('logging' in check_list or 'all' in check_list) and '-logging' not in check_list %}
+  - header: '#### <logging>'
+    command: 'show logging logfile | last 50'
+    footer: >
+      #### </logging>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+#Check 04
+{% if ('system-redundancy-status' in check_list or 'all' in check_list) and '-system-redundancy-status' not in check_list %}
+  - header: '#### <system-redundancy-status>'
+    command: 'show system redundancy status'
+    footer: >
+      #### </system-redundancy-status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 05
+{% if ('callhome' in check_list or 'all' in check_list) and '-callhome' not in check_list %}
+  - header: '#### <callhome>'
+    command: 'show callhome'
+    footer: >
+      #### </callhome>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 06
+{% if ('callhome-transport' in check_list or 'all' in check_list) and '-callhome-transport' not in check_list %}
+  - header: '#### <callhome-transport>'
+    command: 'show callhome transport'
+    footer: >
+      #### </callhome-transport>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 07
+{% if ('callhome-profile' in check_list or 'all' in check_list) and '-callhome-profile' not in check_list %}
+  - header: '#### <callhome-profile>'
+    command: 'show callhome destination-profile'
+    footer: >
+      #### </callhome-profile>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 08
+{% if ('environment-power' in check_list or 'all' in check_list) and '-environment-power' not in check_list %}
+  - header: '#### <environment-power>'
+    command: 'show environment power'
+    footer: >
+      #### </environment-power>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 09
+{% if ('environment-temperature' in check_list or 'all' in check_list) and '-environment-temperature' not in check_list %}
+  - header: '#### <environment-temperature>'
+    command: 'show environment temperature'
+    footer: >
+      #### </environment-temperature>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 10
+{% if ('hardware' in check_list or 'all' in check_list) and '-hardware' not in check_list %}
+  - header: '#### <hardware>'
+    command: 'show hardware'
+    footer: >
+      #### </hardware>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 11
+{% if ('interface-brief' in check_list or 'all' in check_list) and '-interface-brief' not in check_list %}
+  - header: '#### <interface-brief>'
+    command: 'show interface brief'
+    footer: >
+      #### </interface-brief>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 12
+{% if ('inventory' in check_list or 'all' in check_list) and '-inventory' not in check_list %}
+  - header: '#### <inventory>'
+    command: 'show inventory'
+    footer: >
+      #### </inventory>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 13
+{% if ('module' in check_list or 'all' in check_list) and '-module' not in check_list %}
+  - header: '#### <module>'
+    command: 'show module'
+    footer: >
+      #### </module>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 14
+{% if ('show_ntp_status' in check_list or 'all' in check_list) and '-show_ntp_status' not in check_list %}
+  - header: '#### <show_ntp_status>'
+    command: 'show ntp status'
+    footer: >
+      #### </show_ntp_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 15
+{% if ('snmp' in check_list or 'all' in check_list) and '-snmp' not in check_list %}
+  - header: '#### <snmp>'
+    command: 'show snmp'
+    footer: >
+      #### </snmp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 16
+{% if ('snmp-host' in check_list or 'all' in check_list) and '-snmp-host' not in check_list %}
+  - header: '#### <snmp-host>'
+    command: 'show snmp host'
+    footer: >
+      #### </snmp-host>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 17
+{% if ('snmp-community' in check_list or 'all' in check_list) and '-snmp-community' not in check_list %}
+  - header: '#### <snmp-community>'
+    command: 'show snmp community'
+    footer: >
+      #### </snmp-community>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 18
+{% if ('terminal' in check_list or 'all' in check_list) and '-terminal' not in check_list %}
+  - header: '#### <terminal>'
+    command: 'show terminal'
+    footer: >
+      #### </terminal>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 19
+{% if ('user-account' in check_list or 'all' in check_list) and '-user-account' not in check_list %}
+  - header: '#### <user-account>'
+    command: 'show user-account'
+    footer: >
+      #### </user-account>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 20
+{% if ('banner' in check_list or 'all' in check_list) and '-banner' not in check_list %}
+  - header: '#### <banner>'
+    command: 'show banner motd'
+    footer: >
+      #### </banner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 21
+{% if ('sprom_backplan' in check_list or 'all' in check_list) and '-sprom_backplan' not in check_list %}
+  - header: '#### <sprom_backplan>'
+    command: 'show sprom backplane 1'
+    footer: >
+      #### </sprom_backplan>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 22
+{% if ('telnet-server' in check_list or 'all' in check_list) and '-telnet-server' not in check_list %}
+  - header: '#### <telnet-server>'
+    command: 'show telnet server'
+    footer: >
+      #### </telnet-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 23
+{% if ('ssh-server' in check_list or 'all' in check_list) and '-ssh-server' not in check_list %}
+  - header: '#### <ssh-server>'
+    command: 'show ssh server'
+    footer: >
+      #### </ssh-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 24
+{% if ('show_interface' in check_list or 'all' in check_list) and '-show_interface' not in check_list %}
+  - header: '#### <show_interface>'
+    command: 'show interface'
+    footer: >
+      #### </show_interface>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 25
+{% if ('show_password_strength_check' in check_list or 'all' in check_list) and '-show_password_strength_check' not in check_list %}
+  - header: '#### <show_password_strength_check>'
+    command: 'show password strength-check'
+    footer: >
+      #### </show_password_strength_check>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 26
+{% if ('show_feature' in check_list or 'all' in check_list) and '-show_feature' not in check_list %}
+  - header: '#### <show_feature>'
+    command: 'show feature'
+    footer: >
+      #### </show_feature>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 27
+{% if ('show_clock_detail' in check_list or 'all' in check_list) and '-show_clock_detail' not in check_list %}
+  - header: '#### <show_clock_detail>'
+    command: 'show clock detail'
+    footer: >
+      #### </show_clock_detail>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 28
+{% if ('vsan' in check_list or 'all' in check_list) and '-vsan' not in check_list %}
+  - header: '#### <vsan>'
+    command: 'show vsan'
+    footer: >
+      #### </vsan>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 29
+{% if ('zone' in check_list or 'all' in check_list) and '-zone' not in check_list %}
+  - header: '#### <zone>'
+    command: 'show zone'
+    footer: >
+      #### </zone>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 30
+{% if ('system-health' in check_list or 'all' in check_list) and '-system-health' not in check_list %}
+  - header: '#### <system-health>'
+    command: 'show system health'
+    footer: >
+      #### </system-health>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 31
+{% if ('fcdomain' in check_list or 'all' in check_list) and '-fcdomain' not in check_list %}
+  - header: '#### <fcdomain>'
+    command: 'show fcdomain'
+    footer: >
+      #### </fcdomain>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 32
+{% if ('interface-bbcredit' in check_list or 'all' in check_list) and '-interface-bbcredit' not in check_list %}
+  - header: '#### <interface-bbcredit>'
+    command: 'show interface bbcredit'
+    footer: >
+      #### </interface-bbcredit>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 33
+{% if ('port-internal-info' in check_list or 'all' in check_list) and '-port-internal-info' not in check_list %}
+  - header: '#### <port-internal-info>'
+    command: 'show port internal info | no-more'
+    footer: >
+      #### </port-internal-info>
+    failover: true
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 34
+{% if ('zoneset-active' in check_list or 'all' in check_list) and '-zoneset-active' not in check_list %}
+  - header: '#### <zoneset-active>'
+    command: 'show zoneset active'
+    footer: >
+      #### </zoneset-active>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 35
+{% if ('http-server' in check_list or 'all' in check_list) and '-http-server' not in check_list %}
+  - header: '#### <http-server>'
+    command: 'show http-server'
+    footer: >
+      #### </http-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 36
+{% if ('show_fcalias' in check_list or 'all' in check_list) and '-show_fcalias' not in check_list %}
+  - header: '#### <show_fcalias>'
+    command: 'show fcalias'
+    footer: >
+      #### </show_fcalias>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 37
+{% if ('show_zoneset' in check_list or 'all' in check_list) and '-show_zoneset' not in check_list %}
+  - header: '#### <show_zoneset>'
+    command: 'show zoneset'
+    footer: >
+      #### </show_zoneset>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 38
+{% if ('show_flogi_database' in check_list or 'all' in check_list) and '-show_flogi_database' not in check_list %}
+  - header: '#### <show_flogi_database>'
+    command: 'show flogi database'
+    footer: >
+      #### </show_flogi_database>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 39
+{% if ('show_userpassphrase_length' in check_list or 'all' in check_list) and '-show_userpassphrase_length' not in check_list %}
+  - header: '#### <show_userpassphrase_length>'
+    command: 'show userpassphrase length'
+    footer: >
+      #### </show_userpassphrase_length>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 40
+{% if ('show_user_account' in check_list or 'all' in check_list) and '-show_user_account' not in check_list %}
+  - header: '#### <show_user_account>'
+    command: 'show user-account'
+    footer: >
+      #### </show_user_account>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 41
+{% if ('admin_passphrase_timevalues' in check_list or 'all' in check_list) and '-admin_passphrase_timevalues' not in check_list %}
+  - header: '#### <admin_passphrase_timevalues>'
+    command: 'show username admin passphrase timevalues'
+    footer: >
+      #### </admin_passphrase_timevalues>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 42
+{% if ('show_banner_motd' in check_list or 'all' in check_list) and '-show_banner_motd' not in check_list %}
+  - header: '#### <show_banner_motd>'
+    command: 'show banner motd'
+    footer: >
+      #### </show_banner_motd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 43
+{% if ('show_logging_server' in check_list or 'all' in check_list) and '-show_logging_server' not in check_list %}
+  - header: '#### <show_logging_server>'
+    command: 'show logging server'
+    footer: >
+      #### </show_logging_server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 45
+{% if ('session_timeout' in check_list or 'all' in check_list) and '-session_timeout' not in check_list %}
+  - header: '#### <session_timeout>'
+    command: 'show terminal'
+    footer: >
+      #### </session_timeout>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+
+# Check 46
+{% if ('show_telnet_server' in check_list or 'all' in check_list) and '-show_telnet_server' not in check_list %}
+  - header: '#### <show_telnet_server>'
+    command: 'show telnet server'
+    footer: >
+      #### </show_telnet_server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

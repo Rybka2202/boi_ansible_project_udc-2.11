@@ -1,0 +1,452 @@
+---
+settings_global:
+{% if ('chk01' in check_list or 'show_run_aaa' in check_list or 'all' in check_list) and '-chk01' not in check_list %}
+  - header: '#### <show_run_aaa>'
+    command: 'show run | in aaa'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_aaa>
+
+{% endif %}
+{% if ('chk02' in check_list or 'show_version' in check_list or 'all' in check_list) and '-chk02' not in check_list %}
+  - header: '#### <show_version>'
+    command: 'show version'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_version>
+
+{% endif %}
+{% if ('chk04' in check_list or 'show_logging_history' in check_list or 'all' in check_list) and '-chk04' not in check_list %}
+  - header: '#### <show_logging_history>'
+    command: 'show logging history'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_logging_history>
+
+{% endif %}
+{% if ('chk05' in check_list or 'show_callhome_detail' in check_list or 'all' in check_list) and '-chk05' not in check_list %}
+  - header: '#### <show_callhome_detail>'
+    command: 'show call-home detail'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_callhome_detail>
+
+{% endif %}
+{% if ('chk06' in check_list or 'show_callhome_mail_server_status' in check_list or 'all' in check_list) and '-chk06' not in check_list %}
+  - header: '#### <show_callhome_mail_server_status>'
+    command: 'show call-home mail-server status'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_callhome_mail_server_status>
+
+{% endif %}
+{% if ('chk07' in check_list or 'show_callhome_profile' in check_list or 'all' in check_list) and '-chk07' not in check_list %}
+  - header: '#### <show_callhome_profile>'
+    command: 'show call-home profile all'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_callhome_profile>
+
+{% endif %}
+{% if ('chk11' in check_list or 'show_inventory' in check_list or 'all' in check_list) and '-chk11' not in check_list %}
+  - header: '#### <show_inventory>'
+    command: 'show inventory'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_inventory>
+
+{% endif %}
+{% if ('chk13' in check_list or 'show_ntp_status' in check_list or 'all' in check_list) and '-chk13' not in check_list %}
+  - header: '#### <show_ntp_status>'
+    command: 'show ntp status'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_ntp_status>
+
+{% endif %}
+{% if ('chk14' in check_list or 'show_snmp' in check_list or 'all' in check_list) and '-chk14' not in check_list %}
+  - header: '#### <show_snmp>'
+    command: 'show snmp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_snmp>
+
+{% endif %}
+{% if ('chk15' in check_list or 'show_snmp_host' in check_list or 'all' in check_list) and '-chk15' not in check_list %}
+  - header: '#### <show_snmp_host>'
+    command: 'show snmp host'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_snmp_host>
+
+{% endif %}
+{% if ('chk16' in check_list or 'show_snmp_community' in check_list or 'all' in check_list) and '-chk16' not in check_list %}
+  - header: '#### <show_snmp_community>'
+    command: 'show snmp community'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_snmp_community>
+
+{% endif %}
+{% if ('chk17' in check_list or 'show_terminal' in check_list or 'all' in check_list) and '-chk17' not in check_list %}
+  - header: '#### <show_terminal>'
+    command: 'show terminal'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_terminal>
+
+{% endif %}
+{% if ('chk18' in check_list or 'show_interfaces' in check_list or 'all' in check_list) and '-chk18' not in check_list %}
+  - header: '#### <show_interfaces>'
+    command: 'show interfaces'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_interfaces>
+
+{% endif %}
+{% if ('chk19' in check_list or 'show_hardware' in check_list or 'all' in check_list) and '-chk19' not in check_list %}
+  - header: '#### <show_hardware>'
+    command: 'show hardware'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_hardware>
+
+{% endif %}
+{% if ('chk20' in check_list or 'show_running_config' in check_list or 'all' in check_list) and '-chk20' not in check_list %}
+  - header: '#### <show_running_config>'
+    command: 'show running-config'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_running_config>
+
+{% endif %}
+{% if ('chk21' in check_list or 'show_logging' in check_list or 'all' in check_list) and '-chk21' not in check_list %}
+  - header: '#### <show_logging>'
+    command: 'show logging'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_logging>
+
+{% endif %}
+{% if ('chk23' in check_list or 'show_snmp_user' in check_list or 'all' in check_list) and '-chk23' not in check_list %}
+  - header: '#### <show_snmp_user>'
+    command: 'show snmp user'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_snmp_user>
+
+{% endif %}
+{% if ('chk24' in check_list or 'show_banner_motd' in check_list or 'all' in check_list) and '-chk24' not in check_list %}
+  - header: '#### <show_banner_motd>'
+    command: 'show banner motd'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_banner_motd>
+
+{% endif %}
+{% if ('chk25' in check_list or 'show_banner_login' in check_list or 'all' in check_list) and '-chk25' not in check_list %}
+  - header: '#### <show_banner_login>'
+    command: 'show banner login'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_banner_login>
+
+{% endif %}
+{% if ('chk26' in check_list or 'show_banner_exec' in check_list or 'all' in check_list) and '-chk26' not in check_list %}
+  - header: '#### <show_banner_exec>'
+    command: 'show banner exec'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_banner_exec>
+
+{% endif %}
+{% if ('chk54' in check_list or 'show_banner_webauth' in check_list or 'all' in check_list) and '-chk54' not in check_list %}
+  - header: '#### <show_banner_webauth>'
+    command: 'show ip admission status banners'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_banner_webauth>
+
+{% endif %}
+{% if ('chk27' in check_list or 'show_crypto_key_mypubkey_rsa' in check_list or 'all' in check_list) and '-chk27' not in check_list %}
+  - header: '#### <show_crypto_key_mypubkey_rsa>'
+    command: 'show crypto key mypubkey rsa'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_crypto_key_mypubkey_rsa>
+
+{% endif %}
+{% if ('chk29' in check_list or 'show_aaa_cc_policy_all' in check_list or 'all' in check_list) and '-chk29' not in check_list %}
+  - header: '#### <show_aaa_cc_policy_all>'
+    command: 'show aaa common-criteria policy all'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_aaa_cc_policy_all>
+
+{% endif %}
+{% if ('chk30' in check_list or 'show_run_inc_log' in check_list or 'all' in check_list) and '-chk30' not in check_list %}
+  - header: '#### <show_run_inc_log>'
+    command: 'show run | in log'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_inc_log>
+
+{% endif %}
+{% if ('chk31' in check_list or 'show_switch' in check_list or 'all' in check_list) and '-chk31' not in check_list %}
+  - header: '#### <show_switch>'
+    command: 'show switch'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_switch>
+
+{% endif %}
+{% if ('chk32' in check_list or 'show_crypto_pki_timers_detail' in check_list or 'all' in check_list) and '-chk32' not in check_list %}
+  - header: '#### <show_crypto_pki_timers_detail>'
+    command: 'show crypto pki timers detail'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_crypto_pki_timers_detail>
+
+{% endif %}
+{% if ('chk33' in check_list or 'show_common-criteria_policy_all' in check_list or 'all' in check_list) and '-chk33' not in check_list %}
+  - header: '#### <show_common-criteria_policy_all>'
+    command: 'show aaa common-criteria policy all'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_common-criteria_policy_all>
+
+{% endif %}
+{% if ('chk34' in check_list or 'show_run_service_timestamps' in check_list or 'all' in check_list) and '-chk34' not in check_list %}
+  - header: '#### <show_run_service_timestamps>'
+    command: 'show run | in service timestamps'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_service_timestamps>
+
+{% endif %}
+{% if ('chk35' in check_list or 'show_run_logging_source' in check_list or 'all' in check_list) and '-chk35' not in check_list %}
+  - header: '#### <show_run_logging_source>'
+    command: 'show run | in logging source'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_logging_source>
+
+{% endif %}
+{% if ('chk36' in check_list or 'show_run_hostname' in check_list or 'all' in check_list) and '-chk36' not in check_list %}
+  - header: '#### <show_run_hostname>'
+    command: 'show run | in hostname'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_hostname>
+
+{% endif %}
+{% if ('chk37' in check_list or 'show_run_domain_name' in check_list or 'all' in check_list) and '-chk37' not in check_list %}
+  - header: '#### <show_run_domain_name>'
+    command: 'show run | in domain name'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_domain_name>
+
+{% endif %}
+{% if ('chk38' in check_list or 'show_run_bootp' in check_list or 'all' in check_list) and '-chk38' not in check_list %}
+  - header: '#### <show_run_bootp>'
+    command: 'show run | in bootp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_bootp>
+
+{% endif %}
+{% if ('chk39' in check_list or 'show_run_cdp' in check_list or 'all' in check_list) and '-chk39' not in check_list %}
+  - header: '#### <show_run_cdp>'
+    command: 'show run | in cdp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_cdp>
+
+{% endif %}
+{% if ('chk40' in check_list or 'show_run_dhcp' in check_list or 'all' in check_list) and '-chk40' not in check_list %}
+  - header: '#### <show_run_dhcp>'
+    command: 'show run | in dhcp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_dhcp>
+
+{% endif %}
+{% if ('chk41' in check_list or 'show_run_identd' in check_list or 'all' in check_list) and '-chk41' not in check_list %}
+  - header: '#### <show_run_identd>'
+    command: 'show run | in identd'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_identd>
+
+{% endif %}
+{% if ('chk42' in check_list or 'show_run_service_tcp' in check_list or 'all' in check_list) and '-chk42' not in check_list %}
+  - header: '#### <show_run_service_tcp>'
+    command: 'show run | in service tcp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_service_tcp>
+
+{% endif %}
+{% if ('chk43' in check_list or 'show_run_service_pad' in check_list or 'all' in check_list) and '-chk43' not in check_list %}
+  - header: '#### <show_run_service_pad>'
+    command: 'show run | in service pad'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_service_pad>
+
+{% endif %}
+{% if ('chk44' in check_list or 'show_ip_int_brief_tunnel' in check_list or 'all' in check_list) and '-chk44' not in check_list %}
+  - header: '#### <show_ip_int_brief_tunnel>'
+    command: 'show ip int brief | in tunnel'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_ip_int_brief_tunnel>
+
+{% endif %}
+{% if ('chk45' in check_list or 'show_ip_int_loopback_verify_source' in check_list or 'all' in check_list) and '-chk45' not in check_list %}
+  - header: '#### <show_ip_int_loopback_verify_source>'
+    command: 'show ip int loopback 1 | in verify_source'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_ip_int_loopback_verify_source>
+
+{% endif %}
+{% if ('chk46' in check_list or 'show_ip_int_loopback_proxy-arp' in check_list or 'all' in check_list) and '-chk46' not in check_list %}
+  - header: '#### <show_ip_int_loopback_proxy-arp>'
+    command: 'show ip int loopback 1 | in proxy-arp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_ip_int_loopback_proxy-arp>
+
+{% endif %}
+{% if ('chk47' in check_list or 'show_run_sec_router_eigrp' in check_list or 'all' in check_list) and '-chk47' not in check_list %}
+  - header: '#### <show_run_sec_router_eigrp>'
+    command: 'show run | sec router eigrp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_sec_router_eigrp>
+
+{% endif %}
+{% if ('chk48' in check_list or 'show_run_sec_router_ospf' in check_list or 'all' in check_list) and '-chk48' not in check_list %}
+  - header: '#### <show_run_sec_router_ospf>'
+    command: 'show run | sec router ospf'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_sec_router_ospf>
+
+{% endif %}
+{% if ('chk49' in check_list or 'show_run_sec_router_bgp' in check_list or 'all' in check_list) and '-chk49' not in check_list %}
+  - header: '#### <show_run_sec_router_bgp>'
+    command: 'show run | sec router bgp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_sec_router_bgp>
+
+{% endif %}
+{% if ('chk50' in check_list or 'show_run_sec_vty' in check_list or 'all' in check_list) and '-chk50' not in check_list %}
+  - header: '#### <show_run_sec_vty>'
+    command: 'show run | sec vty'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_sec_vty>
+
+{% endif %}
+{% if ('chk51' in check_list or 'show_run_sec_snmp' in check_list or 'all' in check_list) and '-chk51' not in check_list %}
+  - header: '#### <show_run_sec_snmp>'
+    command: 'show run | sec snmp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_sec_snmp>
+
+{% endif %}
+{% if ('chk52' in check_list or 'show_run_ntp' in check_list or 'all' in check_list) and '-chk52' not in check_list %}
+  - header: '#### <show_run_ntp>'
+    command: 'show run | in ntp'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_run_ntp>
+
+{% endif %}
+{% if ('chk53' in check_list or 'show_access-lists' in check_list or 'all' in check_list) and '-chk53' not in check_list %}
+  - header: '#### <show_access-lists>'
+    command: 'show access-lists'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_access-lists>
+
+{% endif %}
+{% if ('chk54' in check_list or 'show_config_diff' in check_list or 'all' in check_list) and '-chk54' not in check_list %}
+  - header: '#### <show_config_diff>'
+    command: 'show archive config differences'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_config_diff>
+
+{% endif %}
+{% if ('chk55' in check_list or 'show_storm_control' in check_list or 'all' in check_list) and '-chk55' not in check_list %}
+  - header: '#### <show_storm_control>'
+    command: 'show storm-control'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_storm_control>
+
+{% endif %}
+{% if ('chk56' in check_list or 'show_loop_detect' in check_list or 'all' in check_list) and '-chk56' not in check_list %}
+  - header: '#### <show_loop_detect>'
+    command: 'show mac address-table loop-detect'
+    become: "{{ udc_privilege_escalation | default(true) | bool }}"
+    become_method: enable
+    footer: >
+      #### </show_loop_detect>
+
+{% endif %}

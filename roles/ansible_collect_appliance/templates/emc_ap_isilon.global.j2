@@ -1,0 +1,405 @@
+---
+#Attention, from SAT legacy there were 2 changes to commands.
+#Check 04 has been deprecated by 9.5.0.0 but the data can be retrieved by check 05.
+#Check 14 had a substitution in commands due to deprecation for 9.5.0.0.
+
+settings_global:
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 01
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'isi version'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 02
+{% if ('version_verbose' in check_list or 'all' in check_list) and '-version_verbose' not in check_list %}
+  - header: '#### <version_verbose>'
+    command: 'isi version --verbose'
+    footer: >
+      #### </version_verbose>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 03
+{% if ('auth_local_view_system' in check_list or 'all' in check_list) and '-sauth_local_view_system' not in check_list %}
+  - header: '#### <auth_local_view_system>'
+    command: 'isi auth local view system'
+    footer: >
+      #### </auth_local_view_system>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 04
+# This command check is deprecated. hardening status can be retrieved through hardening list.
+# {% if ('hardening_status' in check_list or 'all' in check_list) and '-hardening_status' not in check_list %}
+#  - header: '#### <hardening_status>'
+#    command: 'isi hardening status' *** isi hardening list --format list see if it is a proper replacement
+#    footer: >
+#      #### </hardening_status>
+#
+#{% endif %}
+#{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 05
+{% if ('hardening_list' in check_list or 'all' in check_list) and '-hardening_list' not in check_list %}
+  - header: '#### <hardening_list>'
+    command: 'isi hardening list'
+    footer: >
+      #### </hardening_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 06
+{% if ('license_list' in check_list or 'all' in check_list) and '-license_list' not in check_list %}
+  - header: '#### <license_list>'
+    command: 'isi license list --format csv'
+    footer: >
+      #### </license_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 07
+{% if ('batterystatus_list' in check_list or 'all' in check_list) and '-batterystatus_list' not in check_list %}
+  - header: '#### <batterystatus_list>'
+    command: 'isi batterystatus list --format csv'
+    footer: >
+      #### </batterystatus_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 08
+{% if ('snmp_settings_view' in check_list or 'all' in check_list) and '-snmp_settings_view' not in check_list %}
+  - header: '#### <snmp_settings_view>'
+    command: 'isi snmp settings view'
+    footer: >
+      #### </snmp_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 09
+{% if ('smtp_settings_view' in check_list or 'all' in check_list) and '-smtp_settings_view' not in check_list %}
+  - header: '#### <smtp_settings_view>'
+    command: 'isi email settings view'
+    footer: >
+      #### </smtp_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+{% if ('event_channels_list' in check_list or 'all' in check_list) and '-event_channels_list' not in check_list %}
+  - header: '#### <event_channels_list>'
+    command: 'isi event channels list --format csv'
+    footer: >
+      #### </event_channels_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+{% if ('event_settings_view' in check_list or 'all' in check_list) and '-event_settings_view' not in check_list %}
+  - header: '#### <event_settings_view>'
+    command: 'isi event settings view'
+    footer: >
+      #### </event_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+{% if ('devices_drive_firmware_list_node_lnn_all' in check_list or 'all' in check_list) and '-devices_drive_firmware_list_node_lnn_all' not in check_list %}
+  - header: '#### <devices_drive_firmware_list_node_lnn_all>'
+    command: 'isi devices drive firmware list --node-lnn all --format csv'
+    footer: >
+      #### </devices_drive_firmware_list_node_lnn_all>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+{% if ('devices_node_list' in check_list or 'all' in check_list) and '-devices_node_list' not in check_list %}
+  - header: '#### <devices_node_list>'
+    command: 'isi devices node list --format csv'
+    footer: >
+      #### </devices_node_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+{% if ('devices_list' in check_list or 'all' in check_list) and '-devices_list' not in check_list %}
+  - header: '#### <devices_list>'
+    command: 'isi devices list --format csv'
+    footer: >
+      #### </devices_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 14
+# This has been changed from isi remotesupport connectemc view, to isi esrs view, this makes the necessary output available.
+{% if ('remotesupport_connectemc_view' in check_list or 'all' in check_list) and '-remotesupport_connectemc_view' not in check_list %}
+  - header: '#### <remotesupport_connectemc_view>'
+    command: 'isi esrs view'
+    footer: >
+      #### </remotesupport_connectemc_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+{% if ('services' in check_list or 'all' in check_list) and '-services' not in check_list %}
+  - header: '#### <services>'
+    command: 'isi services'
+    footer: >
+      #### </services>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+{% if ('readonly_list' in check_list or 'all' in check_list) and '-readonly_list' not in check_list %}
+  - header: '#### <readonly_list>'
+    command: 'isi readonly list --format csv'
+    footer: >
+      #### </readonly_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+{% if ('cluster_contact_view' in check_list or 'all' in check_list) and '-cluster_contact_view' not in check_list %}
+  - header: '#### <cluster_contact_view>'
+    command: 'isi cluster contact view'
+    footer: >
+      #### </cluster_contact_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+{% if ('fc_settings_list' in check_list or 'all' in check_list) and '-fc_settings_list' not in check_list %}
+  - header: '#### <fc_settings_list>'
+    command: 'isi fc settings list --format csv'
+    footer: >
+      #### </fc_settings_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+{% if ('isi_ntp_config_list' in check_list or 'all' in check_list) and '-isi_ntp_config_list' not in check_list %}
+  - header: '#### <isi_ntp_config_list>'
+    command: 'isi_ntp_config list'
+    footer: >
+      #### </isi_ntp_config_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+{% if ('storagepool_health' in check_list or 'all' in check_list) and '-storagepool_health' not in check_list %}
+  - header: '#### <storagepool_health>'
+    command: 'isi storagepool health'
+    footer: >
+      #### </storagepool_health>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+{% if ('auth_ads_list' in check_list or 'all' in check_list) and '-auth_ads_list' not in check_list %}
+  - header: '#### <auth_ads_list>'
+    command: 'isi auth ads list --format csv'
+    footer: >
+      #### </auth_ads_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+{% if ('auth_status' in check_list or 'all' in check_list) and '-auth_status' not in check_list %}
+  - header: '#### <auth_status>'
+    command: 'isi auth status --format csv'
+    footer: >
+      #### </auth_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 23
+{% if ('isi_hw_status_a' in check_list or 'all' in check_list) and '-isi_hw_status_a' not in check_list %}
+  - header: '#### <isi_hw_status_a>'
+    command: 'isi_hw_status -A'
+    footer: >
+      #### </isi_hw_status_a>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 24
+{% if ('isi_dmi_info' in check_list or 'all' in check_list) and '-isi_dmi_info' not in check_list %}
+  - header: '#### <isi_dmi_info>'
+    command: 'isi_dmi_info'
+    footer: >
+      #### </isi_dmi_info>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 25
+{% if ('isi_nodes_serialnumber' in check_list or 'all' in check_list) and '-isi_nodes_serialnumber' not in check_list %}
+  - header: '#### <isi_nodes_serialnumber>'
+    command: 'isi_nodes "id=%{id};lnn=%{lnn};name=%{name};address=%{address};serialno=%{serialno};powerctl=%{powerctl}"'
+    footer: >
+      #### </isi_nodes_serialnumber>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 26
+{% if ('isi_event_groups_list' in check_list or 'all' in check_list) and '-isi_event_groups_list' not in check_list %}
+  - header: '#### <isi_event_groups_list>'
+    command: 'isi event groups list --resolved No'
+    footer: >
+      #### </isi_event_groups_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 27
+{% if ('isi_for_array_uptime' in check_list or 'all' in check_list) and '-isi_for_array_uptime' not in check_list %}
+  - header: '#### <isi_for_array_uptime>'
+    command: 'isi_for_array -s "uptime"'
+    footer: >
+      #### </isi_for_array_uptime>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 28
+{% if ('isi_hw_status_t' in check_list or 'all' in check_list) and '-isi_hw_status_t' not in check_list %}
+  - header: '#### <isi_hw_status_t>'
+    command: 'isi_for_array isi_hw_status -t'
+    footer: >
+      #### </isi_hw_status_t>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 29
+{% if ('storagepool_list' in check_list or 'all' in check_list) and '-storagepool_list' not in check_list %}
+  - header: '#### <storagepool_list>'
+    command: 'isi storagepool list --format csv'
+    footer: >
+      #### </storagepool_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 30
+{% if ('df_k' in check_list or 'all' in check_list) and '-df_k' not in check_list %}
+  - header: '#### <df_k>'
+    command: 'df -k'
+    footer: >
+      #### </df_k>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 31
+{% if ('isi_for_array_isi_device_list_csv' in check_list or 'all' in check_list) and '-isi_for_array_isi_device_list_csv' not in check_list %}
+  - header: '#### <isi_for_array_isi_device_list_csv>'
+    command: 'isi_for_array isi device list -v --format csv'
+    footer: >
+      #### </isi_for_array_isi_device_list_csv>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 32
+{% if ('auth_roles_list_csv' in check_list or 'all' in check_list) and '-auth_roles_list_csv' not in check_list %}
+  - header: '#### <auth_roles_list_csv>'
+    command: 'isi auth roles list --verbose --format csv'
+    footer: >
+      #### </auth_roles_list_csv>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 33
+{% if ('auth_users_list' in check_list or 'all' in check_list) and '-auth_users_list' not in check_list %}
+  - header: '#### <auth_users_list>'
+    command: 'isi auth users list --verbose --format list'
+    footer: >
+      #### </auth_users_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 34
+{% if ('cloud_access_list' in check_list or 'all' in check_list) and '-cloud_access_list' not in check_list %}
+  - header: '#### <cloud_access_list>'
+    command: 'isi cloud access list --format=csv'
+    footer: >
+      #### </cloud_access_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 35
+{% if ('job_status_v' in check_list or 'all' in check_list) and '-job_status_v' not in check_list %}
+  - header: '#### <job_status_v>'
+    command: 'isi job status -v'
+    footer: >
+      #### </job_status_v>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 36
+{% if ('storagepool_nodepools_list' in check_list or 'all' in check_list) and '-storagepool_nodepools_list' not in check_list %}
+  - header: '#### <storagepool_nodepools_list>'
+    command: 'isi storagepool nodepools list -v --format=csv'
+    footer: >
+      #### </storagepool_nodepools_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 37
+{% if ('status_a' in check_list or 'all' in check_list) and '-status_a' not in check_list %}
+  - header: '#### <status_a>'
+    command: 'isi status -a | cat'
+    footer: >
+      #### </status_a>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 38
+{% if ('isi_ssh_settings_view' in check_list or 'all' in check_list) and '-isi_ssh_settings_view' not in check_list %}
+  - header: '#### <isi_ssh_settings_view>'
+    command: 'isi ssh settings view |grep Root'
+    footer: >
+      #### </isi_ssh_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 39
+{% if ('isi_ftp_settings_view' in check_list or 'all' in check_list) and '-isi_ftp_settings_view' not in check_list %}
+  - header: '#### <isi_ftp_settings_view>'
+    command: 'isi ftp settings view | grep Enabled'
+    footer: >
+      #### </isi_ftp_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 40
+{% if ('isi_http_settings_view' in check_list or 'all' in check_list) and '-isi_http_settings_view' not in check_list %}
+  - header: '#### <isi_http_settings_view>'
+    command: 'isi http settings view | grep HTTPS:'
+    footer: >
+      #### </isi_http_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 41
+{% if ('motd_view' in check_list or 'all' in check_list) and '-motd_view' not in check_list %}
+  - header: '#### <motd_view>'
+    command: 'cat /etc/mcp/templates/motd'
+    footer: >
+      #### </motd_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 42
+{% if ('isi_sync_settings_view' in check_list or 'all' in check_list) and '-isi_sync_settings_view' not in check_list %}
+  - header: '#### <isi_sync_settings_view>'
+    command: 'isi sync settings view | grep -i service'
+    footer: >
+      #### </isi_sync_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 43
+{% if ('isi_certificate_settings_view' in check_list or 'all' in check_list) and '-isi_certificate_settings_view' not in check_list %}
+  - header: '#### <isi_certificate_settings_view>'
+    command: 'isi certificate settings view'
+    footer: >
+      #### </isi_certificate_settings_view>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

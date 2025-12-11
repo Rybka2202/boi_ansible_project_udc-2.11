@@ -1,0 +1,20 @@
+- name: Remediate cisco_ios.1.050119
+  cisco.ios.ios_config:
+    lines:
+      - transport input ssh
+    save_when: always
+  become: "{{ commands.become | default('false') }}"
+  become_method: "{{ commands.become_method | default('enable') }}"
+
+# Fallback:
+# use the below command to re-enable telnet
+# enable
+# conf t
+# line vty 0 4
+# transport input telnet ssh
+# ctrl-Z
+# copy running-config startup-config
+#
+# Validation:
+# Use the below command to check if the ssh time-out
+# sh run | in transport input

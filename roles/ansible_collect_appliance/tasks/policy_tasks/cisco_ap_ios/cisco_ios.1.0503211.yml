@@ -1,0 +1,19 @@
+- name: Remediate cisco_ios.1.0503211
+  cisco.ios.ios_config:
+    lines:
+      - ip ssh time-out {{ udc_parameters['cisco_ios.1.0503211_ssh_value'] | default(60) }}
+    save_when: always
+  become: "{{ commands.become | default('false') }}"
+  become_method: "{{ commands.become_method | default('enable') }}"
+
+# Fallback:
+# use the below command to adjust ssh timeout value
+# enable
+# conf t
+# ip ssh time-out 60
+# ctrl-Z
+# copy running-config startup-config
+#
+# Validation:
+# Use the below command to check if the ssh time-out
+# sh run | in ssh time-out

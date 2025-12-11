@@ -1,0 +1,199 @@
+---
+settings_global:
+{% if ('chk01' in check_list or 'show_aaa' in check_list or 'all' in check_list) and '-chk01' not in check_list %}
+  - header: '#### <show_aaa>'
+    command: 'show aaa parameter'
+    footer: >
+      #### </show_aaa>
+
+{% endif %}
+{% if ('chk02' in check_list or 'show_aaaParam' in check_list or 'all' in check_list) and '-chk02' not in check_list %}
+  - header: '#### <show_aaaParam>'
+    command: 'show aaa tacacsParam'
+    footer: >
+      #### </show_aaaParam>
+
+{% endif %}
+{% if ('chk03' in check_list or 'show_auditSyslog' in check_list or 'all' in check_list) and '-chk03' not in check_list %}
+  - header: '#### <show_auditSyslog>'
+    command: 'show audit syslogPolicy'
+    footer: >
+      #### </show_auditSyslog>
+
+{% endif %}
+{% if ('chk04' in check_list or 'show_auditSyslogParams' in check_list or 'all' in check_list) and '-chk04' not in check_list %}
+  - header: '#### <show_auditSyslogParams>'
+    command: 'show audit syslogParams'
+    footer: >
+      #### </show_auditSyslogParams>
+
+{% endif %}
+{% if ('chk05' in check_list or 'show_auditStats' in check_list or 'all' in check_list) and '-chk05' not in check_list %}
+  - header: '#### <show_auditStats>'
+    command: 'show audit stats'
+    footer: >
+      #### </show_auditStats>
+
+{% endif %}
+{% if ('chk06' in check_list or 'show_syslogGlobal' in check_list or 'all' in check_list) and '-chk06' not in check_list %}
+  - header: '#### <show_syslogGlobal>'
+    command: 'show audit syslogGlobal'
+    footer: >
+      #### </show_syslogGlobal>
+
+{% endif %}
+{% if ('chk07' in check_list or 'show_ntp_param' in check_list or 'all' in check_list) and '-chk07' not in check_list %}
+  - header: '#### <show_ntp_param>'
+    command: 'show ntp param'
+    footer: >
+      #### </show_ntp_param>
+
+{% endif %}
+{% if ('chk08' in check_list or 'show_ntp_server' in check_list or 'all' in check_list) and '-chk08' not in check_list %}
+  - header: '#### <show_ntp_server>'
+    command: 'show ntp server'
+    footer: >
+      #### </show_ntp_server>
+
+{% endif %}
+{% if ('chk09' in check_list or 'show_ntp_status' in check_list or 'all' in check_list) and '-chk09' not in check_list %}
+  - header: '#### <show_ntp_status>'
+    command: 'show ntp status'
+    footer: >
+      #### </show_ntp_status>
+
+{% endif %}
+{% if ('chk10' in check_list or 'show_ntp_sync' in check_list or 'all' in check_list) and '-chk10' not in check_list %}
+  - header: '#### <show_ntp_sync>'
+    command: 'show ntp sync'
+    footer: >
+      #### </show_ntp_sync>
+
+{% endif %}
+{% if ('chk11' in check_list or 'show_SSL_certkey' in check_list or 'all' in check_list) and '-chk11' not in check_list %}
+  - header: '#### <show_SSL_certkey>'
+    command: 'show SSL certkey'
+    footer: >
+      #### </show_SSL_certkey>
+
+{% endif %}
+{% if ('chk13' in check_list or 'show_service' in check_list or 'all' in check_list) and '-chk13' not in check_list %}
+  - header: '#### <show_service>'
+    command: 'show service'
+    footer: >
+      #### </show_service>
+
+{% endif %}
+{% if ('chk14' in check_list or 'show_CLIMode' in check_list or 'all' in check_list) and '-chk14' not in check_list %}
+  - header: '#### <show_CLIMode>'
+    command: 'show cli mode'
+    footer: >
+      #### </show_CLIMode>
+
+{% endif %}
+{% if ('chk15' in check_list or 'stat_SSL' in check_list or 'all' in check_list) and '-chk15' not in check_list %}
+  - header: '#### <stat_SSL>'
+    command: 'stat ssl'
+    footer: >
+      #### </stat_SSL>
+
+{% endif %}
+{% if ('chk16' in check_list or 'stat_system' in check_list or 'all' in check_list) and '-chk16' not in check_list %}
+  - header: '#### <stat_system>'
+    command: 'stat system'
+    footer: >
+      #### </stat_system>
+
+{% endif %}
+{% if ('chk18' in check_list or 'show_SSLService' in check_list or 'all' in check_list) and '-chk18' not in check_list %}
+  - header: '#### <show_SSLService>'
+    command: 'show ssl service'
+    footer: >
+      #### </show_SSLService>
+
+{% endif %}
+{% if ('chk19' in check_list or 'show_version' in check_list or 'all' in check_list) and '-chk19' not in check_list %}
+  - header: '#### <show_version>'
+    command: 'show version'
+    footer: >
+      #### </show_version>
+
+{% endif %}
+{% if ('chk20' in check_list or 'show_hardware' in check_list or 'all' in check_list) and '-chk20' not in check_list %}
+  - header: '#### <show_hardware>'
+    command: 'show hardware'
+    footer: >
+      #### </show_hardware>
+
+{% endif %}
+{% if ('chk21' in check_list or 'show_snmp_option' in check_list or 'all' in check_list) and '-chk21' not in check_list %}
+  - header: '#### <show_snmp_option>'
+    command: 'show snmp option'
+    footer: >
+      #### </show_snmp_option>
+
+{% endif %}
+{% if ('chk22' in check_list or 'show_snmp_stats' in check_list or 'all' in check_list) and '-chk22' not in check_list %}
+  - header: '#### <show_snmp_stats>'
+    command: 'show snmp stats'
+    footer: >
+      #### </show_snmp_stats>
+
+{% endif %}
+{% if ('chk23' in check_list or 'show_system_user' in check_list or 'all' in check_list) and '-chk23' not in check_list %}
+  - header: '#### <show_system_user>'
+    command: 'show system user -format text'
+    footer: >
+      #### </show_system_user>
+
+{% endif %}
+{% if ('chk25' in check_list or 'show_snmp_community' in check_list or 'all' in check_list) and '-chk25' not in check_list %}
+  - header: '#### <show_snmp_community>'
+    command: 'show snmp community'
+    footer: >
+      #### </show_snmp_community>
+
+{% endif %}
+{% if ('chk26' in check_list or 'show_ns_encryptionParams' in check_list or 'all' in check_list) and '-chk26' not in check_list %}
+  - header: '#### <show_ns_encryptionParams>'
+    command: 'show ns encryptionParams'
+    footer: >
+      #### </show_ns_encryptionParams>
+
+{% endif %}
+
+{% if ('chk28' in check_list or 'show_radiusParams' in check_list or 'all' in check_list) and '-chk28' not in check_list %}
+  - header: '#### <show_radiusParams>'
+    command: 'show radiusParams'
+    footer: >
+      #### </show_radiusParams>
+
+{% endif %}
+{% if ('chk29' in check_list or 'show_ldapParams' in check_list or 'all' in check_list) and '-chk29' not in check_list %}
+  - header: '#### <show_ldapParams>'
+    command: 'show ldapParams'
+    footer: >
+      #### </show_ldapParams>
+
+{% endif %}
+{% if ('chk30' in check_list or 'show_tacacsParams' in check_list or 'all' in check_list) and '-chk30' not in check_list %}
+  - header: '#### <show_tacacsParams>'
+    command: 'show tacacsParams'
+    footer: >
+      #### </show_tacacsParams>
+
+{% endif %}
+{% if ('chk31' in check_list or 'show_system_parameter' in check_list or 'all' in check_list) and '-chk31' not in check_list %}
+  - header: '#### <show_system_parameter>'
+    command: 'show system parameter'
+    footer: >
+      #### </show_system_parameter>
+
+{% endif %}
+{% if ('chk32' in check_list or 'show_callhome' in check_list or 'all' in check_list) and '-chk32' not in check_list %}
+  - header: '#### <show_callhome>'
+    command: 'show callhome'
+    footer: >
+      #### </show_callhome>
+
+{% endif %}

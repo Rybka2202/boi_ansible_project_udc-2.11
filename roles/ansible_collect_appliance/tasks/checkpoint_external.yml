@@ -1,0 +1,18 @@
+---
+
+- name: Checkpoint exception handler
+  ansible.builtin.pause:
+    seconds: 19
+
+- name: CHECKPOINT Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+  ansible.builtin.raw: "{{ commands.command }}"
+  register: cmdout
+  no_log: true
+  changed_when: false
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Debug routine
+  ansible.builtin.debug:
+    var: cmdout
+  when: udc_debug | default(false) | bool

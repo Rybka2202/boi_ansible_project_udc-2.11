@@ -1,0 +1,77 @@
+---
+- name: Block for generic SSH devices
+  when:
+    - ansible_network_os is undefined or
+        (namebase == "cisco_ap_mds" and "port-internal-info" in commands.header)
+  block:
+    - name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+      ansible.builtin.raw: "{{ commands.command }}"
+      register: cmdout
+      no_log: true
+      changed_when: false
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_connection: ssh
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cmdout
+      when: udc_debug | default(false) | bool
+
+    - name: Subcommand related tasks
+      when: commands.subcommand is defined and cmdout.rc is defined and cmdout.rc == 0
+      block:
+        - name: Include subcommand results
+          ansible.builtin.include_tasks: subcommand.yml
+
+    - name: Job properties
+      delegate_to: localhost
+      delegate_facts: true
+      block:
+        - name: Set custom facts
+          ansible.builtin.set_stats:
+            data:
+              segment_data: |
+                {{ commands.header }}
+                {{ cmdout.stdout | default('') }}
+                {% if commands.subcommand is defined and subcmdout is defined and cmdout.rc is defined and cmdout.rc == 0 %}
+                {% for result in subcmdout.results | map(attribute='stdout') | list %}
+                {{ result }}
+                {% endfor %}{% endif %}
+                {{ commands.footer }}
+
+- name: Block for network_os devices
+  when:
+    - ansible_network_os is defined and
+        ("port-internal-info" not in commands.header or namebase != "cisco_ap_mds")
+  block:
+    - name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+      ansible.netcommon.cli_command:
+        command: "{{ commands.command }}"
+      become: "{{ commands.become | default('false') }}"
+      become_method: "{{ commands.become_method | default('enable') }}"
+      register: cmdout_nw
+      no_log: true
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cmdout_nw
+      when: udc_debug | default(false) | bool
+
+    - name: Job properties
+      delegate_to: localhost
+      delegate_facts: true
+      block:
+        - name: Set custom facts
+          ansible.builtin.set_stats:
+            data:
+              segment_data: |
+                {{ commands.header }}
+                {{ cmdout_nw.stdout | default('') }}
+                {{ commands.footer }}

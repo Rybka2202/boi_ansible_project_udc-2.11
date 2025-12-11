@@ -1,0 +1,580 @@
+---
+settings_global:
+#Check 01
+{% if ('version' in check_list or 'all' in check_list) and '-version' not in check_list %}
+  - header: '#### <version>'
+    command: 'show version'
+    footer: >
+      #### </version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 02
+{% if ('logging' in check_list or 'all' in check_list) and '-logging' not in check_list %}
+  - header: '#### <logging>'
+    command: 'show logging logfile start-time {{ nxos_start_date }}'
+    footer: >
+      #### </logging>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 03
+{% if ('system-redundancy-status' in check_list or 'all' in check_list) and '-system-redundancy-status' not in check_list %}
+  - header: '#### <system-redundancy-status>'
+    command: 'show system redundancy status'
+    footer: >
+      #### </system-redundancy-status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 04
+{% if ('callhome' in check_list or 'all' in check_list) and '-callhome' not in check_list %}
+  - header: '#### <callhome>'
+    command: 'show callhome'
+    footer: >
+      #### </callhome>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 05
+{% if ('callhome-transport' in check_list or 'all' in check_list) and '-callhome-transport' not in check_list %}
+  - header: '#### <callhome-transport>'
+    command: 'show callhome transport'
+    footer: >
+      #### </callhome-transport>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 06
+{% if ('callhome-profile' in check_list or 'all' in check_list) and '-callhome-profile' not in check_list %}
+  - header: '#### <callhome-profile>'
+    command: 'show callhome destination-profile'
+    footer: >
+      #### </callhome-profile>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 07
+{% if ('environment-power' in check_list or 'all' in check_list) and '-environment-power' not in check_list %}
+  - header: '#### <environment-power>'
+    command: 'show environment power'
+    footer: >
+      #### </environment-power>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 08
+{% if ('environment-temperature' in check_list or 'all' in check_list) and '-environment-temperature' not in check_list %}
+  - header: '#### <environment-temperature>'
+    command: 'show environment temperature'
+    footer: >
+      #### </environment-temperature>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 09
+{% if ('hardware' in check_list or 'all' in check_list) and '-hardware' not in check_list %}
+  - header: '#### <hardware>'
+    command: 'show hardware'
+    footer: >
+      #### </hardware>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 10
+{% if ('interface-brief' in check_list or 'all' in check_list) and '-interface-brief' not in check_list %}
+  - header: '#### <interface-brief>'
+    command: 'show interface brief'
+    footer: >
+      #### </interface-brief>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 11
+{% if ('inventory' in check_list or 'all' in check_list) and '-inventory' not in check_list %}
+  - header: '#### <inventory>'
+    command: 'show inventory'
+    footer: >
+      #### </inventory>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 12
+{% if ('module' in check_list or 'all' in check_list) and '-module' not in check_list %}
+  - header: '#### <module>'
+    command: 'show module'
+    footer: >
+      #### </module>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 13
+{% if ('show_ntp_status' in check_list or 'all' in check_list) and '-show_ntp_status' not in check_list %}
+  - header: '#### <show_ntp_status>'
+    command: 'show ntp status'
+    footer: >
+      #### </show_ntp_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 14
+{% if ('snmp' in check_list or 'all' in check_list) and '-snmp' not in check_list %}
+  - header: '#### <snmp>'
+    command: 'show snmp'
+    footer: >
+      #### </snmp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 15
+#HL.C.1.5.1
+{% if ('snmp-host' in check_list or 'all' in check_list) and '-snmp-host' not in check_list %}
+  - header: '#### <snmp-host>'
+    command: 'show snmp host'
+    footer: >
+      #### </snmp-host>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 16
+#HL.C.1.5.1
+{% if ('snmp-community' in check_list or 'all' in check_list) and '-snmp-community' not in check_list %}
+  - header: '#### <snmp-community>'
+    command: 'show snmp community'
+    footer: >
+      #### </snmp-community>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 17
+{% if ('terminal' in check_list or 'all' in check_list) and '-terminal' not in check_list %}
+  - header: '#### <terminal>'
+    command: 'show terminal'
+    footer: >
+      #### </terminal>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 18
+{% if ('user-account' in check_list or 'all' in check_list) and '-user-account' not in check_list %}
+  - header: '#### <user-account>'
+    command: 'show user-account'
+    footer: >
+      #### </user-account>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 19
+{% if ('banner' in check_list or 'all' in check_list) and '-banner' not in check_list %}
+  - header: '#### <banner>'
+    command: 'show banner motd'
+    footer: >
+      #### </banner>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 20
+{% if ('sprom_backplan' in check_list or 'all' in check_list) and '-sprom_backplan' not in check_list %}
+  - header: '#### <sprom_backplan>'
+    command: 'show sprom backplane 1'
+    footer: >
+      #### </sprom_backplan>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 21
+{% if ('telnet-server' in check_list or 'all' in check_list) and '-telnet-server' not in check_list %}
+  - header: '#### <telnet-server>'
+    command: 'show telnet server'
+    footer: >
+      #### </telnet-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 22
+{% if ('ssh-server' in check_list or 'all' in check_list) and '-ssh-server' not in check_list %}
+  - header: '#### <ssh-server>'
+    command: 'show ssh server'
+    footer: >
+      #### </ssh-server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 23
+{% if ('show_interface' in check_list or 'all' in check_list) and '-show_interface' not in check_list %}
+  - header: '#### <show_interface>'
+    command: 'show interface'
+    footer: >
+      #### </show_interface>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 24
+#HL.C.1.4.1
+{% if ('show_password_strength_check' in check_list or 'all' in check_list) and '-show_password_strength_check' not in check_list %}
+  - header: '#### <show_password_strength_check>'
+    command: 'show password strength-check'
+    footer: >
+      #### </show_password_strength_check>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 25
+{% if ('show_feature' in check_list or 'all' in check_list) and '-show_feature' not in check_list %}
+  - header: '#### <show_feature>'
+    command: 'show feature'
+    footer: >
+      #### </show_feature>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 26
+{% if ('show_clock_detail' in check_list or 'all' in check_list) and '-show_clock_detail' not in check_list %}
+  - header: '#### <show_clock_detail>'
+    command: 'show clock detail'
+    footer: >
+      #### </show_clock_detail>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 27
+#HL.C.1.6.1 HL.C.1.7.1
+{% if ('show_running' in check_list or 'all' in check_list) and '-show_running' not in check_list %}
+  - header: '#### <show_running>'
+    command: 'show running-config'
+    footer: >
+      #### </show_running>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 28
+{% if ('show_startup' in check_list or 'all' in check_list) and '-show_startup' not in check_list %}
+  - header: '#### <show_startup>'
+    command: 'show startup'
+    footer: >
+      #### </show_startup>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 30
+{% if ('show_license_usage' in check_list or 'all' in check_list) and '-show_license_usage' not in check_list %}
+  - header: '#### <show_license_usage>'
+    command: 'show license usage'
+    footer: >
+      #### </show_license_usage>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 31
+{% if ('show_cores' in check_list or 'all' in check_list) and '-show_cores' not in check_list %}
+  - header: '#### <show_cores>'
+    command: 'show cores'
+    footer: >
+      #### </show_cores>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 32
+{% if ('show_environment' in check_list or 'all' in check_list) and '-show_environment' not in check_list %}
+  - header: '#### <show_environment>'
+    command: 'show environment'
+    footer: >
+      #### </show_environment>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 33
+{% if ('show_logging_console' in check_list or 'all' in check_list) and '-show_logging_console' not in check_list %}
+  - header: '#### <show_logging_console>'
+    command: 'show logging console'
+    footer: >
+      #### </show_logging_console>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 34
+{% if ('show_logging_info' in check_list or 'all' in check_list) and '-show_logging_info' not in check_list %}
+  - header: '#### <show_logging_info>'
+    command: 'show logging info'
+    footer: >
+      #### </show_logging_info>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 35
+{% if ('show_logging_level' in check_list or 'all' in check_list) and '-show_logging_level' not in check_list %}
+  - header: '#### <show_logging_level>'
+    command: 'show logging level'
+    footer: >
+      #### </show_logging_level>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 36
+{% if ('show_logging_module' in check_list or 'all' in check_list) and '-show_logging_module' not in check_list %}
+  - header: '#### <show_logging_module>'
+    command: 'show logging module'
+    footer: >
+      #### </show_logging_module>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 37
+{% if ('show_logging_monitor' in check_list or 'all' in check_list) and '-show_logging_monitor' not in check_list %}
+  - header: '#### <show_logging_monitor>'
+    command: 'show logging monitor'
+    footer: >
+      #### </show_logging_monitor>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 38
+{% if ('show_logging_nvram' in check_list or 'all' in check_list) and '-show_logging_nvram' not in check_list %}
+  - header: '#### <show_logging_nvram>'
+    command: 'show logging nvram'
+    footer: >
+      #### </show_logging_nvram>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 40
+{% if ('show_logging_server' in check_list or 'all' in check_list) and '-show_logging_server' not in check_list %}
+  - header: '#### <show_logging_server>'
+    command: 'show logging server'
+    footer: >
+      #### </show_logging_server>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 41
+{% if ('show_logging_status' in check_list or 'all' in check_list) and '-show_logging_status' not in check_list %}
+  - header: '#### <show_logging_status>'
+    command: 'show logging status'
+    footer: >
+      #### </show_logging_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 42
+{% if ('show_logging_timestamp' in check_list or 'all' in check_list) and '-show_logging_timestamp' not in check_list %}
+  - header: '#### <show_logging_timestamp>'
+    command: 'show logging timestamp'
+    footer: >
+      #### </show_logging_timestamp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 43
+{% if ('show_port-monitor' in check_list or 'all' in check_list) and '-show_port-monitor' not in check_list %}
+  - header: '#### <show_port-monitor>'
+    command: 'show port-monitor'
+    footer: >
+      #### </show_port-monitor>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 44
+#HL.C.1.1.2.1
+{% if ('show_run_aaa' in check_list or 'all' in check_list) and '-show_run_aaa' not in check_list %}
+  - header: '#### <show_run_aaa>'
+    command: 'show run | in aaa'
+    footer: >
+      #### </show_run_aaa>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 45
+{% if ('show_run_username' in check_list or 'all' in check_list) and '-show_run_username' not in check_list %}
+  - header: '#### <show_run_username>'
+    command: 'show run | in username'
+    footer: >
+      #### </show_run_username>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 46
+{% if ('show_run_ssh' in check_list or 'all' in check_list) and '-show_run_ssh' not in check_list %}
+  - header: '#### <show_run_ssh>'
+    command: 'show run all | in ssh'
+    footer: >
+      #### </show_run_ssh>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 47
+{% if ('show_run_telnet' in check_list or 'all' in check_list) and '-show_run_telnet' not in check_list %}
+  - header: '#### <show_run_telnet>'
+    command: 'show run all | in telnet'
+    footer: >
+      #### </show_run_telnet>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 48
+{% if ('show_run_logging' in check_list or 'all' in check_list) and '-show_run_logging' not in check_list %}
+  - header: '#### <show_run_logging>'
+    command: 'show run | in logging'
+    footer: >
+      #### </show_run_logging>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 49
+{% if ('show_feature_telnet_enabled' in check_list or 'all' in check_list) and '-show_feature_telnet_enabled' not in check_list %}
+  - header: '#### <show_feature_telnet_enabled>'
+    command: 'show feature | in telnet | in enabled'
+    footer: >
+      #### </show_feature_telnet_enabled>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 50
+{% if ('show_run_source_route' in check_list or 'all' in check_list) and '-show_run_source_route' not in check_list %}
+  - header: '#### <show_run_source_route>'
+    command: "show run all | in 'no ip source-route'"
+    footer: >
+      #### </show_run_source_route>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 51
+{% if ('show_ntp_peer_status' in check_list or 'all' in check_list) and '-show_ntp_peer_status' not in check_list %}
+  - header: '#### <show_ntp_peer_status>'
+    command: 'show ntp peer-status'
+    footer: >
+      #### </show_ntp_peer_status>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 53
+{% if ('show_encryption_service_stat' in check_list or 'all' in check_list) and 'show_encryption_service_stat' not in check_list %}
+  - header: '#### <show_encryption_service_stat>'
+    command: 'show encryption service stat'
+    footer: >
+      #### </show_encryption_service_stat>
+
+    rc: 0
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 54
+{% if ('show_running_username' in check_list or 'all' in check_list) and '-show_running_username' not in check_list %}
+  - header: '#### <show_running_username>'
+    command: 'show running-config | sec username'
+    footer: >
+      #### </show_running_username>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 55
+{% if ('show_ssh_key' in check_list or 'all' in check_list) and '-show_ssh_key' not in check_list %}
+  - header: '#### <show_ssh_key>'
+    command: 'show ssh key'
+    footer: >
+      #### </show_ssh_key>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 56
+{% if ('show_user-account' in check_list or 'all' in check_list) and '-show_user-account' not in check_list %}
+  - header: '#### <show_user-account>'
+    command: 'show user-account'
+    footer: >
+      #### </show_user-account>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 57
+#HL.C.1.4.3
+{% if ('show_userpassphrase_timevalues' in check_list or 'all' in check_list) and '-show_userpassphrase_timevalues' not in check_list %}
+  - header: '#### <show_userpassphrase_timevalues>'
+    command: 'show userpassphrase timevalues'
+    footer: >
+      #### </show_userpassphrase_timevalues>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 58
+{% if ('show_config_diff' in check_list or 'all' in check_list) and '-show_config_diff' not in check_list %}
+  - header: '#### <show_config_diff>'
+    command: 'show running-config diff'
+    footer: >
+      #### </show_config_diff>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 59
+#HL.C.1.1.1.1
+{% if ('show_run_tacacs' in check_list or 'all' in check_list) and '-show_run_tacacs' not in check_list %}
+  - header: '#### <show_run_tacacs>'
+    command: 'show running-config tacacs+ all'
+    footer: >
+      #### </show_run_tacacs>
+    rc: 0 
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 60
+#HL.C.1.1.1.2
+{% if ('show_run_radius' in check_list or 'all' in check_list) and '-show_run_radius' not in check_list %}
+  - header: '#### <show_run_radius>'
+    command: 'show running-config radius all'
+    footer: >
+      #### </show_run_radius>
+    rc: 0 
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 61
+#HL.C.1.3.1
+{% if ('show_banner_motd' in check_list or 'all' in check_list) and '-show_banner_motd' not in check_list %}
+  - header: '#### <show_banner_motd>'
+    command: 'show banner motd'
+    footer: >
+      #### </show_banner_motd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 62
+#HL.C.1.3.2
+{% if ('show_banner_exec' in check_list or 'all' in check_list) and '-show_banner_exec' not in check_list %}
+  - header: '#### <show_banner_exec>'
+    command: 'show banner exec'
+    footer: >
+      #### </show_banner_exec>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 63
+#HL.C.1.4.2
+{% if ('show_userpassphrase_length' in check_list or 'all' in check_list) and '-show_userpassphrase_length' not in check_list %}
+  - header: '#### <show_userpassphrase_length>'
+    command: 'show userpassphrase length'
+    footer: >
+      #### </show_userpassphrase_length>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 64
+#HL.C.1.7.2 NX-OS 7
+{% if ('show_login' in check_list or 'all' in check_list) and '-show_login' not in check_list %}
+  - header: '#### <show_login>'
+    command: 'show login'
+    footer: >
+      #### </show_login>
+    rc: 0 
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+#Check 65
+#HL.C.1.7.2 NX-OS 9
+{% if ('show_system_login' in check_list or 'all' in check_list) and '-show_system_login' not in check_list %}
+  - header: '#### <show_system_login>'
+    command: 'show system login'
+    footer: >
+      #### </show_system_login>
+    rc: 0 
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

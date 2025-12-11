@@ -1,0 +1,258 @@
+---
+settings_global:
+{% if ('purealert_watcher_list' in check_list or 'all' in check_list) and '-purealert_watcher_list' not in check_list %}
+  - header: '#### <purealert_watcher_list>'
+    command: 'purealert watcher list --csv'
+    footer: >
+      #### </purealert_watcher_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purealert_list' in check_list or 'all' in check_list) and '-purealert_list' not in check_list %}
+  - header: '#### <purealert_list>'
+    command: 'purealert list --csv'
+    footer: >
+      #### </purealert_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list' in check_list or 'all' in check_list) and '-purearray_list' not in check_list %}
+  - header: '#### <purearray_list>'
+    command: 'purearray list --csv'
+    footer: >
+      #### </purearray_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_banner' in check_list or 'all' in check_list) and '-purearray_list_banner' not in check_list %}
+  - header: '#### <purearray_list_banner>'
+    command: 'purearray list --banner'
+    footer: >
+      #### </purearray_list_banner>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_ntpserver' in check_list or 'all' in check_list) and '-purearray_list_ntpserver' not in check_list %}
+  - header: '#### <purearray_list_ntpserver>'
+    command: 'purearray list --ntpserver'
+    footer: >
+      #### </purearray_list_ntpserver>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_space' in check_list or 'all' in check_list) and '-purearray_list_space' not in check_list %}
+  - header: '#### <purearray_list_space>'
+    command: 'purearray list --space'
+    footer: >
+      #### </purearray_list_space>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureadmin_global_list' in check_list or 'all' in check_list) and '-pureadmin_global_list' not in check_list %}
+  - header: '#### <pureadmin_global_list>'
+    command: 'pureadmin global list --csv'
+    footer: >
+      #### </pureadmin_global_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureblade_list' in check_list or 'all' in check_list) and '-pureblade_list' not in check_list %}
+  - header: '#### <pureblade_list>'
+    command: 'pureblade list --csv'
+    footer: >
+      #### </pureblade_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('puredns_list' in check_list or 'all' in check_list) and '-puredns_list' not in check_list %}
+  - header: '#### <puredns_list>'
+    command: 'puredns list --csv'
+    footer: >
+      #### </puredns_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list' in check_list or 'all' in check_list) and '-purehw_list' not in check_list %}
+  - header: '#### <purehw_list>'
+    command: 'purehw list --spec --csv'
+    footer: >
+      #### </purehw_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_ch' in check_list or 'all' in check_list) and '-purehw_list_ch' not in check_list %}
+  - header: '#### <purehw_list_ch>'
+    command: 'purehw list --type ch --csv'
+    footer: >
+      #### </purehw_list_ch>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_eth' in check_list or 'all' in check_list) and '-purehw_list_eth' not in check_list %}
+  - header: '#### <purehw_list_eth>'
+    command: 'purehw list --type eth --csv'
+    footer: >
+      #### </purehw_list_eth>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_fan' in check_list or 'all' in check_list) and '-purehw_list_fan' not in check_list %}
+  - header: '#### <purehw_list_fan>'
+    command: 'purehw list --type fan --csv'
+    footer: >
+      #### </purehw_list_fan>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_fb' in check_list or 'all' in check_list) and '-purehw_list_fb' not in check_list %}
+  - header: '#### <purehw_list_fb>'
+    command: 'purehw list --type fb --csv'
+    footer: >
+      #### </purehw_list_fb>
+
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_fm' in check_list or 'all' in check_list) and '-purehw_list_fm' not in check_list %}
+  - header: '#### <purehw_list_fm>'
+    command: 'purehw list --type fm --csv'
+    footer: >
+      #### </purehw_list_fm>
+
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------- #}
+{% if ('purehw_list_pwr' in check_list or 'all' in check_list) and '-purehw_list_pwr' not in check_list %}
+  - header: '#### <purehw_list_pwr>'
+    command: 'purehw list --type pwr --csv'
+    footer: >
+      #### </purehw_list_pwr>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purekmip_list' in check_list or 'all' in check_list) and '-purekmip_list' not in check_list %}
+  - header: '#### <purekmip_list>'
+    command: 'purekmip list --csv'
+    footer: >
+      #### </purekmip_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purenetwork_list' in check_list or 'all' in check_list) and '-purenetwork_list' not in check_list %}
+  - header: '#### <purenetwork_list>'
+    command: 'purenetwork list --csv'
+    footer: >
+      #### </purenetwork_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purelag_list' in check_list or 'all' in check_list) and '-purelag_list' not in check_list %}
+  - header: '#### <purelag_list>'
+    command: 'purelag list --csv'
+    footer: >
+      #### </purelag_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purelog_list' in check_list or 'all' in check_list) and '-purelog_list' not in check_list %}
+  - header: '#### <purelog_list>'
+    command: 'purelog list --csv'
+    footer: >
+      #### </purelog_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('puresupport_list' in check_list or 'all' in check_list) and '-puresupport_list' not in check_list %}
+  - header: '#### <puresupport_list>'
+    command: 'puresupport list --csv'
+    footer: >
+      #### </puresupport_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('puresnmp_list' in check_list or 'all' in check_list) and '-puresnmp_list' not in check_list %}
+  - header: '#### <puresmtp_list>'
+    command: 'puresmtp list --csv'
+    footer: >
+      #### </puresmtp_list>
+
+{% endif %}
+{# ----------------------------------------------------------------------------------------------------------- #}
+{% if ('puresnmp_list' in check_list or 'all' in check_list) and '-puresnmp_list' not in check_list %}
+  - header: '#### <puresnmp_list>'
+    command: 'puresnmp list --csv'
+    footer: >
+      #### </puresnmp_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureds_list' in check_list or 'all' in check_list) and '-pureds_list' not in check_list %}
+  - header: '#### <pureds_list>'
+    command: 'pureds list'
+    footer: >
+      #### </pureds_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureds_test' in check_list or 'all' in check_list) and '-pureds_test' not in check_list %}
+  - header: '#### <pureds_test>'
+    command: 'pureds test'
+    footer: >
+      #### </pureds_test>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('puredatalock_list' in check_list or 'all' in check_list) and '-puredatalock_list' not in check_list %}
+  - header: '#### <puredatalock_list>'
+    command: 'puredatalock list --csv'
+    footer: >
+      #### </puredatalock_list>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_ntp' in check_list or 'all' in check_list) and '-purearray_list_ntp' not in check_list %}
+  - header: '#### <purearray_list_ntp>'
+    command: 'purearray list --ntp --csv'
+    footer: >
+      #### </purearray_list_ntp>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_idletimeout' in check_list or 'all' in check_list) and '-purearray_list_idletimeout' not in check_list %}
+  - header: '#### <purearray_list_idletimeout>'
+    command: 'purearray list --idle-timeout --csv'
+    footer: >
+      #### </purearray_list_idletimeout>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_connect' in check_list or 'all' in check_list) and '-purearray_list_connect' not in check_list %}
+  - header: '#### <purearray_list_connect>'
+    command: 'purearray list --connect --csv'
+    footer: >
+      #### </purearray_list_connect>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureadmin_list' in check_list or 'all' in check_list) and '-pureadmin_list' not in check_list %}
+  - header: '#### <pureadmin_list>'
+    command: 'pureadmin list'
+    footer: >
+      #### </pureadmin_list>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('pureadmin_list_lockout' in check_list or 'all' in check_list) and '-pureadmin_list_lockout' not in check_list %}
+  - header: '#### <pureadmin_list_lockout>'
+    command: 'pureadmin list --lockout'
+    footer: >
+      #### </pureadmin_list_lockout>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('purearray_list_security-token' in check_list or 'all' in check_list) and '-purearray_list_security-token' not in check_list %}
+  - header: '#### <purearray_list_security-token>'
+    command: 'purearray list --security-token --csv'
+    footer: >
+      #### </purearray_list_security-token>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------------------------------- #}

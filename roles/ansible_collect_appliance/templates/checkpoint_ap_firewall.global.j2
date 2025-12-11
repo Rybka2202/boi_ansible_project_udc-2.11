@@ -1,0 +1,229 @@
+---
+settings_global:
+{% if ('chk01' in check_list or 'configuration_password-controls' in check_list or 'all' in check_list) and '-chk01' not in check_list %}
+  - header: '#### <configuration_password-controls>'
+    command: 'clish -c "show password-controls all"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </configuration_password-controls>
+
+{% endif %}
+{% if ('chk02' in check_list or 'failures-allowed' in check_list or 'all' in check_list) and '-chk02' not in check_list %}
+  - header: '#### <failures-allowed>'
+    command: 'clish -c "show password-controls deny-on-fail failures-allowed"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </failures-allowed>
+
+{% endif %}
+{% if ('chk03' in check_list or 'allow-after' in check_list or 'all' in check_list) and '-chk03' not in check_list %}
+  - header: '#### <allow-after>'
+    command: 'clish -c "show password-controls deny-on-fail allow-after"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </allow-after>
+
+{% endif %}
+{% if ('chk04' in check_list or 'telnet' in check_list or 'all' in check_list) and '-chk04' not in check_list %}
+  - header: '#### <telnet>'
+    command: 'clish -c "show net-access telnet"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </telnet>
+
+{% endif %}
+{% if ('chk05' in check_list or 'ntp' in check_list or 'all' in check_list) and '-chk05' not in check_list %}
+  - header: '#### <ntp>'
+    command: 'clish -c "show ntp servers"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </ntp>
+
+{% endif %}
+{% if ('chk06' in check_list or 'ipv6' in check_list or 'all' in check_list) and '-chk06' not in check_list %}
+  - header: '#### <ipv6>'
+    command: 'clish -c "show ipv6-state"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </ipv6>
+
+{% endif %}
+{% if ('chk07' in check_list or 'snmp_trap' in check_list or 'all' in check_list) and '-chk07' not in check_list %}
+  - header: '#### <snmp_trap>'
+    command: 'clish -c "show snmp traps enabled-traps"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </snmp_trap>
+
+{% endif %}
+{% if ('chk08' in check_list or 'inactivity-timeout' in check_list or 'all' in check_list) and '-chk08' not in check_list %}
+  - header: '#### <inactivity-timeout>'
+    command: 'clish -c "show inactivity-timeout"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </inactivity-timeout>
+
+{% endif %}
+{% if ('chk09' in check_list or 'web_session-timeout' in check_list or 'all' in check_list) and '-chk09' not in check_list %}
+  - header: '#### <web_session-timeout>'
+    command: 'clish -c "show web session-timeout"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </web_session-timeout>
+
+{% endif %}
+{% if ('chk10' in check_list or 'core-dump' in check_list or 'all' in check_list) and '-chk10' not in check_list %}
+  - header: '#### <core-dump>'
+    command: 'clish -c "show core-dump status"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </core-dump>
+
+{% endif %}
+{% if ('chk11' in check_list or 'tacacs' in check_list or 'all' in check_list) and '-chk11' not in check_list %}
+  - header: '#### <tacacs>'
+    command: 'clish -c "show aaa radius-servers list"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </tacacs>
+
+{% endif %}
+{% if ('chk12' in check_list or 'business_notice' in check_list or 'all' in check_list) and '-chk12' not in check_list %}
+  - header: '#### <business_notice>'
+    command: 'cat /etc/issue'
+    become: true
+    become_method: enable
+    footer: >
+      #### </business_notice>
+
+{% endif %}
+{% if ('chk13' in check_list or 'logging_1' in check_list or 'all' in check_list) and '-chk13' not in check_list %}
+  - header: '#### <logging_1>'
+    command: 'cat /etc/syslog.conf | grep authpriv | grep /var | grep -v emerg'
+    become: true
+    become_method: enable
+    footer: >
+      #### </logging_1>
+
+{% endif %}
+{% if ('chk14' in check_list or 'logging_2' in check_list or 'all' in check_list) and '-chk14' not in check_list %}
+  - header: '#### <logging_2>'
+    command: 'cat /var/log/messages | grep logged -m 20'
+    become: true
+    become_method: enable
+    footer: >
+      #### </logging_2>
+
+{% endif %}
+{% if ('chk15' in check_list or 'logging_3' in check_list or 'all' in check_list) and '-chk15' not in check_list %}
+  - header: '#### <logging_3>'
+    command: 'cat /var/log/secure | egrep "Accepted|Failed" -m 20'
+    become: true
+    become_method: enable
+    footer: >
+      #### </logging_3>
+
+{% endif %}
+{% if ('chk16' in check_list or 'logging_4' in check_list or 'all' in check_list) and '-chk16' not in check_list %}
+  - header: '#### <logging_4>'
+    command: 'clish -c "show syslog all"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </logging_4>
+
+{% endif %}
+{% if ('chk17' in check_list or 'admin_pw' in check_list or 'all' in check_list) and '-chk17' not in check_list %}
+  - header: '#### <admin_pw>'
+    command: 'cat /etc/shadow | egrep -v "monitor|root|nobody|postfix|rpm|shutdown|pcap|halt|vcsa|_nonlocl|cp_postgres|cron_user|ncmadminE|voysnms|NetBrain|cpep_user"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </admin_pw>
+
+{% endif %}
+{% if ('chk18' in check_list or 'encryption_1' in check_list or 'all' in check_list) and '-chk18' not in check_list %}
+  - header: '#### <encryption_1>'
+    command: 'cat /etc/pam.d/system-auth | grep password | grep pam_unix_passwd'
+    become: true
+    become_method: enable
+    footer: >
+      #### </encryption_1>
+
+{% endif %}
+{% if ('chk19' in check_list or 'encryption_2' in check_list or 'all' in check_list) and '-chk19' not in check_list %}
+  - header: '#### <encryption_2>'
+    command: 'cat /etc/shadow| grep  -v xRADIUS | egrep -v ! | grep -v \*'
+    become: true
+    become_method: enable
+    footer: >
+      #### </encryption_2>
+
+{% endif %}
+{% if ('chk20' in check_list or 'configuration' in check_list or 'all' in check_list) and '-chk20' not in check_list %}
+  - header: '#### <configuration>'
+    command: 'clish -c "show configuration"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </configuration>
+
+{% endif %}
+{% if ('chk21' in check_list or 'show_uptime' in check_list or 'all' in check_list) and '-chk21' not in check_list %}
+  - header: '#### <show_uptime>'
+    command: 'clish -c "show uptime"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </show_uptime>
+
+{% endif %}
+
+{% if ('chk22' in check_list or 'cpstat_os_cpu' in check_list or 'all' in check_list) and '-chk22' not in check_list %}
+  - header: '#### <cpstat_os_cpu>'
+    command: 'cpstat os -f cpu'
+    become: true
+    become_method: enable
+    footer: >
+      #### </cpstat_os_cpu>
+
+{% endif %}
+
+{% if ('chk23' in check_list or 'netstat_i' in check_list or 'all' in check_list) and '-chk23' not in check_list %}
+  - header: '#### <netstat_i>'
+    command: 'netstat -i'
+    become: true
+    become_method: enable
+    footer: >
+      #### </netstat_i>
+
+{% endif %}
+{% if ('chk24' in check_list or 'show_version_all' in check_list or 'all' in check_list) and '-chk24' not in check_list %}
+  - header: '#### <show_version_all>'
+    command: 'clish -c "show version all"'
+    become: true
+    become_method: enable
+    footer: >
+      #### </show_version_all>
+
+{% endif %}
+{% if ('chk25' in check_list or 'dmiparse' in check_list or 'all' in check_list) and '-chk25' not in check_list %}
+  - header: '#### <dmiparse>'
+    command: 'dmiparse'
+    become: true
+    become_method: enable
+    footer: >
+      #### </dmiparse>
+
+{% endif %}

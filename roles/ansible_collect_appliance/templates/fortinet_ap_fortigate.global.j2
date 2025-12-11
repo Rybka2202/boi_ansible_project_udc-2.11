@@ -1,0 +1,171 @@
+---
+settings_global:
+{% if ('chk01' in check_list or 'get_system' in check_list or 'all' in check_list) and '-chk01' not in check_list %}
+  - header: '#### <get_system>'
+    command: 'get system admin'
+    footer: >
+      #### </get_system>
+
+{% endif %}
+{% if ('chk02' in check_list or 'get_system_admin' in check_list or 'all' in check_list) and '-chk02' not in check_list %}
+  - header: '#### <get_system_admin>'
+    command: 'get system admin list'
+    footer: >
+      #### </get_system_admin>
+
+{% endif %}
+{% if ('chk03' in check_list or 'get_system_interface' in check_list or 'all' in check_list) and '-chk03' not in check_list %}
+  - header: '#### <get_system_interface>'
+    command: 'get system interface'
+    footer: >
+      #### </get_system_interface>
+
+{% endif %}
+# LE.C.1.1.1 - Network settings - DNS server definition
+{% if ('chk04' in check_list or 'get_system_dns' in check_list or 'all' in check_list) and '-chk04' not in check_list %}
+  - header: '#### <get_system_dns>'
+    command: 'get system dns'
+    footer: >
+      #### </get_system_dns>
+
+{% endif %}
+{% if ('chk05' in check_list or 'get_system_snmp' in check_list or 'all' in check_list) and '-chk05' not in check_list %}
+  - header: '#### <get_system_snmp>'
+    command: 'get system snmp community'
+    footer: >
+      #### </get_system_snmp>
+
+{% endif %}
+{% if ('chk06' in check_list or 'get_system_snmp_sysinfo' in check_list or 'all' in check_list) and '-chk06' not in check_list %}
+  - header: '#### <get_system_snmp_sysinfo>'
+    command: 'get system snmp sysinfo'
+    footer: >
+      #### </get_system_snmp_sysinfo>
+
+{% endif %}
+# LE.C.2.1.4 - General settings - Hostname
+{% if ('chk07' in check_list or 'get_system_status' in check_list or 'all' in check_list) and '-chk07' not in check_list %}
+  - header: '#### <get_system_status>'
+    command: 'get system status'
+    footer: >
+      #### </get_system_status>
+
+{% endif %}
+# LE.C.2.1.1 - General settings - Pre-Login Banner
+# LE.C.2.1.2 - General settings - Post-Login Banner
+# LE.C.2.2.2 - Password Policy - Administrator password retries and lockout time
+# LE.C.2.4.1 - Administrators and Admin Profiles - Idle timeout period
+{% if ('chk08' in check_list or 'get_system_global' in check_list or 'all' in check_list) and '-chk08' not in check_list %}
+  - header: '#### <get_system_global>'
+    command: 'get system global'
+    footer: >
+      #### </get_system_global>
+
+{% endif %}
+{% if ('chk09' in check_list or 'show_system_ntp' in check_list or 'all' in check_list) and '-chk09' not in check_list %}
+  - header: '#### <show_system_ntp>'
+    command: 'show system ntp'
+    footer: >
+      #### </show_system_ntp>
+
+{% endif %}
+{% if ('chk10' in check_list or 'show_full-config' in check_list or 'all' in check_list) and '-chk10' not in check_list %}
+  - header: '#### <show_full-config>'
+    command: 'show full-configuration'
+    footer: >
+      #### </show_full-config>
+
+{% endif %}
+{% if ('chk11' in check_list or 'show_system_admin_setting' in check_list or 'all' in check_list) and '-chk11' not in check_list %}
+  - header: '#### <show_system_admin_setting>'
+    command: 'show system admin'
+    footer: >
+      #### </show_system_admin_setting>
+
+{% endif %}
+# LE.C.2.2.1 - Password Policy - Password Policy parameters
+{% if ('chk12' in check_list or 'get_system_password-policy' in check_list or 'all' in check_list) and '-chk12' not in check_list %}
+  - header: '#### <get_system_password-policy>'
+    command: 'get system password-policy'
+    footer: >
+      #### </get_system_password-policy>
+
+{% endif %}
+{% if ('chk13' in check_list or 'show_log_syslogd_setting' in check_list or 'all' in check_list) and '-chk13' not in check_list %}
+  - header: '#### <show_log_syslogd_setting>'
+    command: 'show log syslogd setting'
+    footer: >
+      #### </show_log_syslogd_setting>
+
+{% endif %}
+{% if ('chk14' in check_list or 'get_system_auto-install' in check_list or 'all' in check_list) and '-chk14' not in check_list %}
+  - header: '#### <get_system_auto-install>'
+    command: 'get system auto-install'
+    footer: >
+      #### </get_system_auto-install>
+
+{% endif %}
+{% if ('chk15' in check_list or 'show_system_session-ttl' in check_list or 'all' in check_list) and '-chk15' not in check_list %}
+  - header: '#### <show_system_session-ttl>'
+    command: 'show system session-ttl'
+    footer: >
+      #### </show_system_session-ttl>
+
+{% endif %}
+# LE.C.2.1.3 - General settings - System Time (NTP)
+{% if ('chk16' in check_list or 'diag_sys_ntp_status' in check_list or 'all' in check_list) and '-chk16' not in check_list %}
+  - header: '#### <diag_sys_ntp_status>'
+    command: 'diag sys ntp status'
+    footer: >
+      #### </diag_sys_ntp_status>
+
+{% endif %}
+# LE.C.5.1.1 - Automation stitch - Compromised hosts Quarantine
+{% if ('chk17' in check_list or 'show_system_automation_stitch' in check_list or 'all' in check_list) and '-chk17' not in check_list %}
+  - header: '#### <show_system_automation_stitch>'
+    command: 'show system automation-stitch'
+    footer: >
+      #### </show_system_automation_stitch>
+
+{% endif %}
+# LE.C.2.4.2 - Administrators and Admin Profiles - Encryption of access channels
+{% if ('chk18' in check_list or 'show_system_interface_port1' in check_list or 'all' in check_list) and '-chk18' not in check_list %}
+  - header: '#### <show_system_interface_port1>'
+    command: 'show system interface port1'
+    footer: >
+      #### </show_system_interface_port1>
+
+{% endif %}
+# LE.C.2.5.1 - High Availability - Monitor Interfaces
+{% if ('chk19' in check_list or 'show_system_ha' in check_list or 'all' in check_list) and '-chk19' not in check_list %}
+  - header: '#### <show_system_ha>'
+    command: 'show system ha'
+    footer: >
+      #### </show_system_ha>
+
+{% endif %}
+# LE.C.3.1.1 - Policy and Objects - Policy Services 'any'
+{% if ('chk20' in check_list or 'show_firewall_policy' in check_list or 'all' in check_list) and '-chk20' not in check_list %}
+  - header: '#### <show_firewall_policy>'
+    command: 'show firewall policy'
+    footer: >
+      #### </show_firewall_policy>
+
+{% endif %}
+# LE.C.2.4.2 - Administrators and Admin Profiles - Ensure only encrypted access channels are enabled.
+{% if ('chk21' in check_list or 'show_system_interface' in check_list or 'all' in check_list) and '-chk21' not in check_list %}
+  - header: '#### <show_system_interface>'
+    command: 'show system interface'
+    footer: >
+      #### </show_system_interface>
+
+{% endif %}
+
+# LE.C.7.1.1 - Encrypt Logs Sent to FortiAnalyzer / FortiManager - Encrypt Log Transmission to FortiAnalyzer / FortiManager.
+{% if ('chk23' in check_list or 'get_log_fortianalyzer_setting' in check_list or 'all' in check_list) and '-chk23' not in check_list %}
+  - header: '#### <get_log_fortianalyzer_setting>'
+    command: 'get log fortianalyzer setting'
+    footer: >
+      #### </get_log_fortianalyzer_setting>
+
+{% endif %}

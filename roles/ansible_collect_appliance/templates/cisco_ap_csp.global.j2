@@ -1,0 +1,138 @@
+---
+settings_global:
+{% if ('show_version' in check_list or 'all' in check_list) and '-show_version' not in check_list %}
+  - header: '#### <show_version>'
+    command: 'show version'
+    footer: >
+      #### </show_version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_auth' in check_list or 'all' in check_list) and '-show_running_auth' not in check_list %}
+  - header: '#### <show_running_auth>'
+    command: 'show running-config rbac authentication min-pwd-length'
+    footer: >
+      #### </show_running_auth>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_auth_lifetime' in check_list or 'all' in check_list) and '-show_running_auth_lifetime' not in check_list %}
+  - header: '#### <show_running_auth_lifetime>'
+    command: 'show running-config rbac authentication password-lifetime'
+    footer: >
+      #### </show_running_auth_lifetime>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_rbac' in check_list or 'all' in check_list) and '-show_running_rbac' not in check_list %}
+  - header: '#### <show_running_rbac>'
+    command: 'show running-config rbac authentication'
+    footer: >
+      #### </show_running_rbac>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_logging' in check_list or 'all' in check_list) and '-show_running_logging' not in check_list %}
+  - header: '#### <show_running_logging>'
+    command: 'show running-config system settings logging'
+    footer: >
+      #### </show_running_logging>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_tacacs' in check_list or 'all' in check_list) and '-show_running_tacacs' not in check_list %}
+  - header: '#### <show_running_tacacs>'
+    command: 'show running-config tacacs-server'
+    footer: >
+      #### </show_running_tacacs>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_radius' in check_list or 'all' in check_list) and '-show_running_radius' not in check_list %}
+  - header: '#### <show_running_radius>'
+    command: 'show running-config radius-server'
+    footer: >
+      #### </show_running_radius>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_snmp' in check_list or 'all' in check_list) and '-show_running_snmp' not in check_list %}
+  - header: '#### <show_running_snmp>'
+    command: 'show running-config snmp'
+    footer: >
+      #### </show_running_snmp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_snmp' in check_list or 'all' in check_list) and '-show_snmp' not in check_list %}
+  - header: '#### <show_snmp>'
+    command: 'show snmp'
+    footer: >
+      #### </show_snmp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_snmp_traps' in check_list or 'all' in check_list) and '-show_snmp_traps' not in check_list %}
+  - header: '#### <show_snmp_traps>'
+    command: 'show snmp traps'
+    footer: >
+      #### </show_snmp_traps>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_snmp_stats' in check_list or 'all' in check_list) and '-show_snmp_stats' not in check_list %}
+  - header: '#### <show_snmp_stats>'
+    command: 'show snmp stats'
+    footer: >
+      #### </show_snmp_stats>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_ntp' in check_list or 'all' in check_list) and '-show_running_ntp' not in check_list %}
+  - header: '#### <show_running_ntp>'
+    command: 'show running-config system time ntp'
+    footer: >
+      #### </show_running_ntp>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_dns' in check_list or 'all' in check_list) and '-show_running_dns' not in check_list %}
+  - header: '#### <show_running_dns>'
+    command: 'show running-config system settings dns-server'
+    footer: >
+      #### </show_running_dns>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running_banner_motd' in check_list or 'all' in check_list) and '-show_running_banner_motd' not in check_list %}
+  - header: '#### <show_running_banner_motd>'
+    command: 'show running-config banner-motd'
+    footer: >
+      #### </show_running_banner_motd>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_platform_hw_detail' in check_list or 'all' in check_list) and '-show_platform_hw_detail' not in check_list %}
+  - header: '#### <show_platform_hw_detail>'
+    command: 'show platform-detail hardware_info'
+    footer: >
+      #### </show_platform_hw_detail>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_version_uptime' in check_list or 'all' in check_list) and '-show_version_uptime' not in check_list %}
+  - header: '#### <show_version_uptime>'
+    command: 'show version last-reboot'
+    footer: >
+      #### </show_version_uptime>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('show_running-config' in check_list or 'all' in check_list) and '-show_running-config' not in check_list %}
+  - header: '#### <show_running-config>'
+    command: 'show running-config'
+    footer: >
+      #### </show_running-config>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

@@ -1,0 +1,10 @@
+galaxy_info:
+  author: David Kapitany
+  description: Role for extracting data from various Storage and Network devices
+  company: Kyndryl
+
+  license: Kyndryl Intellectual Property
+
+  min_ansible_version: "2.15"
+
+  galaxy_tags: []

@@ -1,0 +1,3 @@
+---
+- name: Import tasks for remediation
+  ansible.builtin.import_tasks: "policy_tasks/{{ namebase }}/{{ udc_policy }}.yml"

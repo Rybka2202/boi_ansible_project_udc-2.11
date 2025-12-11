@@ -1,0 +1,213 @@
+---
+- name: Block for generic SSH devices
+  when:
+    - ansible_network_os is undefined or
+        (namebase == "cisco_ap_mds" and "port-internal-info" in commands.header)
+    - not fatal_on_exec | bool
+  block:
+    - name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+      ansible.builtin.raw: "{{ commands.command }}"
+      register: cmdout
+      no_log: true
+      changed_when: false
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_connection: ssh
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cmdout
+      when: udc_debug | default(false) | bool
+
+    - name: Checkpoint external auth handling
+      ansible.builtin.include_tasks:
+        file: checkpoint_external.yml
+      when:
+        - udc_endpoint == 'checkpoint_firewall'
+        - "'Unable to get user permissions' in cmdout.stdout"
+
+    - name: Subcommand related tasks
+      when: commands.subcommand is defined and cmdout.rc is defined and cmdout.rc == 0
+      block:
+        - name: Include subcommand results
+          ansible.builtin.include_tasks: subcommand.yml
+
+    - name: Error handling control block - only UTF-8
+      block:
+        - name: Write to outfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ out_file }}"
+            line: |-
+              {{ commands.header }}
+              {{ cmdout.stdout | default('') }}
+              {% if commands.subcommand is defined and subcmdout is defined and cmdout.rc is defined and cmdout.rc == 0 %}
+              {% for result in subcmdout.results | map(attribute='stdout') | list %}
+              {{ result }}
+              {% endfor %}{% endif %}
+              {{ commands.footer }}
+          no_log: "{{ not udc_debug | default(false) | bool }}"
+          delegate_to: "{{ delegation_target }}"
+
+        - name: Write to logfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ log_file }}"
+            line: >-
+              {{ '%Y-%m-%d %H:%M:%S' | strftime }} - {{ commands.header }}: {% if commands.rc is defined %}override
+              {% elif cmdout.rc is defined and cmdout.rc != 0 and 'No such command' in cmdout.stdout %}ERROR - no such command
+              {% elif cmdout.rc is defined and cmdout.rc != 0 and 'Too few arguments' in cmdout.stdout %}ERROR - too few arguments
+              {% elif cmdout.rc is defined and cmdout.rc != 0 and 'bad subcommand status' in cmdout.stdout %}ERROR - incorrect command option
+              {% elif (cmdout.msg is defined and 'Invalid/incorrect password' in cmdout.msg) or
+              (cmdout.stdout is defined and 'You are forced to change your password' in cmdout.stdout) %}ERROR - Failed to authenticate the user
+              {% elif cmdout.stdout is defined and 'Permission denied' in cmdout.stdout %}ERROR - Permission denied!
+              {% elif cmdout.unreachable is defined and cmdout.unreachable | bool %}ERROR - Host is unreachable
+              {% elif cmdout.rc is defined and cmdout.rc == 0 %}success{% else %}ERROR - unknown{% endif %}
+          delegate_to: "{{ delegation_target }}"
+      rescue:
+        - name: Generate RC
+          ansible.builtin.include_role:
+            name: returncode
+          vars:
+            rc_variables: "{{ udc_return_codes['wrong_encoding'] }}"
+
+        - name: Fail UDC run for the host
+          ansible.builtin.fail:
+            msg: "{{ udc_return_codes['wrong_encoding']['rc_message'] }}"
+
+    - name: Error handling
+      when:
+        - commands.rc is undefined
+        - (cmdout.rc is undefined or cmdout.rc != 0 or cmdout.unreachable is defined or
+          (cmdout.stdout is defined and 'You are forced to change your password' in cmdout.stdout))
+      block:
+        - name: Set fact on error
+          ansible.builtin.set_fact:
+            error_on_exec: true
+          when: not error_on_exec | bool
+
+        - name: Set exec_rc
+          ansible.builtin.set_fact:
+            exec_rc: >-
+              {% if cmdout.rc is defined and cmdout.rc != 0 and 'No such command' in cmdout.stdout %}1{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and 'Too few arguments' in cmdout.stdout %}1{%
+              elif cmdout.rc is defined and cmdout.rc != 0 and 'bad subcommand status' in cmdout.stdout %}3{%
+              elif cmdout.msg is defined and 'Invalid/incorrect password' in cmdout.msg %}5{%
+              elif cmdout.stdout is defined and 'You are forced to change your password' in cmdout.stdout %}5{%
+              elif cmdout.stdout is defined and 'Permission denied' in cmdout.stdout %}5{%
+              elif cmdout.unreachable is defined and cmdout.unreachable | bool %}255{%
+              else %}1{% endif %}
+
+        - name: Handling fatal errors
+          when: exec_rc == '5' or exec_rc == '255'
+          block:
+            - name: Generate RC
+              ansible.builtin.include_role:
+                name: returncode
+              vars:
+                rc_variables: "{{ udc_return_codes['appliance_auth'] if exec_rc == '5' else udc_return_codes['appliance_unreachable'] }}"
+
+            - name: Set fact on fatal error
+              ansible.builtin.set_fact:
+                fatal_on_exec: true
+
+- name: Block for network_os devices
+  when:
+    - ansible_network_os is defined and
+        ("port-internal-info" not in commands.header or namebase != "cisco_ap_mds")
+    - not fatal_on_exec | bool
+  block:
+    - name: Data collection - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+      ansible.netcommon.cli_command:
+        command: "{{ commands.command }}"
+      become: "{{ commands.become | default('false') }}"
+      become_method: "{{ commands.become_method | default('enable') }}"
+      register: cmdout_nw
+      no_log: true
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cmdout_nw
+      when: udc_debug | default(false) | bool
+
+    - name: Error handling control block - only UTF-8
+      block:
+        - name: Write to outfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ out_file }}"
+            line: |-
+              {{ commands.header }}
+              {{ cmdout_nw.stdout | default('') }}
+              {{ commands.footer }}
+          no_log: "{{ not udc_debug | default(false) | bool }}"
+          delegate_to: "{{ delegation_target }}"
+
+        - name: Write to logfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ log_file }}"
+            line: >-
+              {{ '%Y-%m-%d %H:%M:%S' | strftime }} - {{ commands.header }}: {% if commands.rc is defined %}override
+              {% elif cmdout_nw.msg is defined and 'Invalid input detected at' in cmdout_nw.msg %}
+              ERROR - no such command{% elif cmdout_nw.msg is defined and 'Authentication failed' in cmdout_nw.msg %}ERROR - Failed to authenticate the user
+              {% elif cmdout_nw.msg is defined and 'Invalid input detected at' in cmdout_nw.msg %}
+              ERROR - no such command{% elif cmdout_nw.msg is defined and 'Failed to authenticate' in cmdout_nw.msg %}ERROR - Failed to authenticate the user
+              {% elif cmdout_nw.msg is defined and 'Permission denied' in cmdout_nw.msg %}ERROR - Permission denied!
+              {% elif cmdout_nw.msg is defined and 'Unable to connect to port' in cmdout_nw.msg %}ERROR - Wrong Port or IP Address!
+              {% elif cmdout_nw.msg is defined and 'The authenticity of host' in cmdout_nw.msg %}ERROR - Host-key checking issue!
+              {% elif cmdout_nw.msg is defined and 'command timeout triggered' in cmdout_nw.msg %}ERROR - Host is unreachable!
+              {% elif cmdout_nw.msg is defined and 'Timeout connecting to' in cmdout_nw.msg %}ERROR - Host is unreachable!
+              {% elif cmdout_nw.msg is defined and 'ssh connection failed' in cmdout_nw.msg %}ERROR - Host is unreachable!
+              {% elif cmdout_nw.msg is undefined and cmdout_nw.stdout is defined %}success{% else %}ERROR - unknown{% endif %}
+          delegate_to: "{{ delegation_target }}"
+      rescue:
+        - name: Generate RC
+          ansible.builtin.include_role:
+            name: returncode
+          vars:
+            rc_variables: "{{ udc_return_codes['wrong_encoding'] }}"
+
+        - name: Fail UDC run for the host
+          ansible.builtin.fail:
+            msg: "{{ udc_return_codes['wrong_encoding']['rc_message'] }}"
+
+    - name: Error handling
+      when:
+        - commands.rc is undefined
+        - cmdout_nw.msg is defined
+      block:
+        - name: Set fact on error
+          ansible.builtin.set_fact:
+            error_on_exec: true
+          when: cmdout_nw.msg is defined and not error_on_exec | bool
+
+        - name: Set exec_rc
+          ansible.builtin.set_fact:
+            exec_rc: >-
+              {% if cmdout_nw.msg is defined and 'Invalid input detected at' in cmdout_nw.msg %}3{%
+              elif cmdout_nw.msg is defined and 'Authentication failed' in cmdout_nw.msg %}5{%
+              elif cmdout_nw.msg is defined and 'Failed to authenticate' in cmdout_nw.msg %}5{%
+              elif cmdout_nw.msg is defined and 'Permission denied' in cmdout_nw.msg %}5{%
+              elif cmdout_nw.msg is defined and 'Unable to connect to port' in cmdout_nw.msg %}255{%
+              elif cmdout_nw.msg is defined and 'The authenticity of host' in cmdout_nw.msg %}255{%
+              elif cmdout_nw.msg is defined and 'command timeout triggered' in cmdout_nw.msg %}255{%
+              elif cmdout_nw.msg is defined and 'Unable to connect to port' in cmdout_nw.msg %}255{%
+              elif cmdout_nw.msg is defined and 'Timeout connecting to' in cmdout_nw.msg %}255{%
+              elif cmdout_nw.msg is defined and 'ssh connection failed' in cmdout_nw.msg %}255{%
+              else %}1{% endif %}
+
+        - name: Handling fatal errors
+          when: exec_rc == '5' or exec_rc == '255'
+          block:
+            - name: Generate RC
+              ansible.builtin.include_role:
+                name: returncode
+              vars:
+                rc_variables: "{{ udc_return_codes['appliance_auth'] if exec_rc == '5' else udc_return_codes['appliance_unreachable'] }}"
+
+            - name: Set fact on fatal error
+              ansible.builtin.set_fact:
+                fatal_on_exec: true

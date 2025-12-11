@@ -1,0 +1,200 @@
+---
+# We are simply ignoring ANY errors here - they will be caught in the gather.yml section
+- name: Cisco-specific permission checks
+  when:
+    - '"cisco" in namebase'
+    - ansible_network_os is defined
+  block:
+    - name: Get permissions
+      ansible.netcommon.cli_command:
+        command: show privilege
+      become: false
+      register: cisco_perm
+      no_log: true
+      ignore_errors: true
+      ignore_unreachable: true
+      vars:
+        ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        var: cisco_perm
+      when: udc_debug | default(false) | bool
+
+    - name: Turn off privilege escalation if privilege level is already 15
+      ansible.builtin.set_fact:
+        udc_privilege_escalation: false
+      when: cisco_perm.stdout is defined and (cisco_perm.stdout | regex_search('[0-9]*$') == "15")
+
+# delegation_target is localhost - runs in the Execution Environment
+- name: Data collection prepare block
+  delegate_to: "{{ delegation_target }}"
+  block:
+    - name: NX-OS specific time settings
+      when: namebase == 'cisco_ap_nxos'
+      block:
+        - name: Set nxos_start_date
+          ansible.builtin.set_fact:
+            nxos_start_date: >-
+              {{ lookup('ansible.builtin.pipe',
+              'python3 -c "from datetime import datetime, timedelta; print((datetime.now() - timedelta(hours=24)).strftime(\"%Y %b %d %H:%M:%S\"))"') }}
+
+    - name: Creating directory on target
+      ansible.builtin.file:
+        path: "{{ temp_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Find the policy files
+      ansible.builtin.find:
+        paths: '{{ role_path }}/files'
+        patterns:
+          - '{{ namebase }}.local.{{ account_code }}.{{ udc_local_pol_filter | default("*") }}.pol'
+          - '{{ namebase }}.local.security.{{ udc_local_pol_filter | default("*") }}.pol'
+          - '{{ inventory_hostname }}.{{ namebase }}.local.{{ udc_local_pol_filter | default("*") }}.pol'
+        use_regex: true
+      register: policy_files
+      when: not (use_bps_rules_server | default(False) | bool)
+
+    - name: Find the variable templates
+      ansible.builtin.find:
+        paths: '{{ role_path }}/templates'
+        patterns: '{{ namebase }}.global.j2,{{ namebase }}.local.{{ udc_local_code_filter | default("*") }}.j2'
+        use_regex: true
+      register: vars_list
+
+    - name: Generate the check_list files from templates
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ temp_dir }}/{{ item[:-3] | basename }}.yml"
+        force: true
+        mode: "0600"
+      loop: "{{ vars_list.files | map(attribute='path') | list }}"
+
+    - name: Constructing settings_local block
+      when: vars_list.matched != 1
+      block:
+        - name: Create settings_local as an empty list
+          ansible.builtin.set_fact:
+            settings_local: []
+
+        - name: Find the local variable files
+          ansible.builtin.find:
+            paths: '{{ temp_dir }}'
+            patterns: '*.local.*.yml'
+          register: local_settings_files_list
+
+        - name: Error handling control block - Only run if local files found
+          when: local_settings_files_list.files[0] is defined
+          block:
+            - name: Parse dicts from local variable files
+              ansible.builtin.debug:
+                msg: "{{ lookup('file', item) | from_yaml }}"
+              loop: "{{ local_settings_files_list.files | map(attribute='path') | list }}"
+              register: local_checks
+
+            - name: Concatenate dicts to settings_local
+              ansible.builtin.set_fact:
+                settings_local: "{% if item | type_debug == 'list' %}{{ settings_local + item }}{% else %}{{ settings_local }}{% endif %}"
+              loop: "{{ local_checks['results'] | map(attribute='msg') | list }}"
+          rescue:
+            - name: Generate RC
+              ansible.builtin.include_role:
+                name: returncode
+              vars:
+                rc_variables: "{{ udc_return_codes['local_template_issue'] }}"
+
+            - name: Fail UDC run for the host
+              ansible.builtin.fail:
+                msg: "{{ udc_return_codes['local_template_issue']['rc_message'] }}"
+
+    - name: Load global checks to run
+      ansible.builtin.include_vars:
+        file: "{{ temp_dir }}/{{ namebase }}.global.yml"
+      no_log: true
+
+    - name: Initialize settings_global and settings_local
+      ansible.builtin.set_fact:
+        settings: >-
+          {% if settings_global | type_debug != 'NoneType' and settings_local is defined and
+          settings_local | type_debug != 'NoneType' %}{{ settings_global + settings_local }}{%
+          elif settings_global | type_debug == 'NoneType' and settings_local is defined and settings_local | type_debug != 'NoneType' %}{{ settings_local }}{%
+          elif settings_global | type_debug != 'NoneType' and settings_local is defined and settings_local | type_debug == 'NoneType' %}{{ settings_global }}{%
+          else %}{{ settings_global }}{% endif %}
+
+    - name: Generate the outputfile from template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ temp_dir }}/{{ out_file }}"
+        mode: "0600"
+        force: true
+
+    - name: Initialize logfile
+      ansible.builtin.copy:
+        content: "{{ '%Y-%m-%d %H:%M:%S' | strftime }} - DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} STARTED"
+        dest: "{{ temp_dir }}/{{ log_file }}"
+        mode: "0600"
+        force: true
+
+- name: Block for gathering data
+  block:
+    - name: Initialize exec_rc
+      ansible.builtin.set_fact:
+        exec_rc: 0
+        error_on_exec: false
+        fatal_on_exec: false
+
+    - name: Gather data
+      ansible.builtin.include_tasks: tasks/gather.yml
+      loop: "{{ settings }}"
+      loop_control:
+        loop_var: commands
+
+- name: Data collection finished block
+  delegate_to: "{{ delegation_target }}"
+  block:
+    - name: Finalize logfile
+      ansible.builtin.lineinfile:
+        path: "{{ temp_dir }}/{{ log_file }}"
+        line: "{{ item }}"
+      loop:
+        - "{{ '%Y-%m-%d %H:%M:%S' | strftime }} - DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} \
+           FINISHED {% if error_on_exec is defined and error_on_exec | bool %}WITH ERRORS ({{ exec_rc }}){% else %}SUCCESSFULLY ({{ exec_rc }}){% endif %}"
+        - "{{ '%a %b %d %H:%M:%S %Y' | strftime }}: Data collection status: {% if exec_rc != '3' and error_on_exec is defined and error_on_exec | bool %}\
+           Failed{% else %}OK{% endif %}"
+
+    - name: Set udc_collection_result variable
+      ansible.builtin.set_fact:
+        udc_collection_result: |-
+          DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} FINISHED {% if error_on_exec is defined and error_on_exec | bool %}\
+          WITH ERRORS ({{ exec_rc }}){% else %}SUCCESSFULLY ({{ exec_rc }}){% endif %}.
+          Data collection status: {% if exec_rc != '3' and error_on_exec is defined and error_on_exec | bool %}Failed{% else %}OK{% endif %}
+
+    - name: Copy policy files to destination
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ temp_dir }}/{{ item | basename }}"
+        mode: "0600"
+      loop: "{{ policy_files.files | map(attribute='path') | list }}"
+      when: policy_files.files[0] is defined
+
+    - name: Compress files into Bundle
+      community.general.archive:
+        path:
+          - "{{ temp_dir }}/*"
+        exclude_path:
+          - "{{ temp_dir }}/*.yml"
+        dest: "{{ bundle_path }}/{{ bundle_file }}"
+        mode: "0600"
+        format: zip
+        remove: true
+  always:
+    - name: Delete created directory from the Control Node
+      ansible.builtin.file:
+        path: "{{ temp_dir }}"
+        state: absent
+    - name: Delete generated ssh_config file from the Control Node
+      ansible.builtin.file:
+        path: /tmp/ssh_config
+        state: absent
+      run_once: true

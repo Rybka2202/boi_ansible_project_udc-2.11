@@ -1,0 +1,18 @@
+---
+- name: Data collection (subcommand) - {{ commands.header | regex_replace('#### <', '') | regex_replace('>', '') }}
+  ansible.builtin.raw: "{{ commands.subcommand }} {{ item.split(commands.sat_delimiter)[commands.sat_element] }}"
+  register: subcmdout
+  no_log: true
+  changed_when: false
+  ignore_errors: true
+  ignore_unreachable: true
+  loop: "{{ cmdout.stdout_lines[1:] }}"
+  vars:
+    ansible_command_timeout: "{{ udc_command_timeout | default('180') }}"
+
+- name: Debug routine
+  ansible.builtin.debug:
+    var: subcmdout
+  when:
+    - udc_debug | default(false) | bool
+    - commands.subcommand is defined and cmdout.rc is defined and cmdout.rc == 0

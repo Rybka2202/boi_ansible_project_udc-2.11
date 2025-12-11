@@ -1,0 +1,6 @@
+---
+account: "{{ account_name | default('SDE') }}"
+blueid: "{{ hwsw_blueid_bac_id | default('BAC9999999') }}"
+chipid: "MyChip"
+location: "{{ country | default('Kyndryl') }}"
+check_list: ['all']
