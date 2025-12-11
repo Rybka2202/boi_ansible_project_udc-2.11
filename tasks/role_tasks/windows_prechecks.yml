@@ -1,0 +1,20 @@
+---
+- name: Error handling control block
+  vars:
+    error_msg: minimum_powershell_version
+  block:
+    - name: Get PowerShell version
+      ansible.windows.win_shell: |
+        ($PSVersionTable.PSVersion.Major,$PSVersionTable.PSVersion.Minor,$PSVersionTable.PSVersion.Patch) -Join "."
+      failed_when: false
+      changed_when: false
+      register: ps_version
+
+    - name: Fail data collection if Powershell version is below 5.1
+      ansible.builtin.assert:
+        that:
+          - ((ps_version.stdout).split('.')[0:2] | join('.') | float) >= 5.1
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml

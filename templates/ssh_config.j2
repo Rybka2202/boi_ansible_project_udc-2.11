@@ -1,0 +1,57 @@
+# JH1
+Host {{ jh1_ip }}
+  HostName {{ jh1_ip }}
+  Port {{ jh1_ssh_port }}
+  StrictHostKeyChecking no
+  User {{ jh1_ssh_user }}
+  IdentityFile {{ lookup('env', 'JH1_SSH_PRIVATE_KEY') }}
+
+{% if jh2_ip is defined %}
+
+# JH2
+Host {{ jh2_ip }}
+  HostName {{ jh2_ip }}
+  Port {{ jh2_ssh_port }}
+  ProxyJump {{ jh1_ip }}
+  StrictHostKeyChecking no
+  User {{ jh2_ssh_user }}
+  IdentityFile {{ lookup('env', 'JH2_SSH_PRIVATE_KEY') }}
+{% endif %}
+{% if jh3_ip is defined %}
+
+# JH3
+Host {{ jh3_ip }}
+  HostName {{ jh3_ip }}
+  Port {{ jh3_ssh_port }}
+  ProxyJump {{ jh2_ip }}
+  StrictHostKeyChecking no
+  User {{ jh3_ssh_user }}
+  IdentityFile {{ lookup('env', 'JH3_SSH_PRIVATE_KEY') }}
+{% endif %}
+{% if jh4_ip is defined %}
+
+# JH4
+Host {{ jh4_ip }}
+  HostName {{ jh4_ip }}
+  Port {{ jh4_ssh_port }}
+  ProxyJump {{ jh3_ip }}
+  StrictHostKeyChecking no
+  User {{ jh4_ssh_user }}
+  IdentityFile {{ lookup('env', 'JH4_SSH_PRIVATE_KEY') }}
+{% endif %}
+{% if jh5_ip is defined %}
+
+# JH5
+Host {{ jh5_ip }}
+  HostName {{ jh5_ip }}
+  Port {{ jh5_ssh_port }}
+  ProxyJump {{ jh4_ip }}
+  StrictHostKeyChecking no
+  User {{ jh5_ssh_user }}
+  IdentityFile {{ lookup('env', 'JH5_SSH_PRIVATE_KEY') }}
+{% endif %}
+
+# Endpoint
+Host * !{{ jh1_ip }}{% if jh2_ip is defined %} !{{ jh2_ip }}{% endif %}{% if jh3_ip is defined %} !{{ jh3_ip }}{% endif %}{% if jh4_ip is defined %} !{{ jh4_ip }}{% endif %}{% if jh5_ip is defined %} !{{ jh5_ip }}{% endif %}{{ "" }}
+  User {{ ansible_user }}
+  ProxyCommand ssh -F /tmp/ssh_config -W %h:%p {% if jh5_ip is defined %}{{ jh5_ip }}{% elif jh4_ip is defined %}{{ jh4_ip }}{% elif jh3_ip is defined %}{{ jh3_ip }}{% elif jh2_ip is defined %}{{ jh2_ip }}{% else %}{{ jh1_ip }}{% endif %}

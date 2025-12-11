@@ -1,0 +1,1097 @@
+---
+endpoint_map_udc_version: "2.11.0"
+endpoint_map:
+  active_directory:
+    namebase: microsoft_mw_activedirectory
+    ostype: windows
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Microsoft_MW_ActiveDirectory
+    responsible_sme: TBD
+    udc_platform: Microsoft Active Directory
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: AD
+    ecmscanscope:
+    iscategory:
+  aix:
+    namebase: ibm_os_aix
+    ostype: unix
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: IBM_OS_AIX
+    responsible_sme: dsachin@kyndryl.com
+    udc_platform: AIX
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  aws:
+    namebase: amazon_ap_aws
+    ostype: linux
+    delegation_target: localhost
+    satteam: Hyperscaler
+    hwswdomain: Hyperscaler
+    sat_devicetype: amazon_ap_aws
+    responsible_sme: TBD
+    udc_platform: Amazon AWS
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  azure:
+    namebase: microsoft_ap_azure
+    ostype: linux
+    delegation_target: localhost
+    satteam: Hyperscaler
+    hwswdomain: Hyperscaler
+    sat_devicetype: Microsoft_AP_Azure
+    responsible_sme: TBD
+    udc_platform: Microsoft Azure
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  centos:
+    namebase: redhat_os_centos
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: redhat_os_centos
+    responsible_sme: TBD
+    udc_platform: Centos Linux
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  debian:
+    namebase: debian_os_linux
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: debian_os_linux
+    responsible_sme: TBD
+    udc_platform: Debian GNU Linux
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  db2_unix:
+    namebase: ibm_db_db2unix
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: ibm_db_db2unix
+    sat_parent: ibm_mw_db2unix
+    responsible_sme: TBD
+    udc_platform: IBM DB2 (UNIX)
+    udc_status: production
+    ecmscantype: I
+    ecmapplicationcategory: DB2
+    ecmscanscope:
+    iscategory:
+  broadcom_brocade:
+    namebase: broadcom_ap_brocade
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: BROCADE
+    responsible_sme: Gavin.OReilly@kyndryl.com
+    udc_platform: Brocade SAN Switch
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  checkpoint_firewall:
+    namebase: checkpoint_ap_firewall
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Checkpoint_Firewall
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: Checkpoint Firewall
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  cisco_apic:
+    namebase: cisco_ap_apic
+    ostype: linux
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_AP_APIC
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco APIC (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  cisco_asa:
+    ansible_network_os: cisco.asa.asa
+    netmiko_device_type: cisco_asa
+    namebase: cisco_ap_asa
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_ASA
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco ASA
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: CISCOAS
+    ecmscanscope:
+    iscategory: network
+  cisco_csp:
+    namebase: cisco_ap_csp
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_AP_CSP
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco CSP
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  cisco_ios:
+    ansible_network_os: cisco.ios.ios
+    netmiko_device_type: cisco_ios
+    namebase: cisco_ap_ios
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_IOS
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco IOS
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: CISCOIOS
+    ecmscanscope:
+    iscategory: network
+  cisco_iosxr:
+    ansible_network_os: cisco.iosxr.iosxr
+    netmiko_device_type: cisco_xr
+    namebase: cisco_ap_iosxr
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_AP_IOSXR
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco IOS XR
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  cisco_mds:
+    ansible_network_os: cisco.nxos.nxos
+    netmiko_device_type: cisco_nxos
+    namebase: cisco_ap_mds
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: Cisco_MDS
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco MDS
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  cisco_nxos:
+    ansible_network_os: cisco.nxos.nxos
+    netmiko_device_type: cisco_nxos
+    namebase: cisco_ap_nxos
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_NX_OS
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Cisco NX-OS
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: CISCONXOS
+    ecmscanscope:
+    iscategory: network
+  cisco_wlc:
+    netmiko_device_type: cisco_wlc
+    namebase: cisco_ap_wlc
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Cisco_WLC
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: Cisco WLC
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  citrix_netscaler:
+    netmiko_device_type: netscaler
+    namebase: citrix_ap_netscaler
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Citrix_NetScaler
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Citrix NetScaler
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: CITRIXNET
+    ecmscanscope:
+    iscategory:
+  commvault_simpana:
+    namebase: commvault_db_simpana
+    ostype: windows
+    satteam: Resiliency
+    hwswdomain: Resiliency
+    sat_devicetype: Commvault_Simpana
+    responsible_sme: anirudh.srinivas@kyndryl.com
+    udc_platform: Commvault Simpana
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: COMMVAULT
+    ecmscanscope:
+    iscategory:
+  ibm_ds8000:
+    namebase: ibm_ap_ds8000
+    vendor_cli: dscli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: DS8000
+    responsible_sme: Joe.Kingston@kyndryl.com
+    udc_platform: IBM DS8000 (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  emc_isilon:
+    namebase: emc_ap_isilon
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: EMC_Isilon
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: EMC Isilon
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  emc_powerstore:
+    namebase: emc_ap_powerstore
+    vendor_cli: pstcli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: EMC_PowerStore
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: EMC Powerstore (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  emc_unity:
+    namebase: emc_ap_unity
+    vendor_cli: uemcli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: EMC_Unity
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: Dell EMC Unity (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  f5_ltm:
+    netmiko_device_type: f5_ltm
+    namebase: f5_ap_ltm
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: F5_LTM
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: F5 Big-IP LTM
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: F5LTM
+    ecmscanscope:
+    iscategory: network
+  fortinet_fortigate:
+    netmiko_device_type: fortinet
+    namebase: fortinet_ap_fortigate
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: FortiNet_FortiGate
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Fortinet FortiGate
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: FORTI
+    ecmscanscope:
+    iscategory: network
+  gcp:
+    namebase: google_ap_gcp
+    ostype: linux
+    delegation_target: localhost
+    satteam: Hyperscaler
+    hwswdomain: Hyperscaler
+    sat_devicetype: google_ap_gcp
+    responsible_sme: TBD
+    udc_platform: Google Cloud Platform
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  hp_procurve:
+    netmiko_device_type: hp_procurve
+    namebase: hp_ap_procurve
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: HP_AP_Procurve
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: HP Procurve
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  hpe_alletra_9k:
+    namebase: hpe_ap_alletra9k
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: HPE_AP_Alletra9K
+    responsible_sme: brunodj@kyndryl.com
+    udc_platform: HPE Alletra 9000
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  hpe_3par:
+    namebase: hpe_ap_3par
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: HPE_3PAR
+    responsible_sme: brunodj@kyndryl.com
+    udc_platform: HPE 3PAR
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  hyperv:
+    namebase: microsoft_ap_hyperv
+    ostype: windows
+    satteam: Hypervisor
+    hwswdomain: Hypervisor
+    sat_devicetype: Microsoft_AP_HyperV
+    responsible_sme: marc.winsor@kyndryl.com
+    udc_platform: Microsoft HyperV
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: HYPERV
+    ecmscanscope:
+    iscategory:
+  ibm_a9000:
+    namebase: ibm_ap_a9000
+    vendor_cli: xcli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: A9000
+    responsible_sme: brunodj@kyndryl.com
+    udc_platform: IBM A9000 (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  ibm_flashsystem:
+    namebase: ibm_ap_flashsystem
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: IBM_FlashSystem
+    responsible_sme: sudharsan.vangal@kyndryl.com
+    udc_platform: IBM Storwize FlashSystem
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  ibm_netcoolimpact:
+    namebase: ibm_mw_netcoolimpact
+    home_dir: /home/ncosys
+    im_path: "{{ home_dir | default('/home/ncosys') }}/IBM/InstallationManager/eclipse/tools/imcl"
+    nchome: /opt/IBM/tivoli/netcool
+    ostype: linux
+    satteam: Services
+    hwswdomain: Services
+    sat_devicetype: IBM_MW_NetcoolImpact
+    responsible_sme: dany.cassiani@kyndryl.com
+    udc_platform: IBM NetcoolImpact
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: NETIMPACT
+    ecmscanscope:
+    iscategory:
+  ibm_netcoolobjectserver:
+    namebase: ibm_mw_netcoolobjectserver
+    home_dir: /home/ncosys
+    im_path: "{{ home_dir | default('/home/ncosys') }}/IBM/InstallationManager/eclipse/tools/imcl"
+    nchome: /opt/IBM/tivoli/netcool
+    ostype: linux
+    satteam: Services
+    hwswdomain: Services
+    sat_devicetype: IBM_MW_NetcoolObjectServer
+    responsible_sme: dany.cassiani@kyndryl.com
+    udc_platform: IBM NetcoolObjectServer
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  ibm_netcoolprobe:
+    namebase: ibm_mw_netcoolprobe
+    home_dir: /home/ncosys
+    im_path: "{{ home_dir | default('/home/ncosys') }}/IBM/InstallationManager/eclipse/tools/imcl"
+    nchome: /opt/IBM/tivoli/netcool
+    ostype: linux
+    satteam: Services
+    hwswdomain: Services
+    sat_devicetype: IBM_MW_NetcoolProbe
+    responsible_sme: dany.cassiani@kyndryl.com
+    udc_platform: IBM NetcoolProbe
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: NETOMNIBUS
+    ecmscanscope:
+    iscategory:
+  ibm_netcoolwebgui:
+    namebase: ibm_mw_netcoolwebgui
+    home_dir: /home/ncosys
+    im_path: "{{ home_dir | default('/home/ncosys') }}/IBM/InstallationManager/eclipse/tools/imcl"
+    nchome: /opt/IBM/tivoli/netcool
+    ostype: linux
+    satteam: Services
+    hwswdomain: Services
+    sat_devicetype: IBM_MW_NetcoolWebGUI
+    responsible_sme: dany.cassiani@kyndryl.com
+    udc_platform: IBM NetcoolWebGUI
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: NETWEBGUI
+    ecmscanscope:
+    iscategory:
+  ibm_spectrumprotect:
+    namebase: ibm_mw_spectrumprotect
+    vendor_cli: dsmadmc
+    dsm_dir: /home/{{ ansible_user | default('') }}
+    ostype: linux
+    satteam: Resiliency
+    hwswdomain: Resiliency
+    sat_devicetype: IBM_Spectrum_Protect
+    responsible_sme: ebenedwin@kyndryl.com
+    udc_platform: IBM Spectrum Protect (*)
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: SP
+    ecmscanscope:
+    iscategory:
+  ibm_svc:
+    namebase: ibm_ap_svc
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: SVC
+    responsible_sme: sudharsan.vangal@kyndryl.com
+    udc_platform: IBM Storwize SVC
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  ibm_v5000:
+    namebase: ibm_ap_v5000
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: V5000
+    responsible_sme: Lyle.Ramsey1@kyndryl.com
+    udc_platform: IBM Storwize v5000
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  ibm_v7000:
+    namebase: ibm_ap_v7000
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: V7000
+    responsible_sme: sudharsan.vangal@kyndryl.com
+    udc_platform: IBM Storwize v7000
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  ibm_wlp:
+    namebase: ibm_ap_wlp
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: ibm_ap_wlp
+    sat_parent: ibm_mw_wlp
+    responsible_sme: TBD
+    udc_platform: IBM WebSphere Liberty Profile (WLP)
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: WLP
+    ecmscanscope:
+    iscategory:
+  ibm_xiv:
+    namebase: ibm_ap_xiv
+    vendor_cli: xcli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: XIV
+    responsible_sme: brunodj@kyndryl.com
+    udc_platform: IBM XIV (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  iis:
+    namebase: microsoft_mw_iis
+    ostype: windows
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: microsoft_mw_iis
+    responsible_sme: mircea.gaitan@kyndryl.com
+    udc_platform: Microsoft Internet Information Services
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: IIS
+    ecmscanscope:
+    iscategory: subsystem
+  juniper_junos:
+    ansible_network_os: junipernetworks.junos.junos
+    netmiko_device_type: juniper_junos
+    namebase: juniper_ap_junos
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Juniper_Junos
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Juniper Junos
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  juniper_srx:
+    ansible_network_os: junipernetworks.junos.junos
+    netmiko_device_type: juniper_junos
+    namebase: juniper_ap_srx
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: Juniper_SRX
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Juniper SRX
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  mssql:
+    namebase: microsoft_db_mssql
+    ostype: windows
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Microsoft_DB_MSSQL
+    sat_parent: Microsoft_MW_MSSQL
+    responsible_sme: TBD
+    udc_platform: Microsoft SQL Server
+    udc_status: production
+    ecmscantype: I
+    ecmapplicationcategory: MSSQL
+    ecmscanscope:
+    iscategory:
+  netapp_cdot:
+    namebase: netapp_ap_cdot
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: NETAPP
+    responsible_sme: Megg.Bailey@kyndryl.com
+    udc_platform: NetApp cDOT
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  oracle_db:
+    namebase: oracle_db_oracle
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Oracle_DB_Oracle
+    sat_parent: Oracle_MW_Oracle
+    responsible_sme: Uttam.Samudrala@kyndryl.com
+    udc_platform: Oracle Database (RHEL)
+    udc_status: production
+    ecmscantype: I
+    ecmapplicationcategory: ORACLE
+    ecmscanscope:
+    iscategory:
+  oracle_linux:
+    namebase: oracle_os_linux
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: oracle_os_linux
+    responsible_sme: TBD
+    udc_platform: Oracle Linux
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  paloalto_panos:
+    netmiko_device_type: paloalto_panos
+    namebase: paloalto_ap_firewall
+    delegation_target: localhost
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: PaloAlto_Firewall
+    responsible_sme: petr.marak@kyndryl.com
+    udc_platform: Paloalto PanOS
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: PALOALTO
+    ecmscanscope:
+    iscategory: network
+  postgresql:
+    namebase: postgresql_db_postgresql
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: postgresql_db_postgresql
+    sat_parent: postgresql_mw_postgresql
+    responsible_sme: TBD
+    udc_platform: PostgreSQL
+    udc_status: production
+    ecmscantype: I
+    ecmapplicationcategory: POSTGRES
+    ecmscanscope:
+    iscategory:
+  purestorage_flasharray:
+    namebase: purestorage_ap_flasharray
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: Purestorage_FlashArray
+    responsible_sme: Somak.Banik@kyndryl.com
+    udc_platform: Pure Storage FlashArray
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  purestorage_flashblade:
+    namebase: purestorage_ap_flashblade
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: Purestorage_AP_FlashBlade
+    responsible_sme: Somak.Banik@kyndryl.com
+    udc_platform: Pure Storage FlashBlade
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: storage
+  rhel:
+    namebase: redhat_os_linux
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Redhat_OS
+    responsible_sme: TBD
+    udc_platform: Red Hat Enterprise Linux
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  rubrik_rsc:
+    namebase: rubrik_ap_rsc
+    ostype: linux
+    delegation_target: localhost
+    satteam: Resiliency
+    hwswdomain: Resiliency
+    sat_devicetype: rubrik_ap_rsc
+    responsible_sme: ebenedwin@kyndryl.com
+    udc_platform: Rubrik Security Cloud
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  sciencelogic_sl1:
+    namebase: sciencelogic_ap_sl1
+    delegation_target: localhost
+    satteam: Services
+    hwswdomain: Services
+    sat_devicetype: ScienceLogic_SL1
+    responsible_sme: dany.cassiani@kyndryl.com
+    udc_platform: ScienceLogic SL1
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: SCIENCELOGIC
+    ecmscanscope:
+    iscategory:
+  solaris:
+    namebase: oracle_os_solaris
+    ostype: solaris
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Oracle_OS_Solaris
+    responsible_sme: venkata.prasad.kondeti@kyndryl.com
+    udc_platform: Solaris
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  suse:
+    namebase: suse_os_linux
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: SUSE_OS_linux
+    responsible_sme: wolfgang.kremser1@kyndryl.com
+    udc_platform: SUSE Enterprise Linux Server
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  ubuntu:
+    namebase: canonical_os_ubuntu
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: canonical_os_ubuntu
+    responsible_sme: TBD
+    udc_platform: Ubuntu Linux
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  veritas_netbackup:
+    namebase: veritas_mw_netbackup
+    ostype: linux
+    satteam: Resiliency
+    hwswdomain: Resiliency
+    sat_devicetype: Veritas_Netbackup
+    responsible_sme: ebenedwin@kyndryl.com
+    udc_platform: Veritas NetBackup
+    udc_status: production
+    ecmscantype: A
+    ecmapplicationcategory: NETBACKUP
+    ecmscanscope:
+    iscategory:
+  vmware_vcenter:
+    namebase: vmware_ap_vcenter
+    ostype: linux
+    satteam: Hypervisor
+    hwswdomain: Hypervisor
+    sat_devicetype: ESX_vCenter
+    sat_children:
+      - esx_cluster
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware vCenter (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  esx_cluster:
+    namebase: vmware_ap_vsphere
+    ostype: linux
+    satteam: Hypervisor
+    hwswdomain: Hypervisor
+    sat_devicetype: ESX_Cluster
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware vSphere (*)
+    udc_status: notimplemented
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  vmware_alb:
+    namebase: vmware_ap_alb
+    ostype: linux
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: vmware_ap_alb
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware ALB (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  vmware_cpm:
+    namebase: vmware_ap_cpm
+    ostype: linux
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: vmware_ap_cpm
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware CPM (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory: network
+  vmware_nsx:
+    namebase: vmware_ap_nsx
+    ostype: linux
+    satteam: Network
+    hwswdomain: Network
+    sat_devicetype: vmware_ap_nsx
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware NSX (*)
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  windows:
+    namebase: microsoft_os_windows
+    ostype: windows
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: Microsoft_OS_Windows
+    responsible_sme: TBD
+    udc_platform: Microsoft Windows Server
+    udc_status: production
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  apache_tomcat:
+    namebase: apache_mw_tomcat
+    ostype: linux
+    catalina_home: /opt/tomcat
+    catalina_base: /opt/tomcat
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: apache_mw_tomcat
+    responsible_sme: TBD
+    udc_platform: Apache Tomcat
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: TOMCAT
+    ecmscanscope:
+    iscategory:
+  apache_webserver:
+    namebase: apache_mw_webserver
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: apache_mw_webserver
+    responsible_sme: TBD
+    udc_platform: Apache HTTPD
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: APACHE
+    ecmscanscope:
+    iscategory:
+  dell_powerflex:
+    namebase: dell_ap_powerflex
+    vendor_cli: scli
+    ostype: linux
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: Dell_AP_PowerFlex
+    responsible_sme: dmorelli@kyndryl.com
+    udc_platform: Dell EMC PowerFlex
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  hmc:
+    namebase: ibm_ap_hmc
+    delegation_target: localhost
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: ibm_ap_hmc
+    responsible_sme: TBD
+    udc_platform: IBM Hardvare Management Console (pSeries)
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  netweaver_aix:
+    namebase: sap_mw_netweaver
+    ostype: aix
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: sap_mw_netweaver
+    responsible_sme: TBD
+    udc_platform: SAP Netweaver
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: netweaver
+    ecmscanscope:
+    iscategory:
+  openssh_unix:
+    namebase: unix_mw_openssh
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: unix_mw_openssh
+    responsible_sme: TBD
+    udc_platform: SSH
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: ssh
+    ecmscanscope:
+    iscategory:
+  powerflex:
+    namebase: emc_ap_powerflex
+    delegation_target: localhost
+    satteam: Storage
+    hwswdomain: Storage
+    sat_devicetype: emc_ap_powerflex
+    responsible_sme: dmorelli@kyndryl.com
+    udc_platform: Dell EMC PowerFlex
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  sap_hana:
+    namebase: sap_db_hana
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: sap_db_hana
+    responsible_sme: TBD
+    udc_platform: SAP HANA DATABASE
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: hana
+    ecmscanscope:
+    iscategory:
+  sudo_unix:
+    namebase: unix_mw_sudo
+    ostype: unix
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: unix_mw_sudo
+    responsible_sme: TBD
+    udc_platform: SUDO
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: sudo
+    ecmscanscope:
+    iscategory:
+  vio:
+    namebase: ibm_ap_vio
+    delegation_target: localhost
+    ostype: unix
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: ibm_ap_vio
+    responsible_sme: TBD
+    udc_platform: IBM Virtual I/O Server
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  veeam:
+    namebase: veeam_mw_vbr
+    ostype: windows
+    satteam: Resiliency
+    hwswdomain: Resiliency
+    sat_devicetype: veeam_mw_vbr
+    responsible_sme: ebenedwin@kyndryl.com
+    udc_platform: Veeam Backup and Replication (VBR)
+    udc_status: pilotready
+    ecmscantype: A
+    ecmapplicationcategory: veeam
+    ecmscanscope:
+    iscategory:
+  veritas_clusterunix:
+    namebase: veritas_mw_clusterunix
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: veritas_mw_clusterunix
+    responsible_sme: TBD
+    udc_platform: Veritas Cluster (UNIX)
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  vmware_os_vsphere:
+    namebase: vmware_os_vsphere
+    ostype: linux
+    satteam: Compute
+    hwswdomain: Compute
+    sat_devicetype: vmware_os_vsphere
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware (*)
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:
+  vmware_os_vcenter:
+    namebase: vmware_os_vcenter
+    ostype: linux
+    satteam: Hypervisor
+    hwswdomain: Hypervisor
+    sat_devicetype: vmware_os_vcenter
+    responsible_sme: bjarne.rene.olesen@kyndryl.com
+    udc_platform: VMware (*)
+    udc_status: pilotready
+    ecmscantype: O
+    ecmapplicationcategory:
+    ecmscanscope:
+    iscategory:

@@ -1,0 +1,296 @@
+---
+- name: Unified Data Collector - setup phase
+  hosts: all
+  strategy: linear
+  gather_facts: false
+  vars_files:
+    endpoint_map.yml
+  tasks:
+    - name: Set job properties for returncode role (run_once)
+      vars:
+        asset_name: "UDC - Unified Data Collector"
+        documentation:
+          default: "https://pages.github.kyndryl.net/Continuous-Engineering/ansible_project_udc"
+      ansible.builtin.include_role:
+        name: returncode
+        tasks_from: set_job_properties
+
+    - name: Generate default RC
+      vars:
+        rc_variables: "{{ udc_return_codes['unexpected_failure'] }}"
+      ansible.builtin.include_role:
+        name: returncode
+
+    - name: Show SCM branch and Revision (run_once)
+      run_once: true
+      when: tower_collector | bool
+      ansible.builtin.debug:
+        msg: |
+          Project Branch: {{ awx_project_scm_branch | default('') }}
+          Project Revision: {{ awx_project_revision | default('') }}
+
+    - name: Error handling control block
+      vars:
+        error_msg: missing_mandatory_var
+      block:
+        - name: Set delegation_target on each host individually
+          ansible.builtin.set_fact:
+            delegation_target: "{{ endpoint_map[udc_endpoint]['delegation_target'] | default(inventory_hostname) }}"
+
+        - name: Set UDC internal variables (run_once)
+          run_once: true
+          vars:
+            jinja2_native: true
+          ansible.builtin.set_fact:
+            timestamp: "{{ '%Y-%m-%dT%H.%M.%S' | strftime }}"
+            timestamp_utc: "{{ '%Y-%m-%dT%H:%M:%S%z' | strftime }}"
+            udc_version: "{{ endpoint_map_udc_version }}"
+            # Common variables from endpoint_map.yml
+            ansible_network_os: "{{ endpoint_map[udc_endpoint]['ansible_network_os'] | default(omit) }}"
+            netmiko_device_type: "{{ endpoint_map[udc_endpoint]['netmiko_device_type'] | default(omit) }}"
+            namebase: "{{ endpoint_map[udc_endpoint]['namebase'] }}"
+            ostype: "{{ endpoint_map[udc_endpoint]['ostype'] | default(omit) }}"
+            satteam: "{{ satteam | default(endpoint_map[udc_endpoint]['satteam']) }}"
+            hwswdomain: "{{ hwswdomain | default(endpoint_map[udc_endpoint]['hwswdomain']) }}"
+            sat_devicetype: "{{ endpoint_map[udc_endpoint]['sat_devicetype'] }}"
+            sat_parent: "{{ endpoint_map[udc_endpoint]['sat_parent'] | default(omit) }}"
+            sat_children: "{{ endpoint_map[udc_endpoint]['sat_children'] | default(omit) }}"
+            ecmscantype: "{{ endpoint_map[udc_endpoint]['ecmscantype'] }}"
+            ecmapplicationcategory: "{{ endpoint_map[udc_endpoint]['ecmapplicationcategory'] }}"
+            ecmscanscope: "{{ endpoint_map[udc_endpoint]['ecmscanscope'] }}"
+            iscategory: "{{ endpoint_map[udc_endpoint]['iscategory'] }}"
+            # ISP only
+            dsm_dir: "{{ dsm_dir | default(endpoint_map[udc_endpoint]['dsm_dir'] | default('')) }}"
+            # vendorCLI devices only
+            vendor_cli: "{{ vendor_cli | default(endpoint_map[udc_endpoint]['vendor_cli'] | default('')) }}"
+            # Netcool only
+            home_dir: "{{ endpoint_map[udc_endpoint]['home_dir'] | default(omit) }}"
+            im_path: "{{ endpoint_map[udc_endpoint]['im_path'] | default(omit) }}"
+            # Tomcat only
+            udc_catalina_home: "{{ endpoint_map[udc_endpoint]['catalina_home'] | default(omit) }}"
+            udc_catalina_base: "{{ endpoint_map[udc_endpoint]['catalina_base'] | default(omit) }}"
+            # Advanced filtering
+            collect_bestpractice: "{{ udc_collect_bestpractice | default(true) }}"
+            # Error handling variables
+            exec_rc: 0
+            error_on_exec: false
+            fatal_on_exec: false
+            # Control Base Dir
+            control_base_dir: "{% if tower_collector | bool %}/tmp/udc/{% else %}{{ save_to | default('/tmp/udc') }}/{% endif %}"
+
+        # This has to be a separate task as it relies on ostype from the previous task
+        # and the next task relies this already being set
+        - name: Set bundle_path on each host individually
+          ansible.builtin.set_fact:
+            bundle_path: >-
+              {% if (delegation_target == "localhost") and (tower_collector | bool) %}/tmp/udc{%
+              elif delegation_target == "localhost" %}{{ save_to | default("/tmp/udc") }}{%
+              elif ostype is defined and ostype in ["win", "windows"] %}{{ endpoint_dir | default("C:\temp") }}{%
+              else %}{{ endpoint_dir | default("/tmp") }}{% endif %}
+
+        - name: Set rest of the internal variables on each host individually
+          ansible.builtin.set_fact:
+            # This allows for fine-grained check_list usage on a per device basis
+            check_list: "{{ check_list | default(['all']) }}"
+            # TechSpec control
+            results: "{{ udc_results | default('send') | lower }}"
+            ecm: "{{ udc_ecm | default('create') | lower }}"
+            escm: "{{ udc_escm | default('create') | lower }}"
+            aiops: "{{ udc_aiops | default('send') | lower }}"
+            hwsw: "{{ udc_hwsw | default('off') | lower }}"
+            uat: "{{ udc_uat | default('send') | lower }}"
+            invscanner: "{{ udc_invscanner | default('send') | lower }}"
+            # End of TechSpec control
+            log_file: "{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}.log"
+            out_file: "{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}.out"
+            bundle_file: "Bundle-{{ account_code }}_{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}-{{ timestamp }}.zip"
+            temp_dir: "{{ bundle_path }}/{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}_{{ timestamp }}"
+            control_temp_dir: "{{ control_base_dir }}{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}_{{ timestamp }}"
+
+        - name: Set event-socks-tunnel control variable (run_once)
+          run_once: true
+          delegate_to: localhost
+          delegate_facts: true
+          ansible.builtin.set_fact:
+            socks_setup_needed: "{% if (tower_job_id is defined) and ((ostype is defined and ostype in ['win', 'windows']) or \
+                                (udc_endpoint in ['zabbix', 'powerflex'])) %}true{% else %}false{% endif %}"
+
+        - name: Get AAP related info (AAP version, SCM URL, assigned credential IDs) (run_once)
+          run_once: true
+          register: udc_info
+          delegate_to: localhost
+          delegate_facts: true
+          when: tower_collector | bool
+          sat.udc.get_udc_info:
+            template_id: "{{ awx_job_template_id }}"
+      rescue:
+        - name: Include error handling
+          ansible.builtin.include_tasks: tasks/error_handling.yml
+
+    - name: Debug routine (run_once)
+      when: udc_debug | default(False) | bool
+      run_once: true
+      ansible.builtin.debug:
+        msg: >-
+          namebase: {{ namebase }} |
+          ostype: {{ ostype | default('') }} |
+          ansible_network_os: {{ ansible_network_os | default('') }} |
+          netmiko_device_type: {{ netmiko_device_type | default('') }} |
+          satteam: {{ satteam }} |
+          hwswdomain: {{ hwswdomain }} |
+          timestamp: {{ timestamp }} |
+          timestamp_utc: {{ timestamp_utc[:-2] }}:{{ timestamp_utc[-2:] }} |
+          dsm_dir: {{ dsm_dir }} |
+          vendor_cli: {{ vendor_cli }} |
+          results: {{ results }} |
+          ecm: {{ ecm }} |
+          aiops: {{ aiops }} |
+          hwsw: {{ hwsw }} |
+          uat: {{ uat }} |
+          invscanner: {{ invscanner }}
+
+    - name: Debug routine
+      when: udc_debug | default(False) | bool
+      ansible.builtin.debug:
+        msg: >-
+          log_file: {{ log_file }} |
+          out_file: {{ out_file }} |
+          bundle_file: {{ bundle_file }} |
+          temp_dir: {{ temp_dir }} |
+          control_temp_dir: {{ control_temp_dir }}
+
+    - name: Include prechecks (run_once)
+      ansible.builtin.include_tasks: tasks/prechecks.yml
+      args:
+        apply:
+          run_once: true
+
+    - name: Network and Netmiko ProxyCommand setup (run_once)
+      when:
+        - jh1_ip is defined
+        - udc_network_device_list is ansible.builtin.contains(namebase) or
+          udc_netmiko_device_list is ansible.builtin.contains(namebase)
+      ansible.builtin.include_tasks: tasks/network_proxycommand.yml
+      args:
+        apply:
+          run_once: true
+
+    - name: Error handling control block
+      delegate_to: localhost
+      run_once: true
+      vars:
+        error_msg: j2_not_found
+      block:
+        - name: Find the collector role (run_once)
+          register: collector_templates
+          failed_when: collector_templates['files'][0] is undefined
+          ansible.builtin.find:
+            paths: "{{ playbook_dir }}/roles"
+            patterns: "{{ namebase }}.*"
+            use_regex: true
+            recurse: true
+      rescue:
+        - name: Include error handling
+          ansible.builtin.include_tasks: tasks/error_handling.yml
+
+    - name: Set rest of the internal variables (run_once)
+      run_once: true
+      ansible.builtin.set_fact:
+        collector_name: "{{ (collector_templates['files'][0]['path'] | replace(playbook_dir + '/roles/', '')).split('/').0 }}"
+        collector_global_j2_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*global.*j2$') }}"
+        collector_global_ps1_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*global.*ps1$') }}"
+        collector_global_pol_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*global.*pol$') }}"
+        collector_local_j2_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*local.*j2$') }}"
+        collector_local_ps1_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*local.*ps1$') }}"
+        collector_local_pol_files: "{{ (collector_templates['files'] | map(attribute='path') | list) | select('match', '.*local.*pol$') }}"
+        # Advanced filtering
+        collect_security: "{{ False if ecm == 'off' and escm == 'off' else True }}"
+
+- name: Socks tunnel setup for Windows endpoints
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Call event-socks-tunnel role block
+      when:
+        - hostvars['localhost']['socks_setup_needed'] | bool
+        - jh_socks_port is defined
+      block:
+        - name: Include event-socks-tunnel role
+          ansible.builtin.include_role:
+            name: ansible-role-event-socks-tunnel
+
+        - name: Set fact for socks file
+          ansible.builtin.set_fact:
+            socks_file: '/tmp/mysocks-{{ account_code }}-{{ trans_num }}-{{ jh_socks_port }}'
+
+        - name: Prepare to fail all hosts if socks file creation failed
+          when: hostvars['localhost']['Socks_File_Created'] == 'FAILED'
+          ansible.builtin.set_fact:
+            udc_fail_all_hosts: true
+
+- name: Unified Data Collector - collect phase - ansible_network_os
+  hosts: all
+  strategy: linear
+  connection: ansible.netcommon.network_cli
+  gather_facts: false
+  tasks:
+    - name: Include collector_role
+      when: udc_network_device_list is ansible.builtin.contains(namebase)
+      ansible.builtin.include_role:
+        name: "{{ collector_name }}"
+
+- name: Unified Data Collector - collect phase
+  hosts: all
+  strategy: linear
+  gather_facts: false
+  tasks:
+    # Only triggers on CACF and Windows hosts if socks file wasn't created
+    - name: Fail UDC on all hosts
+      when: hostvars['localhost']['udc_fail_all_hosts'] | default(false) | bool
+      vars:
+        error_msg: socks_role_error
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+    - name: Include collector_role
+      when: udc_network_device_list is not ansible.builtin.contains(namebase)
+      ansible.builtin.include_role:
+        name: "{{ collector_name }}"
+
+    - name: Generate RC for playbook success
+      ansible.builtin.include_role:
+        name: returncode
+      vars:
+        rc_support: "success"
+        rc_success: true
+        rc_message: |
+          "UDC ran successfully. {{ udc_collection_result | default('') }}"
+      when: not fatal_on_exec | bool
+
+- name: Unified Data Collector - upload phase
+  hosts: all
+  strategy: linear
+  gather_facts: false
+  tasks:
+    - name: Include Push to SAT role (run_once)
+      when: sat_ip is defined and (lookup('env', 'CUSTOM_USER') | length > 0)
+      ansible.builtin.include_role:
+        name: ansible_role_push_to_sat
+
+    - name: Upload data to SFS (run_once)
+      when:
+        - tower_collector | bool
+        - sat_ip is not defined or (lookup('env', 'CUSTOM_USER') | length == 0)
+      vars:
+        error_msg: sfs_role_error
+      block:
+        - name: Upload data to SFS
+          vars:
+            sfs_upload_stage: "simple"
+            sfs_simple_output_dir: "{{ control_base_dir }}"
+          ansible.builtin.include_role:
+            name: ansible_role_sfs_upload
+
+        - name: Include error handling when sfs_upload_error is set
+          when: hostvars['localhost']['sfs_upload_error'] | default(False) | bool
+          ansible.builtin.include_tasks: tasks/error_handling.yml

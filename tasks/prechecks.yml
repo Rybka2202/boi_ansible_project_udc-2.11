@@ -1,0 +1,101 @@
+---
+- name: Error handling control block
+  vars:
+    error_msg: minimum_ansible_version
+  block:
+    - name: Ansible version validation
+      ansible.builtin.assert:
+        that:
+          - ansible_version['major'] >= 2
+          - ansible_version['minor'] >= 15
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Error handling control block
+  vars:
+    error_msg: invalid_check_list
+  block:
+    - name: Check_list validation
+      ansible.builtin.assert:
+        that:
+          - check_list == "all" or check_list | length > 0
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Error handling control block
+  vars:
+    error_msg: misconfigured_techspec_control
+  block:
+    - name: TechSpec control validation
+      ansible.builtin.assert:
+        that:
+          - results in ['off', 'create', 'send']
+          - ecm in ['off', 'create', 'send']
+          - escm in ['off', 'create', 'send']
+          - aiops in ['off', 'create', 'send']
+          - hwsw in ['off', 'create', 'send']
+          - uat in ['off', 'create', 'send']
+          - invscanner in ['off', 'create', 'send']
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Fail when ChipID is misconfigured and ECM / ESCM is set to send
+  when:
+    - ecm == "send" or escm == "send"
+    - udc_chipid == "MyChip"
+  ansible.builtin.include_tasks: tasks/error_handling.yml
+  args:
+    apply:
+      vars:
+        error_msg: misconfigured_techspec_control
+
+- name: Error handling control block
+  when: udc_collect_bestpractice is defined
+  vars:
+    error_msg: misconfigured_techspec_control
+  block:
+    - name: Check if valid boolean
+      ansible.builtin.assert:
+        that:
+          - udc_collect_bestpractice | lower in ['true', 'false', 'yes', 'no', '1', '0']
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Error handling control block
+  vars:
+    error_msg: misconfigured_optional_var
+  when: use_bps_rules_server is defined
+  block:
+    - name: Check if valid boolean
+      ansible.builtin.assert:
+        that:
+          - use_bps_rules_server | lower in ['true', 'false', 'yes', 'no', '1', '0']
+        fail_msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"
+  rescue:
+    - name: Include rescue
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Windows CACF prerequisite block
+  when:
+    - hostvars['localhost']['socks_setup_needed'] | bool
+    - (ansible_limit is not defined) or (ansible_limit is defined and 'localhost' not in ansible_limit)
+  block:
+    - name: Generate RC
+      ansible.builtin.include_role:
+        name: returncode
+        apply:
+          delegate_facts: false
+      vars:
+        rc_variables: "{{ udc_return_codes['win_localhost_missing'] }}"
+
+    - name: Fail UDC run for the host
+      ansible.builtin.fail:
+        msg: "{{ udc_return_codes['win_localhost_missing']['rc_message'] }}"

@@ -1,0 +1,44 @@
+---
+- name: Set udc_os_version
+  ansible.builtin.set_fact:
+    udc_os_version: >-
+      {% if namebase in "['canonical_os_ubuntu', 'ibm_os_aix']"
+      %}{{ ansible_facts['distribution_version'] | replace('.', '') }}{%
+      elif '2008' in ansible_facts["distribution"] %}2008{%
+      elif '2012' in ansible_facts["distribution"] %}2012{%
+      elif '2016' in ansible_facts["distribution"] %}2016{%
+      elif '2019' in ansible_facts["distribution"] %}2019{%
+      elif '2022' in ansible_facts["distribution"] %}2022{%
+      else %}{{ ansible_facts['distribution_major_version'] }}{% endif %}
+  when:
+    - namebase not in udc_rules_server_skip_osversion
+
+- name: Local policies from forks
+  when: not (use_bps_rules_server | default(False) | bool)
+  block:
+    - name: Define acceptable policy patterns
+      ansible.builtin.set_fact:
+        policy_patterns:
+          - '{{ namebase }}.local.{{ account_code }}.{{ udc_local_pol_filter | default("*") }}.pol'
+          - '{{ inventory_hostname }}.{{ namebase }}.local.{{ udc_local_pol_filter | default("*") }}.pol'
+
+    - name: Add the udc_os_version dependent policy matcher when running an OS collector
+      ansible.builtin.set_fact:
+        policy_patterns: >
+          {{ policy_patterns + [namebase + '.local.security.' + udc_os_version + '.'
+          + udc_local_pol_filter | default("*") + '.pol'] }}
+      when: namebase.split("_")[1] == "os"
+
+    - name: Add the udc_os_version independent security policy matcher when running a non-OS collector
+      ansible.builtin.set_fact:
+        policy_patterns: >
+          {{ policy_patterns + [namebase + '.local.security.' + udc_local_pol_filter | default("*") + '.pol'] }}
+      when: namebase.split("_")[1] != "os"
+
+    - name: Find the policy files
+      delegate_to: localhost
+      ansible.builtin.find:
+        paths: '{{ role_path }}/files'
+        patterns: "{{ policy_patterns }}"
+        use_regex: true
+      register: policy_files

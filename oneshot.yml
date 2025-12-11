@@ -1,0 +1,130 @@
+---
+- name: Unified Data Collector - setup phase
+  hosts: all
+  strategy: linear
+  gather_facts: false
+  vars_files:
+    endpoint_map.yml
+  tasks:
+    - name: Initialize internal variables
+      ansible.builtin.set_fact:
+        # Common variables from endpoint_map.yml
+        ansible_network_os: "{{ endpoint_map[udc_endpoint]['ansible_network_os'] | default(omit) }}"
+        netmiko_device_type: "{{ endpoint_map[udc_endpoint]['netmiko_device_type'] | default(omit) }}"
+        namebase: "{{ endpoint_map[udc_endpoint]['namebase'] }}"
+        ostype: "{{ endpoint_map[udc_endpoint]['ostype'] | default(omit) }}"
+        delegation_target: "{{ endpoint_map[udc_endpoint]['delegation_target'] | default(inventory_hostname) }}"
+        satteam: "{{ satteam | default(endpoint_map[udc_endpoint]['satteam']) }}"
+        hwswdomain: "{{ hwswdomain | default(endpoint_map[udc_endpoint]['hwswdomain']) }}"
+        sat_parent: "{{ endpoint_map[udc_endpoint]['sat_parent'] | default(omit) }}"
+        timestamp: "{{ '%Y-%m-%dT%H.%M.%S' | strftime }}"
+        timestamp_utc: "{{ '%Y-%m-%dT%H:%M:%S%z' | strftime }}"
+        org: "{{ gsma_code | default('NA') }}"
+        # ISP only
+        dsm_dir: "{{ dsm_dir | default(endpoint_map[udc_endpoint]['dsm_dir'] | default('')) }}"
+        # vendorCLI devices only
+        vendor_cli: "{{ vendor_cli | default(endpoint_map[udc_endpoint]['vendor_cli'] | default('')) }}"
+        # Netcool only
+        home_dir: "{{ endpoint_map[udc_endpoint]['home_dir'] | default(omit) }}"
+        im_path: "{{ endpoint_map[udc_endpoint]['im_path'] | default(omit) }}"
+      vars:
+        jinja2_native: true
+
+    - name: Debug routine
+      ansible.builtin.debug:
+        msg: >-
+          namebase: {{ namebase }} |
+          ostype: {{ ostype | default('') }} |
+          ansible_network_os: {{ ansible_network_os | default('') }} |
+          netmiko_device_type: {{ netmiko_device_type | default('') }} |
+          delegation_target: {{ delegation_target }} |
+          timestamp: {{ timestamp }} |
+          timestamp_utc: {{ timestamp_utc[:-2] }}:{{ timestamp_utc[-2:] }} |
+          org: {{ account_code }} |
+          dsm_dir: {{ dsm_dir }}
+      when: udc_debug | default(False) | bool
+
+    - name: Network device / Netmiko block
+      when:
+        - jh1_ip is defined
+        - (ansible_network_os is defined) or (netmiko_device_type is defined)
+      block:
+        - name: Create a temporary ssh_config file
+          ansible.builtin.template:
+            mode: "0600"
+            src: templates/ssh_config.j2
+            dest: /tmp/ssh_config
+          delegate_to: localhost
+          run_once: true # noqa: run-once[task]
+
+        - name: Set ssh_common_args for {{ udc_endpoint }}
+          ansible.builtin.set_fact:
+            ansible_ssh_common_args: >-
+              -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o
+              ProxyCommand="ssh -F /tmp/ssh_config -W %h:%p {% if jh5_ip is defined %}{{ jh5_ip }}{% elif jh4_ip is defined %}{{ jh4_ip }}
+              {% elif jh3_ip is defined %}{{ jh3_ip }}{% elif jh2_ip is defined %}{{ jh2_ip }}{% else %}{{ jh1_ip }}{% endif %}"
+
+        - name: Debug routine
+          ansible.builtin.debug:
+            msg: >-
+              ansible_ssh_common_args: {{ ansible_ssh_common_args }}
+          when: udc_debug | default(False) | bool
+
+    - name: Tasks delegated to localhost block
+      delegate_to: localhost
+      delegate_facts: true
+      block:
+        - name: Set facts on localhost for event-socks-tunnel roles
+          ansible.builtin.set_fact:
+            socks_setup_needed: "{% if (tower_job_id is defined) and (ostype is defined and ostype in ['win', 'windows']) %}True{% else %}False{% endif %}"
+            acc_id: "{{ gsma_code | default('NA') }}"
+            transaction_id: "{{ tower_job_id | default(omit) }}"
+
+        - name: Find the collector role
+          ansible.builtin.find:
+            paths: "{{ playbook_dir }}/roles"
+            patterns: "{{ namebase }}.global.*"
+            recurse: true
+          register: find_collector
+          failed_when: find_collector['files'][0] is undefined
+
+    - name: Set collector_name and tower_collector variables
+      ansible.builtin.set_fact:
+        collector_name: "{{ (find_collector['files'][0]['path'] | regex_replace(playbook_dir + '/roles/', '')).split('/').0 }}"
+
+- name: Socks tunnel setup for Windows endpoints
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Call event-socks-tunnel role block
+      when:
+        - hostvars['localhost']['socks_setup_needed'] | bool
+        - jh_socks_port is defined
+      block:
+        - name: Include event-socks-tunnel role
+          ansible.builtin.include_role:
+            name: ansible-role-event-socks-tunnel
+
+- name: Unified Data Collector - collect phase - ansible_network_os
+  hosts: all
+  strategy: linear
+  connection: ansible.netcommon.network_cli
+  gather_facts: false
+  tasks:
+    - name: Include collector_role
+      ansible.builtin.include_role:
+        name: "{{ collector_name }}"
+        tasks_from: "{{ 'oneshot.yml' if udc_remediate is undefined else 'remediate.yml' }}"
+      when: ansible_network_os is defined
+
+- name: Unified Data Collector - collect phase
+  hosts: all
+  strategy: linear
+  gather_facts: false
+  tasks:
+    - name: Include collector_role
+      ansible.builtin.include_role:
+        name: "{{ collector_name }}"
+        tasks_from: "{{ 'oneshot.yml' if udc_remediate is undefined else 'remediate.yml' }}"
+      when: ansible_network_os is not defined

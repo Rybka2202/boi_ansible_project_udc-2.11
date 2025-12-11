@@ -1,0 +1,10 @@
+---
+- name: Generate RC
+  ansible.builtin.include_role:
+    name: returncode
+  vars:
+    rc_variables: "{{ udc_return_codes[error_msg] }}"
+
+- name: Fail UDC run for the host
+  ansible.builtin.fail:
+    msg: "{{ udc_return_codes[error_msg]['rc_message'] }}"

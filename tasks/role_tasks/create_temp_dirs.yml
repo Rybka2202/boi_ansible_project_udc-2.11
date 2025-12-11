@@ -1,0 +1,51 @@
+---
+- name: Run if delegation target is not localhost
+  when: delegation_target != 'localhost'
+  block:
+    - name: Error handling control block
+      when: ostype is defined and ostype not in ['win', 'windows']
+      block:
+        - name: Creating {{ temp_dir }} on the target for UNIX hosts
+          ansible.builtin.file:
+            path: "{{ temp_dir }}"
+            state: directory
+            mode: "0700"
+          register: conn_status
+          ignore_errors: true
+          ignore_unreachable: true
+      always:
+        - name: Include error handling
+          when:
+            - conn_status.unreachable is defined
+            - conn_status.unreachable | bool
+          ansible.builtin.include_tasks: tasks/error_handling.yml
+
+        - name: Include error handling
+          when:
+            - not conn_status.changed | bool
+            - conn_status.msg is defined and 'ansible-core requires a minimum of Python2 version 2.7 or Python3 version 3.5' in conn_status.msg
+          ansible.builtin.include_tasks: tasks/error_handling.yml
+
+    - name: Error handling control block
+      when: ostype is defined and ostype in ['win', 'windows']
+      block:
+        - name: Creating directory on target on Windows hosts
+          ansible.windows.win_file:
+            path: "{{ temp_dir }}"
+            state: directory
+          register: conn_status
+          ignore_errors: true
+          ignore_unreachable: true
+      always:
+        - name: Include error handling
+          when:
+            - conn_status.unreachable is defined
+            - conn_status.unreachable | bool
+          ansible.builtin.include_tasks: tasks/error_handling.yml
+
+- name: Creating {{ control_temp_dir }} on EE
+  ansible.builtin.file:
+    path: "{{ control_temp_dir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost

@@ -1,0 +1,20 @@
+---
+- name: Error handling control block
+  block:
+    - name: Collect required facts
+      register: conn_status
+      ansible.builtin.setup:
+        gather_subset: "{{ applied_gather_subset }}"
+        gather_timeout: 120
+  always:
+    - name: Include error handling
+      when:
+        - conn_status.unreachable is defined
+        - conn_status.unreachable | bool
+      ansible.builtin.include_tasks: tasks/error_handling.yml
+
+    - name: Include error handling
+      when:
+        - not conn_status.changed | bool
+        - conn_status.msg is defined and 'ansible-core requires a minimum of Python2 version 2.7 or Python3 version 3.5' in conn_status.msg
+      ansible.builtin.include_tasks: tasks/error_handling.yml

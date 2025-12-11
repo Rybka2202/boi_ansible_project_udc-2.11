@@ -1,0 +1,26 @@
+---
+- name: Generate from global j2 files
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ control_temp_dir }}/{{ item[:-3] | basename }}.yml"
+    force: true
+    mode: "0600"
+  loop: "{{ collector_global_j2_files }}"
+
+- name: Create the empty settings list
+  ansible.builtin.set_fact:
+    settings: []
+
+- name: Fill settings with values from global settings files
+  ansible.builtin.set_fact:
+    settings: "{{ settings | union(lookup('file', control_temp_dir + '/' + item[:-3].split('/')[-1] + '.yml') | from_yaml | default([], true)) }}"
+  loop: "{{ collector_global_j2_files }}"
+
+- name: Remove generated files
+  when:
+    - not tower_collector | bool
+    - not udc_debug | default(false) | bool
+  ansible.builtin.file:
+    path: "{{ control_temp_dir }}/{{ item[:-3] | basename }}.yml"
+    state: absent
+  loop: "{{ collector_global_j2_files }}"

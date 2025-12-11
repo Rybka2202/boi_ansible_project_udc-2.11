@@ -1,0 +1,20 @@
+---
+- name: Create a temporary ssh_config file
+  delegate_to: localhost
+  ansible.builtin.template:
+    mode: "0600"
+    src: templates/ssh_config.j2
+    dest: /tmp/ssh_config
+
+- name: Set ssh_common_args for {{ udc_endpoint }}
+  ansible.builtin.set_fact:
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o
+      ProxyCommand="ssh -F /tmp/ssh_config -W %h:%p {% if jh5_ip is defined %}{{ jh5_ip }}{% elif jh4_ip is defined %}{{ jh4_ip }}
+      {% elif jh3_ip is defined %}{{ jh3_ip }}{% elif jh2_ip is defined %}{{ jh2_ip }}{% else %}{{ jh1_ip }}{% endif %}"
+
+- name: Debug routine
+  when: udc_debug | default(False) | bool
+  ansible.builtin.debug:
+    msg: >-
+      ansible_ssh_common_args: {{ ansible_ssh_common_args }}

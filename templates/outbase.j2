@@ -1,0 +1,78 @@
+#jinja2:lstrip_blocks: True,trim_blocks: True
+{# ------------------------------------------------------------------------------------- #}
+{% if not only_cacf | default(False) | bool %}
+#### <devicelist_cfg>
+"Devicename";"{{ 'Deviceaddress' if namebase in udc_parent_child_list else 'IPaddress' }}";"Devicetype"
+  {% if namebase not in udc_parent_child_list %}
+"{{ satdevicename | default(inventory_hostname) }}_{{ namebase }}";"{{ udc_device['host_ip']| default(ansible_host) }}{% if udc_device['host_port'] is defined %}:{{ udc_device['host_port'] }}{% endif %}";"{{ parent_devicetype | default(sat_devicetype) }}"
+  {% else %}
+    {% for device in udc_devicelist_cfg | list %}
+{{ device }}
+    {% endfor %}
+  {% endif %}
+#### </devicelist_cfg>
+
+  {# ------------------------------------------------------------------------------------- #}
+  {% if not skip_policy_cfg | default(False) | bool %}
+#### <policy_cfg>
+    {# This only runs is we are using the original forks method of getting local policies #}
+    {# ------------------------------------------------------------------------------------- #}
+    {% if policy_files.files is defined %}
+      {# ------------------------------------------------------------------------------------- #}
+      {% for policy in policy_files.files | map(attribute='path') | list %}
+{{ policy | default('') | basename }}
+      {% endfor %}
+      {# ------------------------------------------------------------------------------------- #}
+    {% endif %}
+    {# ------------------------------------------------------------------------------------- #}
+    {# This only runs is using BPS rules server #}
+    {# ------------------------------------------------------------------------------------- #}
+    {% if policies.policy_list is defined %}
+      {# ------------------------------------------------------------------------------------- #}
+      {% for policy in policies.policy_list.split(";") %}
+{{ policy | default('') | basename }}
+      {% endfor %}
+      {# ------------------------------------------------------------------------------------- #}
+    {% endif %}
+    {# ------------------------------------------------------------------------------------- #}
+#### </policy_cfg>
+
+  {% endif %}
+  {# ------------------------------------------------------------------------------------- #}
+#### <tpchc_cfg>
+"tpchc_version";"build_version";"blue_id";"chip_id";"account";"location";"tpchc_description";"tpchc_identifier";"satteam";"hwswdomain"
+"{{ udc_tpchc_version }}";"{{ udc_build_version }}";"{{ udc_bac_id }}";"{{ udc_chipid }}";"{{ udc_account_name }}";"{{ udc_country }}";"{{ parent_devicetype | default(sat_devicetype) }}";"None";"{{ satteam }}";"{{ hwswdomain }}"
+#### </tpchc_cfg>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------- #}
+{# ------------------------------------------------------------------------------------- #}
+{% if not skip_rules_server | default(False) | bool %}
+#### <rules_server>
+"namebase";"inventoryname";"osversion"
+"{{ parent_devicetype | default(namebase) }}";"{{ satdevicename | default(inventory_hostname) }}";"{{ udc_os_version | default('') }}"
+#### </rules_server>
+
+{% endif %}
+{# ------------------------------------------------------------------------------------- #}
+#### <cacf_cfg>
+"collected_on";"timestamp";"gsma_code";"tower_version";"os_distribution";"os_version";"ansible_version";"python_version";"powershell_version";"udc_version";"healthcheck_timestamp_utc"
+"{{ ansible_host | default(inventory_hostname) }}";"{{ timestamp_utc[:-5] | regex_replace('T', ' ') }}";"{{ account_code }}";"{{ udc_info['tower_version'] | default('') }}";"{{ ansible_facts['distribution'] | default('') }}";"{{ ansible_facts['distribution_version'] | default('') }}";"{{ ansible_version['full'] }}";"{{ ansible_facts['python_version'] | default('0') }}";"{{ ps_version.stdout | default('0') | regex_replace('\r\n', '') | regex_replace('\n', '') }}";"{{ udc_version }}";"{{ timestamp_utc[:-2] }}:{{ timestamp_utc[-2:] }}"
+#### </cacf_cfg>
+
+#### <extra_variables>
+"techspec_version";"results";"ecm";"aiops";"hwsw";"uat";"invscanner";"bps_rules_server";"escm";"collect_bestpractice";"collect_security"
+"{{ techspec_version | default('') }}";"{{ results }}";"{{ ecm }}";"{{ aiops }}";"{{ hwsw }}";"{{ uat }}";"{{ invscanner }}";"{{ use_bps_rules_server | default(false) | bool | lower }}";"{{ escm }}";"{{ collect_bestpractice }}";"{{ collect_security }}"
+#### </extra_variables>
+
+#### <endpoint_map>
+"ansible_network_os";"netmiko_device_type";"namebase";"ostype";"delegation_target";"satteam";"hwswdomain";"sat_devicetype";"ecmscantype";"ecmapplicationcategory";"vendor_cli";"sat_parent";"sat_children";"iscategory";"ecmscanscope"
+"{{ ansible_network_os | default('') }}";"{{ netmiko_device_type | default('') }}";"{{ namebase }}";"{{ ostype | default('') }}";"{{ delegation_target }}";"{{ satteam }}";"{{ hwswdomain }}";"{{ sat_devicetype }}";"{{ ecmscantype }}";"{{ ecmapplicationcategory }}";"{{ vendor_cli }}";"{{ sat_parent | default('') }}";"{{ sat_children | default('') }}";"{{ iscategory | default('') }}";"{{ ecmscanscope | default('') }}"
+#### </endpoint_map>
+
+#### <udc_info>
+"project_scm_url";"project_branch";"project_revision";"credentials"
+"{{ udc_info['scm_url'] | default('') }}";"{{ awx_project_scm_branch | default('') }}";"{{ awx_project_revision | default('') }}";"{{ udc_info['credentials'] | default('') }}"
+#### </udc_info>
+
+{# Forcing a new line here #}
