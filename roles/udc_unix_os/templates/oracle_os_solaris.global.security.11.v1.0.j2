@@ -1,0 +1,1109 @@
+#jinja2:lstrip_blocks: True,trim_blocks: True
+---
+{% if collect_security | bool %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {#                                                                  TECH SPEC FOR SOLARIS 11                                                                  #}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ansible_facts.distribution == "Solaris" and
+    ansible_facts.distribution_major_version | int == 11 and
+    techspec_version['oracle_os_solaris.11'] | default(latest_techspec_version['oracle_os_solaris.11']) == 'v1.0' %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('svcs_output_N' in check_list or 'all' in check_list) and '-svcs_output_N' not in check_list %}
+- header: '#### <svcs_output_N>'
+  command: |
+    # SW_C_1_1_1_Disable_Local #svcs -a | /usr/bin/grep -i gdm| /usr/bin/awk '{print $1}'
+    # SW_C_1_1_3_Disable_RPC #svcs -Ho state svc:/network/rpc/keyserv
+    # SW_C_1_1_4_Disable_GSS #svcs -Ho state svc:/network/rpc/gss
+    # SW_C_1_1_5_Disable_Apache #svcs -Ho state svc:/network/http:apache24
+    # SW_C_1_1_6_Disable_Kerberos #svcs -Ho state svc:/network/security/ktkt_warn
+    # SW_C_1_1_7_Disable_NIS_Client #svcs -Ho state svc:/network/nis/client #svcs -Ho state svc:/network/nis/domain
+    # SW_C_1_1_8_Disable_NIS_Server #svcs -Ho state svc:/network/nis/server
+    # SW_C_1_1_9_Disable_Removable_Volume_Manager #svcs -Ho state svc:/network/rpc/smserver #svcs -Ho state svc:/system/filesystem/rmvolmgr
+    # SW_C_1_1_10_Disable_automount #svcs -Ho state svc:/system/filesystem/autofs
+    # SW_C_1_1_11_Disable_Telnet  #svcs -Ho state svc:/network/telnet
+    # SW_C_4_1_1_Disable_login # svcs -Ho state svc:/system/console-login:terma # svcs -Ho state svc:/system/console-login:termb
+    /usr/bin/svcs -a
+  become: true
+  footer: >
+    #### </svcs_output_N>
+    {% endif %}
+    {# ----------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_3_N_Enable_Strong_TCP' in check_list or 'all' in check_list) and '-SW_C_2_1_3_N_Enable_Strong_TCP' not in check_list %}
+- header: '#### <SW_C_2_1_3_N_Enable_Strong_TCP>'
+  command: |
+    echo '"'"TCP_STRONG_ISS"'"'";"'"'"strong_iss_current_tcp"'"'
+    V1=`/usr/bin/grep "^TCP_STRONG_ISS=" /etc/default/inetinit` >/dev/null 2>&1
+    V2=`ipadm show-prop -p _strong_iss -co current tcp|| true`  >/dev/null 2>&1
+    echo '"'$V1'"'";"'"'$V2'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_3_N_Enable_Strong_TCP>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('sshd_config_N' in check_list or 'all' in check_list) and '-sshd_config_N' not in check_list %}
+- header: '#### <sshd_config_N>'
+  command:
+    # SW_C_4_1_6_Disable_Rhost-based       # grep "^IgnoreRhosts" /etc/ssh/sshd_config||true
+    # SW_C_4_1_8_Disable_root              # grep "^PermitRootLogin" /etc/ssh/sshd_config| awk '{print $NF}'
+    # SW_C_4_1_10_Blocking_Authentication  # grep "^PermitEmptyPasswords" /etc/ssh/sshd_config| awk '{print $NF}'
+    # SW_C_4_1_11_Limit_Consecutive        # grep "^MaxAuthTries" /etc/ssh/sshd_config| awk '{print $NF}'
+    # SW_C_4_1_12_Disable_X11              # grep "^X11Forwarding" /etc/ssh/sshd_config| awk '{print $NF}'
+    # SW_C_6_1_3_ssh_banner		             # grep "^Banner" /etc/ssh/sshd_config
+    file="/etc/ssh/sshd_config"; test -e "$file" && cat $file |egrep -v "^$|#" || echo $file does not exist
+  become: true
+  footer: >
+    #### </sshd_config_N>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_5_1_2_N_set_passwdcreation' in check_list or 'all' in check_list) and '-SW_C_5_1_2_N_set_passwdcreation' not in check_list %}
+- header: '#### <SW_C_5_1_2_N_set_passwdcreation>'
+  command: |
+    #echo "Passlength: `grep "PASSLENGTH=" /etc/default/passwd`"
+    #echo "NAMECHECK: `grep "NAMECHECK=" /etc/default/passwd`"
+    #echo "History: `grep "HISTORY=" /etc/default/passwd`"
+    #echo "Mindiff: `grep "MINDIFF=" /etc/default/passwd`"
+    #echo "Minupper: `grep "MINUPPER=" /etc/default/passwd`"
+    #echo "Minlower: `grep "MINLOWER=" /etc/default/passwd`"
+    #echo "MinSpecial: `grep "MINSPECIAL=" /etc/default/passwd`"
+    #echo "Mindigit: `grep "MINDIGIT=" /etc/default/passwd`"
+    #echo "Maxrepeats: `grep "MAXREPEATS=" /etc/default/passwd`"
+    #echo "Whitespace: `grep "WHITESPACE=" /etc/default/passwd`"
+    #echo "Dictonary:	`grep "DICTIONDBDIR=/var/passwd" /etc/default/passwd`"
+    #echo "Dictonarylist: `grep "DICTIONLIST=/usr/share/lib/dict/words" /etc/default/passwd`"
+    file="/etc/default/passwd"; test -e "$file" && cat $file || echo $file does not exist
+  become: true
+  footer: >
+    #### </SW_C_5_1_2_N_set_passwdcreation>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_1_1_2_Configure_sendmail' in check_list or 'all' in check_list) and '-SW_C_1_1_2_Configure_sendmail' not in check_list %}
+- header: '#### <SW_C_1_1_2_Configure_sendmail>'
+  command: |
+   svccfg -v -s svc:/network/smtp:sendmail listprop config/local_only| awk '{print $NF}'
+  become: true
+  footer: >
+    #### </SW_C_1_1_2_Configure_sendmail>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_1_Disable_Response_to_Broadcast_ICMPv4' in check_list or 'all' in check_list) and '-SW_C_2_1_1_Disable_Response_to_Broadcast_ICMPv4' not in check_list %}
+- header: '#### <SW_C_2_1_1_Disable_Response_to_Broadcast_ICMPv4>'
+  command: |
+   CurrentIP=`ipadm show-prop -p _respond_to_echo_broadcast -co current ip`
+   PersistentIP =`ipadm show-prop -p _respond_to_echo_broadcast -co persistent ip`
+   echo '"'$CurrentIP'"'";"'"'$PersistentIP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_1_Disable_Response_to_Broadcast_ICMPv4>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_2_Disable_Response_to_ICMP_Broadcast' in check_list or 'all' in check_list) and '-SW_C_2_1_2_Disable_Response_to_ICMP_Broadcast' not in check_list %}
+- header: '#### <SW_C_2_1_2_Disable_Response_to_ICMP_Broadcast>'
+  command: |
+    CurrentIP=`ipadm show-prop -p _respond_to_address_mask_broadcast -co current ip`
+    PersistentIP=`ipadm show-prop -p _respond_to_address_mask_broadcast -co persistent ip`
+    echo '"'$CurrentIP'"'";"'"'$PersistentIP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_2_Disable_Response_to_ICMP_Broadcast>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_4_Disable_Response_to_ICMP_Broadcast_Timestamp' in check_list or 'all' in check_list) and '-SW_C_2_1_4_Disable_Response_to_ICMP_Broadcast_Timestamp' not in check_list %}
+- header: '#### <SW_C_2_1_4_Disable_Response_to_ICMP_Broadcast_Timestamp>'
+  command: |
+    CurrentIP=`ipadm show-prop -p _respond_to_timestamp_broadcast -co current ip`
+    PersistentIP=`ipadm show-prop -p _respond_to_timestamp_broadcast -co persistent ip`
+    echo '"'$CurrentIP'"'";"'"'$PersistentIP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_4_Disable_Response_to_ICMP_Broadcast_Timestamp>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_5_Disable_Source_Packet' in check_list or 'all' in check_list) and '-SW_C_2_1_5_Disable_Source_Packet' not in check_list %}
+- header: '#### <SW_C_2_1_5_Disable_Source_Packet>'
+  command: |
+    CurrentIP4=`ipadm show-prop -p _forward_src_routed -co current ipv4`
+    PersistentIP4=`ipadm show-prop -p _forward_src_routed -co persistent ipv4`
+    CurrentIP6=`ipadm show-prop -p _forward_src_routed -co current ipv6`
+    PersistentIP6=`ipadm show-prop -p _forward_src_routed -co persistent ipv6`
+    echo '"'$CurrentIP4'"'";"'"'$PersistentIP4'"'";"'"'$CurrentIP6'"'";"'"'$PersistentIP6'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_5_Disable_Source_Packet>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_6_Disable_Directed_Broadcast' in check_list or 'all' in check_list) and '-SW_C_2_1_6_Disable_Directed_Broadcast' not in check_list %}
+- header: '#### <SW_C_2_1_6_Disable_Directed_Broadcast>'
+  command: |
+    CurrentIP=`ipadm show-prop -p _forward_directed_broadcasts -co current ip`
+    PersistentIP=`ipadm show-prop -p _forward_directed_broadcasts -co persistent ip`
+    echo '"'$CurrentIP'"'";"'"'$PersistentIP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_6_Disable_Directed_Broadcast>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_7_Enable_Stack_Protection' in check_list or 'all' in check_list) and '-SW_C_2_1_7_Enable_Stack_Protection' not in check_list %}
+- header: '#### <SW_C_2_1_7_Enable_Stack_Protection>'
+  command: |
+    sxadm status -po extension,status,configuration nxheap,nxstack
+  become: true
+  footer: >
+    #### </SW_C_2_1_7_Enable_Stack_Protection>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_8_Restrict_Core_Dumps' in check_list or 'all' in check_list) and '-SW_C_2_1_8_Restrict_Core_Dumps' not in check_list %}
+- header: '#### <SW_C_2_1_8_Restrict_Core_Dumps>'
+  command: |
+    coreadm
+    ls -ld /var/share/cores
+  become: true
+  footer: >
+    #### </SW_C_2_1_8_Restrict_Core_Dumps>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_9_Disable_Response_to_ICMP_Timestamp' in check_list or 'all' in check_list) and '-SW_C_2_1_9_Disable_Response_to_ICMP_Timestamp' not in check_list %}
+- header: '#### <SW_C_2_1_9_Disable_Response_to_ICMP_Timestamp>'
+  command: |
+    CurrentIP=`ipadm show-prop -p _respond_to_timestamp -co current ip`
+    PersistentIP=`ipadm show-prop -p _respond_to_timestamp -co persistent ip`
+    echo '"'$CurrentIP'"'";"'"'$PersistentIP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_9_Disable_Response_to_ICMP_Timestamp>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_10_Disable_Response_to_Multicast_Echo' in check_list or 'all' in check_list) and '-SW_C_2_1_10_Disable_Response_to_Multicast_Echo' not in check_list %}
+- header: '#### <SW_C_2_1_10_Disable_Response_to_Multicast_Echo>'
+  command: |
+    CurrentIP4=`ipadm show-prop -p _respond_to_echo_multicast -co current ipv4`
+    PersistentIP4=`ipadm show-prop -p _respond_to_echo_multicast -co persistent ipv4`
+    CurrentIP6=`ipadm show-prop -p _respond_to_echo_multicast -co current ipv6`
+    PersistentIP6=`ipadm show-prop -p _respond_to_echo_multicast -co persistent ipv6`
+    echo '"'$CurrentIP4'"'";"'"'$PersistentIP4'"'";"'"'$CurrentIP6'"'";"'"'$PersistentIP6'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_10_Disable_Response_to_Multicast_Echo>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_11_Ignore_ICMP_Redirect' in check_list or 'all' in check_list) and '-SW_C_2_1_11_Ignore_ICMP_Redirect' not in check_list %}
+- header: '#### <SW_C_2_1_11_Ignore_ICMP_Redirect>'
+  command: |
+    CurrentIP4=`ipadm show-prop -p _ignore_redirect -co current ipv4`
+    PersistentIP4=`ipadm show-prop -p _ignore_redirect -co persistent ipv4`
+    CurrentIP6=`ipadm show-prop -p _ignore_redirect -co current ipv6`
+    PersistentIP6=`ipadm show-prop -p _ignore_redirect -co persistent ipv6`
+    echo '"'$CurrentIP4'"'";"'"'$PersistentIP4'"'";"'"'$CurrentIP6'"'";"'"'$PersistentIP6'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_11_Ignore_ICMP_Redirect>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_12_Set_Strict_Multihoming' in check_list or 'all' in check_list) and '-SW_C_2_1_12_Set_Strict_Multihoming' not in check_list %}
+- header: '#### <SW_C_2_1_12_Set_Strict_Multihoming>'
+  command: |
+    CurrentIP4=`ipadm show-prop -p _strict_dst_multihoming -co current ipv4`
+    PersistentIP4=`ipadm show-prop -p _strict_dst_multihoming -co persistent ipv4`
+    CurrentIP6=`ipadm show-prop -p _strict_dst_multihoming -co current ipv6`
+    PersistentIP6=`ipadm show-prop -p _strict_dst_multihoming -co persistent ipv4`
+    echo '"'$CurrentIP4'"'";"'"'$PersistentIP4'"'";"'"'$CurrentIP6'"'";"'"'$PersistentIP6'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_12_Set_Strict_Multihoming>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_13_Disable_ICMP_Redirect' in check_list or 'all' in check_list) and '-SW_C_2_1_13_Disable_ICMP_Redirect' not in check_list %}
+- header: '#### <SW_C_2_1_13_Disable_ICMP_Redirect>'
+  command: |
+    CurrentIP4=`ipadm show-prop -p send_redirects -co current ipv4`
+    PersistentIP4=`ipadm show-prop -p send_redirects -co persistent ipv4`
+    CurrentIP6=`ipadm show-prop -p send_redirects -co current ipv6`
+    PersistentIP6=`ipadm show-prop -p send_redirects -co persistent ipv6`
+    echo '"'$CurrentIP4'"'";"'"'$PersistentIP4'"'";"'"'$CurrentIP6'"'";"'"'$PersistentIP6'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_13_Disable_ICMP_Redirect>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_14_Disable_TCP' in check_list or 'all' in check_list) and '-SW_C_2_1_14_Disable_TCP' not in check_list %}
+- header: '#### <SW_C_2_1_14_Disable_TCP>'
+  command: |
+    CurrentTCP=`ipadm show-prop -p _rev_src_routes -co current tcp`
+    PersistentTCP=`ipadm show-prop -p _rev_src_routes -co persistent tcp`
+    echo '"'$CurrentTCP'"'";"'"'$PersistentTCP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_14_Disable_TCP>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_15_Set_Maximum_Number_of_Half-open_TCP' in check_list or 'all' in check_list) and '-SW_C_2_1_15_Set_Maximum_Number_of_Half-open_TCP' not in check_list %}
+- header: '#### <SW_C_2_1_15_Set_Maximum_Number_of_Half-open_TCP>'
+  command: |
+    CurrentTCP=`ipadm show-prop -p _conn_req_max_q0 -co current tcp`
+    PersistentTCP=`ipadm show-prop -p _conn_req_max_q0 -co persistent tcp`
+    echo '"'$CurrentTCP'"'";"'"'$PersistentTCP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_15_Set_Maximum_Number_of_Half-open_TCP>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_16_Set_Maximum_Number_of_Incoming' in check_list or 'all' in check_list) and '-SW_C_2_1_16_Set_Maximum_Number_of_Incoming' not in check_list %}
+- header: '#### <SW_C_2_1_16_Set_Maximum_Number_of_Incoming>'
+  command: |
+    CurrentTCP=`ipadm show-prop -p _conn_req_max_q -co current tcp`
+    PersistentTCP=`ipadm show-prop -p _conn_req_max_q -co persistent tcp`
+    echo '"'$CurrentTCP'"'";"'"'$PersistentTCP'"'
+  become: true
+  footer: >
+    #### </SW_C_2_1_16_Set_Maximum_Number_of_Incoming>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_2_1_17_Disable_Network_Routing' in check_list or 'all' in check_list) and '-SW_C_2_1_17_Disable_Network_Routing' not in check_list %}
+- header: '#### <SW_C_2_1_17_Disable_Network_Routing>'
+  command: |
+    #!/bin/bash
+    # Print CSV Header
+    echo "\"Property\";\"Value\""
+    # Commands for IPv4 and IPv6 Routing/Forwarding
+    routeadm -p | egrep "^ipv4-routing " | awk '{printf("\"%s\";\"%s\"\n", $1, $NF); }'
+    routeadm -p | egrep "^ipv4-forwarding " | awk '{printf("\"%s\";\"%s\"\n", $1, $NF); }'
+    routeadm -p | egrep "^ipv4-routing " | awk '{printf("\"%s\";\"%s\"\n", $1, $2); }'
+    routeadm -p | egrep "^ipv4-forwarding " | awk '{printf("\"%s\";\"%s\"\n", $1, $2); }'
+    routeadm -p | egrep "^ipv6-routing " | awk '{printf("\"%s\";\"%s\"\n", $1, $NF); }'
+    routeadm -p | egrep "^ipv6-forwarding " | awk '{printf("\"%s\";\"%s\"\n", $1, $NF); }'
+    routeadm -p | egrep "^ipv6-routing " | awk '{printf("\"%s\";\"%s\"\n", $1, $2); }'
+    routeadm -p | egrep "^ipv6-forwarding " | awk '{printf("\"%s\";\"%s\"\n", $1, $2); }'
+  become: true
+  footer: >
+    #### </SW_C_2_1_17_Disable_Network_Routing>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_3_1_1_Create_CIS' in check_list or 'all' in check_list) and '-SW_C_3_1_1_Create_CIS' not in check_list %}
+- header: '#### <SW_C_3_1_1_Create_CIS>'
+  command: |
+    file="/etc/security/audit_class"; test -e "$file" && cat $file |egrep -v "^$|#" || echo $file does not exist
+  become: true
+  footer: >
+    #### </SW_C_3_1_1_Create_CIS>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_3_1_Enable_Auditing' in check_list or 'all' in check_list) and '-SW_C_3_1_Enable_Auditing' not in check_list %}
+- header: '#### <SW_C_3_1_Enable_Auditing>'
+  command: |
+    #SW_C_3_1_2_Enable_Auditing_of_Incoming_Network #grep "cis" /etc/security/audit_event | awk -F: '{ print $2 }'
+    #SW_C_3_1_3_Enable_Auditing_of_File_Metadata    #grep "cis" /etc/security/audit_event | awk -F: '{ print $2 }'
+    #SW_C_3_1_4_Enable_Auditing_of_Process          #grep ""cis"" /etc/security/audit_event | awk -F: '{ print $2 }'
+    #file="/etc/security/audit_event"; test -e "$file" && cat $file || echo $file does not exist
+    file="/etc/security/audit_event"; test -e "$file" && cat $file |egrep -v "^$|#" || echo $file does not exist
+  become: true
+  footer: >
+    #### </SW_C_3_1_Enable_Auditing>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_3_1_5_Configure_Solaris_Auditing' in check_list or 'all' in check_list) and '-SW_C_3_1_5_Configure_Solaris_Auditing' not in check_list %}
+- header: '#### <SW_C_3_1_5_Configure_Solaris_Auditing>'
+  command: |
+    /usr/sbin/auditconfig  -getcond -getpolicy -getflags -getnaflags -getplugin audit_binfile >>/tmp/t1;cat /tmp/t1
+    /usr/bin/userattr audit_flags root
+    ls -l /var/share/audit/*.not_terminated.*| awk ' { print $NF " = " $5 }'
+  footer: >
+    #### </SW_C_3_1_5_Configure_Solaris_Auditing>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_2_Restrict_at/cron' in check_list or 'all' in check_list) and '-SW_C_4_1_2_Restrict_at/cron' not in check_list %}
+- header: '#### <SW_C_4_1_2_Restrict_at/cron>'
+  command: |
+    #!/bin/bash
+    # Define the output CSV file
+    # Initialize the CSV file with a header
+    echo "\"File\";\"Status\""
+    # Check file1
+    file1="/etc/cron.d/cron.deny"
+    a=$(test -e "$file1" && echo "exists" || echo "does not exist")
+    echo "\"$file1\";\"$a\""
+    # Check file2
+    file2="/etc/cron.d/at.deny"
+    b=$(test -e "$file2" && echo "exists" || echo "does not exist")
+    echo "\"$file2\";\"$b\""
+    # Check file3
+    file3="/etc/cron.d/at.allow"
+    if test -e "$file3"; then
+    c="length: $(wc -l < "$file3")"
+    else
+    c="does not exist"
+    fi
+    echo "\"$file3\";\"$c\""
+  become: true
+  footer: >
+    #### </SW_C_4_1_2_Restrict_at/cron>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_3_Set_Default_Screen_Lock' in check_list or 'all' in check_list) and '-SW_C_4_1_3_Set_Default_Screen_Lock' not in check_list %}
+- header: '#### <SW_C_4_1_3_Set_Default_Screen_Lock>'
+  command: |
+    #grep "^\*timeout:" /usr/share/X11/app-defaults/XScreenSaver 2> /dev/null
+    #grep "^\*lockTimeout:" /usr/share/X11/app-defaults/XScreenSaver 2> /dev/null
+    #grep "^\*lock:" /usr/share/X11/app-defaults/XScreenSaver 2> /dev/null
+    A=`svcs -a | grep -i gdm| awk '{print $1}'`
+    if [ "$A" = "enabled" ]; then
+    file="/usr/share/X11/app-defaults/XScreenSaver"; test -e "$file" && cat $file |egrep -v "^$|#" || echo $file does not exist
+    else
+    echo "GNOME_Service=disabled"
+    fi
+  become: true
+  footer: >
+    #### </SW_C_4_1_3_Set_Default_Screen_Lock>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_4_Remove_Autologin' in check_list or 'all' in check_list) and '-SW_C_4_1_4_Remove_Autologin' not in check_list %}
+- header: '#### <SW_C_4_1_4_Remove_Autologin>'
+  command: |
+    A=`svcs -a | grep -i gdm| awk '{print $1}'`
+    if [ "$A" = "enabled" ]; then
+    egrep "auth|account" /etc/pam.d/gdm-autologin | grep -vc ^ 2> /dev/null
+    else
+    echo "GNOME_Service=disabled"
+    fi
+  become: true
+  footer: >
+    #### </SW_C_4_1_4_Remove_Autologin>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_7_Restrict_FTP_Use' in check_list or 'all' in check_list) and '-SW_C_4_1_7_Restrict_FTP_Use' not in check_list %}
+- header: '#### <SW_C_4_1_7_Restrict_FTP_Use>'
+  command: |
+    for user in `logins -s | awk '{ print $1 }'` aiuser noaccess nobody nobody4; do
+    grep -w "${user}" /etc/ftpd/ftpusers >/dev/null 2>&1
+    if [ $? != 0 ]; then
+    echo "User '${user}' not in /etc/ftpd/ftpusers."
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_4_1_7_Restrict_FTP_Use>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_9_Disable_Host-based' in check_list or 'all' in check_list) and '-SW_C_4_1_9_Disable_Host-based' not in check_list %}
+- header: '#### <SW_C_4_1_9_Disable_Host-based>'
+  command: |
+    /usr/bin/test -e /etc/pam.conf && (grep "pam_rhosts_auth" /etc/pam.conf | grep -v "^#") || echo "/etc/pam.conf does not exist."
+    /usr/bin/test -d /etc/pam.d && (grep "pam_rhosts_auth" /etc/pam.d/* 2>/dev/null | grep -v "^\s*#") || echo "/etc/pam.d does not exist."
+  become: true
+  footer: >
+    #### </SW_C_4_1_9_Disable_Host-based>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_13_Disable_nobody' in check_list or 'all' in check_list) and '-SW_C_4_1_13_Disable_nobody' not in check_list %}
+- header: '#### <SW_C_4_1_13_Disable_nobody>'
+  command: |
+    #grep "^ENABLE_NOBODY_KEYS" /etc/default/keyserv| awk '{print $NF}'
+    file="/etc/default/keyserv"; test -e "$file" && cat $file || echo $file does not exist
+  become: true
+  footer: >
+    #### </SW_C_4_1_13_Disable_nobody>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_14_Secure_the_GRUB' in check_list or 'all' in check_list) and '-SW_C_4_1_14_Secure_the_GRUB' not in check_list %}
+- header: '#### <SW_C_4_1_14_Secure_the_GRUB>'
+  command: |
+    cpu_info=`psrinfo -pv | awk '/GenuineIntel/ { key = substr($2, 2); if (!seen[key]++) print key }'`
+    grub_info=`/usr/bin/grep ""password.cfg"" /rpool/boot/grub/grub.cfg`
+    echo '"'$cpu_info'"'";"'"'$grub_info'"'
+  become: true
+  footer: >
+    #### </SW_C_4_1_14_Secure_the_GRUB>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_15_Restrict_root_Login' in check_list or 'all' in check_list) and '-SW_C_4_1_15_Restrict_root_Login' not in check_list %}
+- header: '#### <SW_C_4_1_15_Restrict_root_Login>'
+  command: |
+    file="/etc/default/login"; test -e "$file" && grep ""CONSOLE=/dev/console"" /etc/default/login && cat $file |egrep -v '^$|#'  || echo $file does not exist
+  become: true
+  footer: >
+    #### </SW_C_4_1_15_Restrict_root_Login>
+    {% endif %}
+    {# --------------------------------------------------------checked13Nov24------------------------------------------------------------------------------------ #}
+    {% if ('SW_C_5_1_1_set_passwexpiration' in check_list or 'all' in check_list) and '-set_passwexpiration' not in check_list %}
+- header: '#### <set_passwexpiration>'
+  command: |
+    logins -ox | awk -F: '( $1 != "root" && $8 != "LK" && $8 != "NL" && ( $10 < 7 || $11 > 91 || $12 < 7 )) { print }'
+    #grep "WEEKS=" /etc/default/passwd | sort -u #Refer section SW_C_5_1_2_N_set_passwdcreation
+  become: true
+  footer: >
+    #### </set_passwexpiration>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_5_1_5_mesgn_default' in check_list or 'all' in check_list) and '-SW_C_5_1_5_mesgn_default' not in check_list %}
+- header: '#### <SW_C_5_1_5_mesgn_default>'
+  command: |
+    Message_Profile=`grep "^mesg" /etc/profile`
+    Message_dotlogin=`grep "^mesg" /etc/.login`
+    echo '"'$Message_Profile'"'";"'"'$Message_dotlogin'"'
+  become: true
+  footer: >
+    #### </SW_C_5_1_5_mesgn_default>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_5_1_6_lock_inactive_useracc' in check_list or 'all' in check_list) and '-SW_C_5_1_6_lock_inactive_useracc' not in check_list %}
+- header: '#### <SW_C_5_1_6_lock_inactive_useracc>'
+  command: |
+    #!/bin/bash
+    # CSV Header
+    echo "\"Username\";\"Command\";\"Result\""
+    # Check the default inactive setting for new users
+    inactive_default=$(useradd -D | xargs -n 1 | grep inactive | awk -F= '{ print $2 }')
+    if [ -n "$inactive_default" ]; then
+    echo "\"Default\";\"Inactive Setting\";\"$inactive_default\""
+    else
+    echo "\"Default\";\"Inactive Setting\";\"Not Set\""
+    fi
+    # Retrieve inactivity status for all users using logins
+    logins -axo | awk -F: '{ print $1, $13 }' | while read -r user inactive_status; do
+    if [ -n "$inactive_status" ]; then
+      echo "\"$user\";\"Inactivity Status\";\"$inactive_status\""
+    else
+      echo "\"$user\";\"Inactivity Status\";\"No Status Found\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_5_1_6_lock_inactive_useracc>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_6_1_1_stdloginservice_banner' in check_list or 'all' in check_list) and '-SW_C_6_1_1_stdloginservice_banner' not in check_list %}
+- header: '#### <SW_C_6_1_1_stdloginservice_banner>'
+  command: |
+    #!/bin/bash
+    # CSV Header
+    echo "\"File\";\"Status\";\"Permissions\""
+    # Check for /etc/motd
+    file1="/etc/motd"
+    if [ -e "$file1" ]; then
+    echo "\"$file1\";\"Exists\";\"$(stat -c '%a' "$file1")\""
+    cat "$file1"
+    else
+    echo "\"$file1\";\"Does not exist\";\"N/A\""
+    fi
+    # Check for /etc/issue
+    file2="/etc/issue"
+    if [ -e "$file2" ]; then
+    permissions=$(stat -c '%a' "$file2")
+    if [ "$permissions" -eq 644 ]; then
+      echo "\"$file2\";\"Exists\";\"644\""
+    else
+      echo "\"$file2\";\"Exists\";\"$permissions\""
+    fi
+    cat "$file2"
+    else
+    echo "\"$file2\";\"Does not exist\";\"N/A\""
+    fi
+  become: true
+  footer: >
+    #### </SW_C_6_1_1_stdloginservice_banner>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_5_1_4' in check_list or 'all' in check_list) and '-SW_C_5_1_4' not in check_list %}
+- header: '#### <SW_C_5_1_4>'
+  command: |
+    #!/bin/bash
+    # Output CSV header
+    echo "\"Check\";\"Status\""
+    # Check if FTP server package is installed
+    ftp_installed=$(pkg info -q service/network/ftp && echo "Installed" || echo "Not Installed")
+    # Output FTP installation status
+    echo "\"FTP Server Installation\";\"$ftp_installed\""
+    # Check if ProFTPD is installed and the /etc/proftpd.conf file exists
+    if [[ "$ftp_installed" == "Installed" ]]; then
+    if [ -e /etc/proftpd.conf ]; then
+    # Extract the Umask value from /etc/proftpd.conf
+    umask_value=$(grep "^Umask" /etc/proftpd.conf | awk '{ print $2 }')
+    if [ -n "$umask_value" ]; then
+    echo "\"Umask Setting\";\"$umask_value\""
+    else
+    echo "\"Umask Setting\";\"Not Found\""
+    fi
+    else
+    echo "\"/etc/proftpd.conf\";\"File does not exist\""
+    fi
+    else
+    echo "\"FTP Server Installation\";\"Not Installed\""
+    fi
+  become: true
+  footer: >
+    #### </SW_C_5_1_4>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_6_1_4_gnome_banner' in check_list or 'all' in check_list) and '-SW_C_6_1_4_gnome_banner' not in check_list %}
+- header: '#### <SW_C_6_1_4_gnome_banner>'
+  command: |
+    A=`svcs -a | grep -i gdm| awk '{print $1}'`
+    if [ "$A" = "enabled" ]; then
+    cd /etc/gdm/init
+    grep "Security Message" Default
+    else
+    echo "GNOME=disabled"
+    fi
+  become: true
+  footer: >
+    #### </SW_C_6_1_4_gnome_banner>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_6_1_5_telent_banner_null' in check_list or 'all' in check_list) and '-SW_C_6_1_5_telent_banner_null' not in check_list %}
+- header: '#### <SW_C_6_1_5_telent_banner_null>'
+  command: |
+    #grep "^BANNER" /etc/default/telnetd
+    file1="/etc/default/telnetd"; test -e "$file1" &&  cat $file1 || echo $file1 does not exist
+  become: true
+  footer: >
+    #### </SW_C_6_1_5_telent_banner_null>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_16_New1_Set_Retry_Limit' in check_list or 'all' in check_list) and '-SW_C_4_1_16_New1_Set_Retry_Limit' not in check_list %}
+- header: '#### <SW_C_4_1_16_New1_Set_Retry_Limit>'
+  command: |
+    #!/bin/bash
+    # Files and output settings
+    login_file="/etc/default/login"
+    policy_file="/etc/security/policy.conf"
+    # Initialize the CSV file with headers
+    echo "\"File\";\"Setting\";\"Value\""
+    # Function to check RETRIES setting
+    check_retries() {
+    if [ -e "$login_file" ]; then
+      retries=$(grep "^RETRIES=" "$login_file" 2>/dev/null | awk -F= '{print $2}')
+      if [ -n "$retries" ]; then
+          echo "\"$login_file\";\"RETRIES\";\"$retries\""
+      else
+          echo "\"$login_file\";\"RETRIES\";\"Not Found\""
+      fi
+    else
+      echo "\"$login_file\";\"RETRIES\";\"File does not exist\""
+    fi
+    }
+    # Function to check MAXTRIES setting
+    check_maxtries() {
+    if [ -e "$policy_file" ]; then
+      maxtries=$(grep "^MAXTRIES=" "$policy_file" 2>/dev/null | awk -F= '{print $2}')
+      if [ -n "$maxtries" ]; then
+          echo "\"$policy_file\";\"MAXTRIES\";\"$maxtries\""
+      else
+          echo "\"$policy_file\";\"MAXTRIES\";\"Not Found\""
+      fi
+    else
+      echo "\"$policy_file\";\"MAXTRIES\";\"File does not exist\""
+    fi
+    }
+    # Run checks
+    check_retries
+    check_maxtries
+  become: true
+  footer: >
+    #### </SW_C_4_1_16_New1_Set_Retry_Limit>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_16_New2_Set_Retry_Limit' in check_list or 'all' in check_list) and '-SW_C_4_1_16_New2_Set_Retry_Limit' not in check_list %}
+- header: '#### <SW_C_4_1_16_New2_Set_Retry_Limit>'
+  command: |
+    # Function to check LOCK_AFTER_RETRIES setting
+    # Files and output settings
+    policy_file="/etc/security/policy.conf"
+    # Initialize the CSV file with headers
+    echo "\"File\";\"Setting\";\"Value\""
+    check_lock_after_retries() {
+    if [ -e "$policy_file" ]; then
+    lock_after_retries=$(grep "^LOCK_AFTER_RETRIES=" "$policy_file" 2>/dev/null | awk -F= '{print $2}')
+    if [ -n "$lock_after_retries" ]; then
+    echo "\"$policy_file\";\"LOCK_AFTER_RETRIES\";\"$lock_after_retries\""
+    else
+    echo "\"$policy_file\";\"LOCK_AFTER_RETRIES\";\"Not Found\""
+    fi
+    else
+    echo "\"$policy_file\";\"LOCK_AFTER_RETRIES\";\"File does not exist\""
+    fi
+    }
+    # Call the functions
+    check_lock_after_retries
+  become: true
+  footer: >
+    #### </SW_C_4_1_16_New2_Set_Retry_Limit>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_16_New3_Set_Retry_Limit' in check_list or 'all' in check_list) and '-SW_C_4_1_16_New3_Set_Retry_Limit' not in check_list %}
+- header: '#### <SW_C_4_1_16_New3_Set_Retry_Limit>'
+  command: |
+    #!/bin/bash
+    # File to save the CSV output
+    # Initialize CSV with headers
+    echo "\"Username\";\"Lock_After_Retries_Status\""
+    # Get the list of usernames from `logins -s` and append additional ones
+    user_list=$(logins -s | awk '{ print $1 }')
+    extra_users=("aiuser" "noaccess" "nobody" "nobody4")
+    # Combine all users into one array
+    all_users=($user_list "${extra_users[@]}")
+    # Loop through each username
+    for username in "${all_users[@]}"; do
+    if [ -n "$username" ]; then
+    # Check the lock_after_retries attribute for the user
+    exemption_status=$(userattr lock_after_retries "$username" 2>/dev/null)
+    if [ "$exemption_status" == "no" ]; then
+    echo '"'$username'"'";"'"'no'"'
+    elif [ "$exemption_status" == "yes" ]; then
+    echo "\"$username\";\"yes\""
+    else
+    echo "\"$username\";\"Check Failed or Not Found\""
+    fi
+    else
+    echo "No username provided."
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_4_1_16_New3_Set_Retry_Limit>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_1_remote_consoles' in check_list or 'all' in check_list) and '-SW_C_7_1_1_remote_consoles' not in check_list %}
+- header: '#### <SW_C_7_1_1_remote_consoles>'
+  command: |
+    /usr/sbin/consadm -p
+  become: true
+  footer: >
+    #### </SW_C_7_1_1_remote_consoles>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_2_no_duplicate_uname' in check_list or 'all' in check_list) and '-SW_C_7_1_2_no_duplicate_uname' not in check_list %}
+- header: '#### <SW_C_7_1_2_no_duplicate_uname>'
+  command: |
+    #!/bin/bash
+    # Initialize the CSV with headers
+    echo "\"Username\";\"GIDs\""
+    # Check for duplicate usernames in /etc/passwd
+    getent passwd | cut -f1 -d":" | sort | uniq -c | while read -r x; do
+    [ -z "${x}" ] && break
+    set -- $x
+    if [ "$1" -gt 1 ]; then
+      # Find associated GIDs for the duplicate username
+      gids=$(getent passwd | awk -F: -v user="$2" '($1 == user) { print $3 }' | xargs)
+      # Print the result in CSV format
+      echo "\"$2\";\"$gids\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_2_no_duplicate_uname>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_3_home_dir_exist' in check_list or 'all' in check_list) and '-SW_C_7_1_3_home_dir_exist' not in check_list %}
+- header: '#### <SW_C_7_1_3_home_dir_exist>'
+  command: |
+    #!/bin/bash
+    # Initialize the CSV with headers
+    echo "\"Username\";\"HomeDirectory\""
+    # Process /etc/passwd to find missing home directories
+    awk -F: '{ print $1, $6 }' /etc/passwd | while read -r user home; do
+    if [ ! -d "${home}" ]; then
+      echo "\"${user}\";\"${home}\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_3_home_dir_exist>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_4_systemacc_defpasw' in check_list or 'all' in check_list) and '-SW_C_7_1_4_systemacc_defpasw' not in check_list %}
+- header: '#### <SW_C_7_1_4_systemacc_defpasw>'
+  command: |
+    for user in $(logins -s | awk '{ print $1 }'); do
+    if [ "${user}" != "root" ]; then
+    stat=`passwd -s ${user} | awk '{ print $2 }'`
+    if [ "${stat}" != "LK" ] && [ "${stat}" != "NL" ]; then
+    echo "Account ${user} is not locked or non-login."
+    fi
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_4_systemacc_defpasw>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_5_empty_password' in check_list or 'all' in check_list) and '-SW_C_7_1_5_empty_password' not in check_list %}
+- header: '#### <SW_C_7_1_5_empty_password>'
+  command: |
+    logins -p
+  become: true
+  footer: >
+    #### </SW_C_7_1_5_empty_password>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_6_root_UID' in check_list or 'all' in check_list) and '-SW_C_7_1_6_root_UID' not in check_list %}
+- header: '#### <SW_C_7_1_6_root_UID>'
+  command: |
+    #!/bin/bash
+    # Output CSV file
+    # Initialize the CSV with headers
+    echo "\"Username\";\"UID\""
+    # Extract users with UID 0 and write to CSV
+    logins -o | awk -F: '($2 == 0) { print "\"" $1 "\";\"" $2 "\"" }'
+  become: true
+  footer: >
+    #### </SW_C_7_1_6_root_UID>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_8_permissions_userdirec' in check_list or 'all' in check_list) and '-SW_C_7_1_8_permissions_userdirec' not in check_list %}
+- header: '#### <SW_C_7_1_8_permissions_userdirec>'
+  command: |
+    for dir in `logins -ox | awk -F: '($8 == "PS") { print $6 }'`; do
+    find ${dir} -type d -prune \( -perm -g+w -o -perm -o+r -o -perm -o+w -o -perm -o+x \) -ls
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_8_permissions_userdirec>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_9_permissions_userdotfiles' in check_list or 'all' in check_list) and '-SW_C_7_1_9_permissions_userdotfiles' not in check_list %}
+- header: '#### <SW_C_7_1_9_permissions_userdotfiles>'
+  command: |
+    for dir in `logins -ox | awk -F: '($8 == "PS") { print $6 }'`; do
+    find ${dir}/.[A-Za-z0-9]* \! -type l \( -perm -20 -o -perm -02 \) -ls
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_9_permissions_userdotfiles>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_10_permissions_netrc' in check_list or 'all' in check_list) and '-SW_C_7_1_10_permissions_netrc' not in check_list %}
+- header: '#### <SW_C_7_1_10_permissions_netrc>'
+  command: |
+    #!/bin/bash
+    # Output CSV header
+    echo "\"Directory\";\"File\";\"Permissions\""
+    # Iterate over directories of users with 'PS' in their user account type
+    for dir in $(logins -ox | awk -F: '($8 == "PS") { print $6 }'); do
+    # Find .netrc files with inappropriate permissions
+    find "$dir/.netrc" -type f \( -perm -g+r -o -perm -g+w -o -perm -g+x -o -perm -o+r -o -perm -o+w -o -perm -o+x \) -ls 2>/dev/null | \
+    awk '{ printf "\"%s\";\"%s\";\"%s\"\n", $NF, $11, $3 }'
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_10_permissions_netrc>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_11_rhost files' in check_list or 'all' in check_list) and '-SW_C_7_1_11_rhost files' not in check_list %}
+- header: '#### <SW_C_7_1_11_rhost files>'
+  command: |
+    #!/bin/bash
+    # Output CSV header
+    echo "\"Directory\";\"File\";\"Permissions\";\"Size\";\"Owner\";\"Group\";\"LastModified\""
+    # Iterate over directories of users with 'PS' in their account type
+    for dir in $(logins -ox | awk -F: '($8 == "PS") { print $6 }'); do
+    # Find .rhosts files and capture relevant details
+    find "$dir" -name ".rhosts" -type f -ls 2>/dev/null | \
+    awk '{ printf "\"%s\";\"%s\";\"%s\";\"%s\";\"%s\";\"%s\";\"%s %s %s\"\n", $NF, $NF, $3, $7, $5, $6, $8, $9, $10 }'
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_11_rhost files>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_12_grps_in_passwd' in check_list or 'all' in check_list) and '-SW_C_7_1_12_grps_in_passwd' not in check_list %}
+- header: '#### <SW_C_7_1_12_grps_in_passwd>'
+  command: |
+    logins -xo | awk -F: '($3 == "") { print $1 }'
+  become: true
+  footer: >
+    #### </SW_C_7_1_12_grps_in_passwd>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_13_user_assign_homedir' in check_list or 'all' in check_list) and '-SW_C_7_1_13_user_assign_homedir' not in check_list %}
+- header: '#### <SW_C_7_1_13_user_assign_homedir>'
+  command: |
+    logins -xo | while read line; do
+    user=`echo ${line} | awk -F: '{ print $1 }'`
+    home=`echo ${line} | awk -F: '{ print $6 }'`
+    if [ -z "${home}" ]; then
+    echo ${user}
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_13_user_assign_homedir>
+    {% endif %}
+    {# --------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_14_Userowned_homedirec' in check_list or 'all' in check_list) and '-SW_C_7_1_14_Userowned_homedirec' not in check_list %}
+- header: '#### <SW_C_7_1_14_Userowned_homedirec>'
+  command: |
+    #!/bin/bash
+    # Print CSV header with double quotes and semicolon delimiter
+    echo "\"User\";\"Directory\";\"Owner\";\"Permissions\""
+    # Process each logged-in user whose session is "PS"
+    logins -xo | awk -F: '($8 == "PS") { print }' | while read -r line; do
+    # Extract the username and home directory
+    user=$(echo "${line}" | awk -F: '{ print $1 }')
+    home=$(echo "${line}" | awk -F: '{ print $6 }')
+    # Check if the home directory exists before proceeding
+    if [ -d "${home}" ]; then
+      # Find directories not owned by the user and list them
+      find "${home}" -type d -prune \! -user "${user}" -exec ls -ld {} \; | while read -r dir; do
+          # Extract directory name, owner, and permissions
+          dir_name=$(echo "${dir}" | awk '{ print $9 }')
+          owner=$(echo "${dir}" | awk '{ print $3 }')
+          permissions=$(echo "${dir}" | awk '{ print $1 }')
+
+          # Output as CSV with double quotes and semicolon delimiter
+          echo "\"${user}\";\"${dir_name}\";\"${owner}\";\"${permissions}\""
+      done
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_14_Userowned_homedirec>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_15_duplicate_UIDs' in check_list or 'all' in check_list) and '-SW_C_7_1_15_duplicate_UIDs' not in check_list %}
+- header: '#### <SW_C_7_1_15_duplicate_UIDs>'
+  command: |
+    logins -d
+  become: true
+  footer: >
+    #### </SW_C_7_1_15_duplicate_UIDs>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_16_duplicate_GIDs' in check_list or 'all' in check_list) and '-SW_C_7_1_16_duplicate_GIDs' not in check_list %}
+- header: '#### <SW_C_7_1_16_duplicate_GIDs>'
+  command: |
+    #!/bin/bash
+    # File to save the CSV output
+    # Initialize CSV with headers
+    echo "\"GID\";\"Groups\""
+    # Process GIDs to find duplicates
+    getent group | cut -f3 -d":" | sort -n | uniq -c | while read x; do
+    [ -z "${x}" ] && break
+    set -- $x
+    if [ $1 -gt 1 ]; then
+      # Find all groups with the duplicate GID
+      grps=$(getent group | awk -F: -v gid="$2" '($3 == gid) { print $1 }' | xargs)
+      # Write to CSV
+      echo "\"$2\";\"$grps\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_16_duplicate_GIDs>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_7_rootpath_integrity' in check_list or 'all' in check_list) and '-SW_C_7_1_7_rootpath_integrity' not in check_list %}
+- header: '#### <SW_C_7_1_7_rootpath_integrity>'
+  command: |
+    #!/bin/bash
+    # Check for empty directories in PATH (::)
+    if echo "$PATH" | grep -q "::"; then
+    echo "Warning: PATH contains an empty directory (::)"
+    fi
+    # Check for trailing colon in PATH
+    if echo "$PATH" | grep -q ":$"; then
+    echo "Warning: PATH ends with a trailing colon (:)"
+    fi
+    # Normalize PATH: remove empty entries (::), trailing colons, and split into directories
+    normalized_path=$(echo "$PATH" | sed -e 's/::/:/' -e 's/:$//' -e 's/:/ /g')
+    # Process each directory in PATH
+    for dir in $normalized_path; do
+    if [ "$dir" = "." ]; then
+      echo "Warning: PATH contains the current directory (.)"
+      continue
+    fi
+
+    if [ -d "$dir" ]; then
+      # Check directory permissions
+      dirperm=$(ls -ld "$dir" | awk '{print $1}')
+
+      # Group write permission
+      if [ "$(echo "$dirperm" | cut -c6)" != "-" ]; then
+          echo "Warning: Group write permission is set on directory $dir"
+      fi
+
+      # Other write permission
+      if [ "$(echo "$dirperm" | cut -c9)" != "-" ]; then
+          echo "Warning: Other write permission is set on directory $dir"
+      fi
+    else
+      echo "Note: $dir is not a valid directory"
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_7_rootpath_integrity>
+
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_17_duplicate_grpnames' in check_list or 'all' in check_list) and '-SW_C_7_1_17_duplicate_grpnames' not in check_list %}
+- header: '#### <SW_C_7_1_17_duplicate_grpnames>'
+  command: |
+    #!/bin/bash
+    # File to save the CSV output
+    # Initialize CSV with headers
+    echo "\"Group Name\";\"GIDs\""
+    # Process group names to find duplicates
+    getent group | cut -f1 -d":" | sort | uniq -c | while read x; do
+    [ -z "${x}" ] && break
+    set -- $x
+    if [ $1 -gt 1 ]; then
+      # Find all GIDs for the duplicate group name
+      gids=$(getent group | awk -F: -v group_name="$2" '($1 == group_name) { print $3 }' | xargs)
+      # Write to CSV
+      echo "\"$2\";\"$gids\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_17_duplicate_grpnames>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_18_user_netrcfile' in check_list or 'all' in check_list) and '-SW_C_7_1_18_user_netrcfile' not in check_list %}
+- header: '#### <SW_C_7_1_18_user_netrcfile>'
+  command: |
+    #!/bin/bash
+    # File to save the CSV output
+    # Initialize the CSV with headers
+    echo "\"Username\";\"Home Directory\";\".netrc Status\""
+    # Iterate over users with primary shell enabled
+    logins -ox | awk -F: '($8 == "PS") { print $1":"$6 }' | while IFS=: read -r username homedir; do
+    if [ -d "$homedir" ]; then
+      if [ -f "$homedir/.netrc" ]; then
+          echo "\"$username\";\"$homedir\";\".netrc file exists\""
+      else
+          echo "\"$username\";\"$homedir\";\"No .netrc file\""
+      fi
+    else
+      echo "\"$username\";\"$homedir\";\"Home directory does not exist\""
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_18_user_netrcfile>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_19_no_user_forwardfile' in check_list or 'all' in check_list) and '-SW_C_7_1_19_no_user_forwardfile' not in check_list %}
+- header: '#### <SW_C_7_1_19_no_user_forwardfile>'
+  command: |
+    #!/bin/bash
+    # Iterate over each home directory of users with empty password status
+    logins -ox | awk -F: '($8 == "") { print $6 }' | while read -r dir; do
+    # Check if the home directory is valid and if .forward exists
+    if [ -d "${dir}" ]; then
+    if [ -f "${dir}/.forward" ]; then
+    ls -l "${dir}/.forward"
+    fi
+    fi
+    done
+  become: true
+  footer: >
+    #### </SW_C_7_1_19_no_user_forwardfile>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_20_unowned_files_dir' in check_list or 'all' in check_list) and '-SW_C_7_1_20_unowned_files_dir' not in check_list %}
+- header: '#### <SW_C_7_1_20_unowned_files_dir>'
+  command: |
+    timeout 300 find / \( -fstype nfs -o -fstype cachefs -o -fstype autofs -o -fstype ctfs -o -fstype mntfs -o -fstype objfs -o -fstype proc \) -prune -o \( -nouser -o -nogroup \) -ls || echo 'WARNING: timeout is triggered! Manual verification required.'
+  become: true
+  footer: >
+    #### </SW_C_7_1_20_unowned_files_dir>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_7_1_21_files_extended_attributes' in check_list or 'all' in check_list) and '-SW_C_7_1_21_files_extended_attributes' not in check_list %}
+- header: '#### <SW_C_7_1_21_files_extended_attributes>'
+  command: |
+    timeout 300 find / \( -fstype nfs -o -fstype cachefs -o -fstype autofs -o -fstype ctfs\ -o -fstype mntfs -o -fstype objfs -o -fstype proc \) -prune -o -xattr -ls || echo 'WARNING: timeout is triggered! Manual verification required.'
+  become: true
+  footer: >
+    #### </SW_C_7_1_21_files_extended_attributes>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_2_Restrict_at/cron_2' in check_list or 'all' in check_list) and '-SW_C_4_1_2_Restrict_at/cron_2' not in check_list %}
+- header: '#### <SW_C_4_1_2_Restrict_at/cron_2>'
+  command: |
+    #!/bin/bash
+    # Define the file to check
+    cron_allow_file="/etc/cron.allow"
+    # Initialize the CSV with headers
+    echo "\"File\";\"Setting\";\"Value\""
+    # Check if the file exists
+    if [ -e "$cron_allow_file" ]; then
+    # Check for the 'root' entry in the file
+    if grep -q "^root$" "$cron_allow_file"; then
+    echo "\"$cron_allow_file\";\"root entry\";\"Present\""
+    else
+    echo "\"$cron_allow_file\";\"root entry\";\"Not Present\""
+    fi
+    else
+    echo "\"$cron_allow_file\";\"File\";\"Does not exist\""
+    fi
+  become: true
+  footer: >
+    #### </SW_C_4_1_2_Restrict_at/cron_2>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_4_1_2_Restrict_at/cron_3' in check_list or 'all' in check_list) and '-SW_C_4_1_2_Restrict_at/cron_3' not in check_list %}
+- header: '#### <SW_C_4_1_2_Restrict_at/cron_3>'
+  command: |
+    #!/bin/bash
+    # Define the file to check
+    cron_allow_file="/etc/cron.allow"
+    # Check if the file exists
+    if [ -e "$cron_allow_file" ]; then
+    echo "The file '$cron_allow_file' exists. Printing its contents:"
+    echo "--------------------------------------"
+    cat "$cron_allow_file"
+    echo "--------------------------------------"
+    else
+    echo "The file '$cron_allow_file' does not exist."
+    fi
+  become: true
+  footer: >
+    #### </SW_C_4_1_2_Restrict_at/cron_3>
+    {% endif %}
+    {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+    {% if ('SW_C_6_1_2' in check_list or 'all' in check_list) and '-SW_C_6_1_2' not in check_list %}
+- header: '#### <SW_C_6_1_2>'
+  command: |
+    #!/bin/bash
+    # Check if FTP service is enabled in Solaris 11
+    ftp_service_status=$(svcs -Ho STATE svc:/network/ftp)
+
+    if [ "$ftp_service_status" == "online" ]; then
+    echo "FTP service is enabled and running."
+
+    # Check for the DisplayConnect directive in the proftpd configuration file
+    proftpd_conf="/etc/proftpd.conf"
+    if [ -f "$proftpd_conf" ]; then
+    echo "Checking for 'DisplayConnect' in $proftpd_conf..."
+    display_connect=$(grep "^DisplayConnect" "$proftpd_conf")
+
+    if [ -n "$display_connect" ]; then
+    echo "'DisplayConnect' directive found:"
+    echo "$display_connect"
+    else
+    echo "'DisplayConnect' directive not found in $proftpd_conf."
+    fi
+    else
+    echo "ProFTPD configuration file ($proftpd_conf) does not exist."
+    fi
+    else
+    echo "FTP service is not enabled."
+    fi
+  become: true
+  footer: >
+    #### </SW_C_6_1_2>
+    {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {#                                                    TECH SPEC FOR SOLARIS 11 END BLOCK                                                                      #}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% endif %}

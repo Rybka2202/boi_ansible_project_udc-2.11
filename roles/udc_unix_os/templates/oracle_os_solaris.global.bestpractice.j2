@@ -1,0 +1,585 @@
+#jinja2:lstrip_blocks: True,trim_blocks: True
+---
+{% if collect_bestpractice | bool %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('hostid' in check_list or 'all' in check_list) and '-hostid' not in check_list %}
+- header: '#### <hostid>'
+  command: 'hostid; echo""'
+  footer: >
+    #### </hostid>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('release' in check_list or 'all' in check_list) and '-release' not in check_list %}
+- header: '#### <release>'
+  command: 'file="/etc/release"; test -e "$file" && cat $file || echo $file does not exist'
+  footer: >
+    #### </release>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('messages' in check_list or 'all' in check_list) and '-messages' not in check_list %}
+- header: '#### <messages>'
+  command: 'file="/var/adm/messages"; test -e "$file" && cat $file || echo $file does not exist'
+  footer: >
+    #### </messages>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('uptime' in check_list or 'all' in check_list) and '-uptime' not in check_list %}
+- header: '#### <uptime>'
+  command: 'uptime; echo""'
+  footer: >
+    #### </uptime>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('hostname' in check_list or 'all' in check_list) and '-hostname' not in check_list %}
+- header: '#### <hostname>'
+  command: 'hostname; echo""'
+  footer: >
+    #### </hostname>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('processes' in check_list or 'all' in check_list) and '-processes' not in check_list %}
+- header: '#### <processes>'
+  command: 'ps -ef; echo""'
+  become: true
+  footer: >
+    #### </processes>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('sshd_config' in check_list or 'all' in check_list) and '-sshd_config' not in check_list %}
+- header: '#### <sshd_config>'
+  command: 'file="/etc/ssh/sshd_config"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </sshd_config>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('mount' in check_list or 'all' in check_list) and '-mount' not in check_list %}
+- header: '#### <mount>'
+  command: 'mount; echo""'
+  become: true
+  footer: >
+    #### </mount>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('dumpadm' in check_list or 'all' in check_list) and '-dumpadm' not in check_list %}
+- header: '#### <dumpadm>'
+  command: '/usr/sbin/dumpadm; echo""'
+  become: true
+  footer: >
+    #### </dumpadm>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('fmadm_faulty' in check_list or 'all' in check_list) and '-fmadm_faulty' not in check_list %}
+- header: '#### <fmadm_faulty>'
+  command: '/usr/sbin/fmadm faulty; echo""'
+  become: true
+  footer: >
+    #### </fmadm_faulty>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('ifconfig' in check_list or 'all' in check_list) and '-ifconfig' not in check_list %}
+- header: '#### <ifconfig>'
+  command: '/usr/sbin/ifconfig -a; echo""'
+  become: true
+  footer: >
+    #### </ifconfig>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('zpool_status' in check_list or 'all' in check_list) and '-zpool_status' not in check_list %}
+- header: '#### <zpool_status>'
+  command: '/usr/sbin/zpool status -v; echo""'
+  become: true
+  footer: >
+    #### </zpool_status>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('prtdiag' in check_list or 'all' in check_list) and '-prtdiag' not in check_list %}
+- header: '#### <prtdiag>'
+  command: '/usr/sbin/prtdiag -v; echo""'
+  become: true
+  footer: >
+    #### </prtdiag>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('eeprom' in check_list or 'all' in check_list) and '-eeprom' not in check_list %}
+- header: '#### <eeprom>'
+  command: '/usr/sbin/eeprom; echo""'
+  become: true
+  footer: >
+    #### </eeprom>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('psrinfo' in check_list or 'all' in check_list) and '-psrinfo' not in check_list %}
+- header: '#### <psrinfo>'
+  command: '/usr/sbin/psrinfo -v; echo""'
+  become: true
+  footer: >
+    #### </psrinfo>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('iostat_En' in check_list or 'all' in check_list) and '-iostat_En' not in check_list %}
+- header: '#### <iostat_En>'
+  command: '/usr/bin/iostat -En; echo""'
+  become: true
+  footer: >
+    #### </iostat_En>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('netstat' in check_list or 'all' in check_list) and '-netstat' not in check_list %}
+- header: '#### <netstat>'
+  command: '/usr/bin/netstat -in; echo""'
+  become: true
+  footer: >
+    #### </netstat>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('df_k' in check_list or 'all' in check_list) and '-df_k' not in check_list %}
+- header: '#### <df_k>'
+  command: '/usr/bin/df -klZ; echo""'
+  become: true
+  footer: >
+    #### </df_k>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('iostat_xpnc_3_3' in check_list or 'all' in check_list) and '-iostat_xpnc_3_3' not in check_list %}
+- header: '#### <iostat_xpnc_3_3>'
+  command: '/usr/bin/iostat -xpnc 3 3; echo""'
+  become: true
+  footer: >
+    #### </iostat_xpnc_3_3>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('ntpq' in check_list or 'all' in check_list) and '-ntpq' not in check_list %}
+- header: '#### <ntpq>'
+  command: '/usr/sbin/ntpq -p; echo""'
+  become: true
+  footer: >
+    #### </ntpq>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('svcs' in check_list or 'all' in check_list) and '-svcs' not in check_list %}
+- header: '#### <svcs>'
+  command: '/usr/bin/svcs -av; echo""'
+  become: true
+  footer: >
+    #### </svcs>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('vmstat_3_3' in check_list or 'all' in check_list) and '-vmstat_3_3' not in check_list %}
+- header: '#### <vmstat_3_3>'
+  command: '/usr/bin/vmstat 3 3; echo""'
+  footer: >
+    #### </vmstat_3_3>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('swap' in check_list or 'all' in check_list) and '-swap' not in check_list %}
+- header: '#### <swap>'
+  command: '/usr/sbin/swap -s; echo""'
+  footer: >
+    #### </swap>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('ipmpstat' in check_list or 'all' in check_list) and '-ipmpstat' not in check_list %}
+- header: '#### <ipmpstat>'
+  command: '/usr/sbin/ipmpstat -g; echo""'
+  footer: >
+    #### </ipmpstat>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('fcinfo_hba-port' in check_list or 'all' in check_list) and '-fcinfo_hba-port' not in check_list %}
+- header: '#### <fcinfo_hba-port>'
+  command: '/usr/sbin/fcinfo hba-port;echo ""'
+  footer: >
+    #### </fcinfo_hba-port>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('mpathadm_show_lu' in check_list or 'all' in check_list) and '-mpathadm_show_lu' not in check_list %}
+- header: '#### <mpathadm_show_lu>'
+  command: 'mpathadm show lu; echo""'
+  footer: >
+    #### </mpathadm_show_lu>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('mpathadm_list_lu' in check_list or 'all' in check_list) and '-mpathadm_list_lu' not in check_list %}
+- header: '#### <mpathadm_list_lu>'
+  command: 'mpathadm list lu; echo""'
+  footer: >
+    #### </mpathadm_list_lu>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('luxadm_probe' in check_list or 'all' in check_list) and '-luxadm_probe' not in check_list %}
+- header: '#### <luxadm_probe>'
+  command: 'luxadm probe; echo""'
+  footer: >
+    #### </luxadm_probe>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('passwd' in check_list or 'all' in check_list) and '-default_passwd' not in check_list %}
+- header: '#### <passwd>'
+  command: 'file="/etc/passwd"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </passwd>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('default_passwd' in check_list or 'all' in check_list) and '-default_passwd' not in check_list %}
+- header: '#### <default_passwd>'
+  command: 'file="/etc/default/passwd"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </default_passwd>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('shadow' in check_list or 'all' in check_list) and '-shadow' not in check_list %}
+- header: '#### <shadow>'
+  command: 'file="/etc/shadow"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </shadow>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('default_login' in check_list or 'all' in check_list) and '-default_login' not in check_list %}
+- header: '#### <default_login>'
+  command: 'file="/etc/default/login"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </default_login>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('security_policy_conf' in check_list or 'all' in check_list) and '-security_policy_conf' not in check_list %}
+- header: '#### <security_policy_conf>'
+  command: 'file="/etc/security/policy.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </security_policy_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('user_attr' in check_list or 'all' in check_list) and '-user_attr' not in check_list %}
+- header: '#### <user_attr>'
+  command: 'file="/etc/user_attr"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </user_attr>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('user_attr_d_core-os' in check_list or 'all' in check_list) and '-user_attrd_d_core-os' not in check_list %}
+- header: '#### <user_attr_d_core-os>'
+  command: 'file="/etc/user_attr.d/core-os"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </user_attr_d_core-os>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('logins-p' in check_list or 'all' in check_list) and '-logins-p' not in check_list %}
+- header: '#### <logins-p>'
+  command: 'logins -p; echo""'
+  footer: >
+    #### </logins-p>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('ftpd_ftpusers' in check_list or 'all' in check_list) and '-ftpd_ftpusers' not in check_list %}
+- header: '#### <ftpd_ftpusers>'
+  command: 'file="/etc/ftp/ftpusers"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </ftpd_ftpusers>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('proftpd_conf' in check_list or 'all' in check_list) and '-proftpd_conf' not in check_list %}
+- header: '#### <proftpd_conf>'
+  command: 'file="/etc/proftpd.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </proftpd_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('rhosts' in check_list or 'all' in check_list) and '-rhosts' not in check_list %}
+- header: '#### <rhosts>'
+  command: 'find /-name .rhosts &2>1; echo""'
+  become: true
+  footer: >
+    #### </rhosts>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('profile' in check_list or 'all' in check_list) and '-profile' not in check_list %}
+- header: '#### <profile>'
+  command: 'file="/etc/profile"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </profile>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('logadm_conf' in check_list or 'all' in check_list) and '-logadm_conf' not in check_list %}
+- header: '#### <logadm_conf>'
+  command: 'file="/etc/logadm.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </logadm_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('etc' in check_list or 'all' in check_list) and '-etc' not in check_list %}
+- header: '#### <etc>'
+  command: 'ls /etc; echo""'
+  become: true
+  footer: >
+    #### </etc>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('var_adm' in check_list or 'all' in check_list) and '-var_adm' not in check_list %}
+- header: '#### <var_adm>'
+  command: 'ls /var/adm; echo""'
+  become: true
+  footer: >
+    #### </var_adm>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('var_log' in check_list or 'all' in check_list) and '-var_log' not in check_list %}
+- header: '#### <var_log>'
+  command: 'ls /var/log; echo""'
+  become: true
+  footer: >
+    #### </var_log>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('patch_date' in check_list or 'all' in check_list) and '-patch_date' not in check_list %}
+- header: '#### <patch_date>'
+  command: 'ls -terd /var/sadm/patch/*; echo""'
+  become: true
+  footer: >
+    #### </patch_date>
+
+  {% endif %}
+  {# --------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('pkg_date' in check_list or 'all' in check_list) and '-pkg_date' not in check_list %}
+- header: '#### <pkg_date>'
+  command: 'ls -terd /var/sadm/pkg/*; echo""'
+  become: true
+  footer: >
+    #### </pkg_date>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('inet_ntp_conf' in check_list or 'all' in check_list) and '-inet_ntp_conf' not in check_list %}
+- header: '#### <inet_ntp_conf>'
+  command: 'file="/etc/inet/ntp.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </inet_ntp_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('inetd_inetd_conf' in check_list or 'all' in check_list) and '-inetd_inetd_conf' not in check_list %}
+- header: '#### <inetd_inetd_conf>'
+  command: 'file="/etc/inetd/inetd.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </inetd_inetd_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('syslog_conf' in check_list or 'all' in check_list) and '-syslog_conf' not in check_list %}
+- header: '#### <syslog_conf>'
+  command: 'file="/etc/syslog.conf"; test -e "$file" && cat $file || echo $file does not exist'
+  become: true
+  footer: >
+    #### </syslog_conf>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('uname-i' in check_list or 'all' in check_list) and '-uname-i' not in check_list %}
+- header: '#### <uname-i>'
+  command: 'uname -i; echo""'
+  become: true
+  footer: >
+    #### </uname-i>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('vxdg-q_list' in check_list or 'all' in check_list) and '-vxdg-q_list' not in check_list %}
+- header: '#### <vxdg-q_list>'
+  command: '/usr/sbin/vxdg -q list; echo ""'
+  become: true
+  footer: >
+    #### </vxdg-q_list>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('vxdmpadm_listctlr_all' in check_list or 'all' in check_list) and '-vxdmpadm_listctlr_all' not in check_list %}
+- header: '#### <vxdmpadm_listctlr_all>'
+  command: '/usr/sbin/vxdmpadm listctlr all; echo ""'
+  become: true
+  footer: >
+    #### </vxdmpadm_listctlr_all>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('vxdisk_path' in check_list or 'all' in check_list) and '-vxdisk_path' not in check_list %}
+- header: '#### <vxdisk_path>'
+  command: '/usr/sbin/vxdisk path; echo ""'
+  become: true
+  footer: >
+    #### </vxdisk_path>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('vxprint' in check_list or 'all' in check_list) and '-vxprint' not in check_list %}
+- header: '#### <vxprint>'
+  command: '/usr/sbin/vxprint -Aht; echo ""'
+  become: true
+  footer: >
+    #### </vxprint>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('hastatus-summary' in check_list or 'all' in check_list) and '-hastatus-summary' not in check_list %}
+- header: '#### <hastatus-summary>'
+  command: 'hastatus -summary; echo ""'
+  become: true
+  footer: >
+    #### </hastatus-summary>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('haagent-display' in check_list or 'all' in check_list) and '-haagent-display' not in check_list %}
+- header: '#### <haagent-display>'
+  command: 'haagent -display; echo ""'
+  become: true
+  footer: >
+    #### </haagent-display>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('haclus-display' in check_list or 'all' in check_list) and '-haclus-display' not in check_list %}
+- header: '#### <hastatus-display>'
+  command: 'haclus -display; echo ""'
+  become: true
+  footer: >
+    #### </haclus-display>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('hagrp-display_all' in check_list or 'all' in check_list) and '-hagrp-display_all' not in check_list %}
+- header: '#### <hagrp-display_all>'
+  command: 'hagrp -display all; echo ""'
+  become: true
+  footer: >
+    #### </hagrp-display_all>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('hares-display_all' in check_list or 'all' in check_list) and '-hares-display_all' not in check_list %}
+- header: '#### <hares-display_all>'
+  command: 'hares -display all; echo ""'
+  become: true
+  footer: >
+    #### </hares-display_all>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('had-version' in check_list or 'all' in check_list) and '-had-version' not in check_list %}
+- header: '#### <had-version>'
+  command: 'had -version; echo ""'
+  become: true
+  footer: >
+    #### </had-version>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('lltstat-nvv' in check_list or 'all' in check_list) and '-lltstat-nvv' not in check_list %}
+- header: '#### <lltstat-nvv>'
+  command: 'lltstat -nvv; echo ""'
+  become: true
+  footer: >
+    #### </lltstat-nvv>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('engine_A_log' in check_list or 'all' in check_list) and '-engine_A_log' not in check_list %}
+- header: '#### <engine_A_log>'
+  command: 'file="/var/VRTSvcs/log/engine_A.log"; test -e "$file" && cat $file || echo $file does not exist'
+  footer: >
+    #### </engine_A_log>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('cluster_status' in check_list or 'all' in check_list) and '-cluster_status' not in check_list %}
+- header: '#### <cluster_status>'
+  command: '/usr/cluster/bin/cluster status -v; echo ""'
+  become: true
+  footer: >
+    #### </cluster_status>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('clnode_status' in check_list or 'all' in check_list) and '-clnode_status' not in check_list %}
+- header: '#### <clnode_status>'
+  command: '/usr/cluster/bin/clnode status -v; echo ""'
+  become: true
+  footer: >
+    #### </clnode_status>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('clq_status' in check_list or 'all' in check_list) and '-clq_status' not in check_list %}
+- header: '#### <clq_status>'
+  command: '/usr/cluster/bin/clq status -v; echo ""'
+  become: true
+  footer: >
+    #### </clq_status>
+
+  {% endif %}
+  {# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+  {% if ('virtinfo-a' in check_list or 'all' in check_list) and '-virtinfo-a' not in check_list %}
+- header: '#### <virtinfo-a>'
+  command: 'virtinfo -a; echo ""'
+  become: true
+  footer: >
+    #### </virtinfo-a>
+
+  {% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% endif %}

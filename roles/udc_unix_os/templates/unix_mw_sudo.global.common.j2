@@ -1,0 +1,157 @@
+#jinja2:lstrip_blocks: True,trim_blocks: True
+---
+- header: '#### <OS_INFO>'
+  command: |
+    echo \"HOSTNAME"\";"\"OS_DETAILS"\";"\"RELEASE_NUMBER"\";"\"KERNEL"\";"\"SERIAL\"
+    HOSTNAME="$(hostname)"
+    OS_DETAILS="{{ ansible_facts['distribution'] }}"
+    VERSION_ID="{{ ansible_facts['distribution_version'] }}"
+    KERNEL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/bin/oslevel -s){% else %}$(/usr/bin/uname -r){% endif %}{{ '' }}
+    SERIAL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/sbin/prtconf | grep 'Machine Serial Number' | awk '{print $NF}' || echo 'SN unreadable'){%
+              elif ansible_facts['os_family'] == 'RedHat' %}{%
+                  if ansible_facts['architecture'] == 'ppc64le' %}$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'SN unreadable'){%
+                  else %}$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+              elif ansible_facts['os_family'] == 'Solaris' %}$(smbios -i1 | grep 'Serial Number' | awk 'BEGIN { FS = ":" } {print $NF}' | sed 's/^[ \t]*//' | grep -v '^$' || echo 'SN unreadable'){%
+              elif ansible_facts['os_family'] == 'Suse' %}{%
+                  if ansible_facts['architecture'] == 'ppc64le' %}$(/usr/bin/grep serial_number /proc/powerpc/lparcfg | cut -d ',' -f 2 | cut -c 3- || echo 'SN unreadable'){%
+                  else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+              else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{{ '' }}
+    echo \"$HOSTNAME"\";"\"$OS_DETAILS"\";"\"$VERSION_ID"\";"\"$KERNEL"\";"\"$SERIAL\"
+  become: true
+  become_user: "{{ become_user | default('root') }}"
+  footer: >
+    #### </OS_INFO>
+
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudoers' in check_list or 'all' in check_list) and '-sudoers' not in check_list %}
+- header: '#### <sudoers>'
+  command: >
+    ( echo "Paths of the sudo binaries:"; whereis sudo | cut -d ":" -f 2 | tr " " "\n" | grep "/" | xargs file | grep ELF | cut -d ":" -f 1 ) | tr "\n" " "; echo ""; echo "";
+    grep -v '^\s*$\|^\s*\#' /etc/sudoers /etc/sudoers.d/* ;
+    grep '#include' /etc/sudoers /etc/sudoers.d/* ;
+    test -e /var/log/sudo.log && echo /var/log/sudo.log found || echo '/var/log/sudo.log not found' ;
+    test -e /var/adm/sudo.log && echo /var/adm/sudo.log found || echo '/var/adm/sudo.log not found'
+  become: true
+  footer: >
+    #### </sudoers>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudo_v' in check_list or 'all' in check_list) and '-sudo_v' not in check_list %}
+- header: '#### <sudo_v>'
+  command: >
+    sudo -V;
+    test -e /var/log/sudo.log && echo /var/log/sudo.log found || echo '/var/log/sudo.log not found' ;
+    test -e /var/adm/sudo.log && echo /var/adm/sudo.log found || echo '/var/adm/sudo.log not found'
+  become: true
+  footer: >
+    #### </sudo_v>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudo_l' in check_list or 'all' in check_list) and '-sudo_l' not in check_list %}
+- header: '#### <sudo_l>'
+  command: >
+    /usr/bin/sudo -l || echo "sudo command not found"
+  become: true
+  footer: >
+    #### </sudo_l>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sfit_l' in check_list or 'all' in check_list) and '-sfit_l' not in check_list %}
+- header: '#### <sfit_l>'
+  command: |
+    if [ -e {{ temp_dir }}/sfit.pl ]
+    then
+      {% if ansible_facts['distribution'] == 'AIX' %}
+      # AIX does not have timeout comand
+      PERLOUT=$(/usr/bin/perl {{ temp_dir }}/sfit.pl -l 2>&1)
+      {% else %}
+      PERLOUT=$(/usr/bin/timeout 300 /usr/bin/perl {{ temp_dir }}/sfit.pl -l 2>&1)
+      {% endif %}
+      if [ $? -eq 2 ]
+      then
+        /usr/bin/echo "ERROR: perl prerequisite"
+        /usr/bin/echo "$PERLOUT"
+      else
+        /usr/bin/cat $(/usr/bin/echo "$PERLOUT" | /usr/bin/grep 'CSV OUTPUT FILE FILTERED' | cut -d ':' -f 2 | cut -d ' ' -f2) || /usr/bin/echo "ERROR: could not retrieve the path of the generated file"
+      fi
+    else
+      /usr/bin/echo "ERROR"
+      /usr/bin/echo "{{ temp_dir }}/sfit.pl is not found. This usually means that the perl prerequisites are not met. Please check the ansible logs."
+    fi
+  become: true
+  footer: >
+    #### </sfit_l>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sfit_e' in check_list or 'all' in check_list) and '-sfit_e' not in check_list %}
+- header: '#### <sfit_e>'
+  command: |
+    if [ -e {{ temp_dir }}/sfit.pl ]
+    then
+      {% if ansible_facts['distribution'] == 'AIX' %}
+      # AIX does not have timeout comand
+      PERLOUT=$(/usr/bin/perl {{ temp_dir }}/sfit.pl -e 2>&1)
+      {% else %}
+      PERLOUT=$(/usr/bin/timeout 300 /usr/bin/perl {{ temp_dir }}/sfit.pl -e 2>&1)
+      {% endif %}
+      if [ $? -eq 2 ]
+      then
+        /usr/bin/echo "ERROR: perl prerequisite"
+        /usr/bin/echo "$PERLOUT"
+      else
+        /usr/bin/cat $(/usr/bin/echo "$PERLOUT" | /usr/bin/grep 'CSV OUTPUT FILE FILTERED' | cut -d ':' -f 2 | cut -d ' ' -f2) || /usr/bin/echo "ERROR: could not retrieve the path of the generated file"
+      fi
+    else
+      /usr/bin/echo "ERROR"
+      /usr/bin/echo "{{ temp_dir }}/sfit.pl is not found. This usually means that the perl prerequisites are not met. Please check the ansible logs."
+    fi
+  become: true
+  footer: >
+    #### </sfit_e>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudoenv' in check_list or 'all' in check_list) and '-sudoenv' not in check_list %}
+- header: '#### <sudoenv>'
+  command: 'test -e /etc/sudo.env && cat /etc/sudo.env || echo "/etc/sudo.env not found"'
+  become: true
+  footer: >
+    #### </sudoenv>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudoenv_perm' in check_list or 'all' in check_list) and '-sudoenv_perm' not in check_list %}
+- header: '#### <sudoenv_perm>'
+  command: 'test -e /etc/sudo.env && stat /etc/sudo.env || echo "/etc/sudo.env not found"'
+  become: true
+  footer: >
+    #### </sudoenv_perm>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('sudoers_executed_files' in check_list or 'all' in check_list) and '-sudoers_executed_files' not in check_list %}
+- header: '#### <sudoers_executed_files>'
+  command: >
+    grep -v '^\s*$\|^\s*\#' /etc/sudoers /etc/sudoers.d/* | cut -d ':' -f2- | tr ' ' '\n' | grep '/' | tr ',' ' ' | tr -d '\t' | sed s+/$++ | while read line;
+    do
+    len=0;
+    echo '/'`echo $line |  cut -d '/' -f2-$(( 2 + $len ))`;
+    while [[ ! `echo $line | cut -d '/' -f2-$(( 2 + $len ))` == `echo $line | cut -d '/' -f2-$(( 2 + $len + 1 ))` ]];
+    do
+    echo '/'`echo $line |  cut -d '/' -f2-$(( 2 + $len + 1))`;
+    len=$(( $len + 1 ));
+    done;
+    done | sort | uniq | while read file;
+    do
+    [[ -f $file || -d $file ]] && ls -adlL $file || echo "No such file or directory";
+    done
+  become: true
+  footer: >
+    #### </sudoers_executed_files>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

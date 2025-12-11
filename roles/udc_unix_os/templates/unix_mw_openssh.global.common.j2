@@ -1,0 +1,584 @@
+---
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+- header: '#### <OS_INFO>'
+  command: |
+    echo \"HOSTNAME"\";"\"OS_DETAILS"\";"\"RELEASE_NUMBER"\";"\"KERNEL"\";"\"SERIAL\"
+    HOSTNAME="$(hostname)"
+    OS_DETAILS="{{ ansible_facts['distribution'] }}"
+    VERSION_ID="{{ ansible_facts['distribution_version'] }}"
+    KERNEL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/bin/oslevel -s){% else %}$(/usr/bin/uname -r){% endif %}{{ '' }}
+    SERIAL={% if ansible_facts['distribution'] == 'AIX' %}$(/usr/sbin/prtconf | grep 'Machine Serial Number' | awk '{print $NF}' || echo 'SN unreadable'){%
+              elif ansible_facts['os_family'] == 'RedHat' %}{%
+                  if ansible_facts['architecture'] == 'ppc64le' %}$(/bin/cat /sys/firmware/devicetree/base/ibm,hardware-sn | /usr/bin/tr '\0' '\n' || /usr/bin/grep serial_number /proc/powerpc/lparcfg | /usr/bin/cut -d ',' -f 2 | /usr/bin/cut -c 3- || echo 'SN unreadable'){%
+                  else %}$(/bin/cat /sys/devices/virtual/dmi/id/product_serial || /usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+              elif ansible_facts['os_family'] == 'Solaris' %}$(smbios -i1 | grep 'Serial Number' | awk 'BEGIN { FS = ":" } {print $NF}' | sed 's/^[ \t]*//' | grep -v '^$' || echo 'SN unreadable'){%
+              elif ansible_facts['os_family'] == 'Suse' %}{%
+                  if ansible_facts['architecture'] == 'ppc64le' %}$(/usr/bin/grep serial_number /proc/powerpc/lparcfg | cut -d ',' -f 2 | cut -c 3- || echo 'SN unreadable'){%
+                  else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{%
+              else %}$(/usr/sbin/dmidecode -s system-serial-number || echo 'SN unreadable'){% endif %}{{ '' }}
+    echo \"$HOSTNAME"\";"\"$OS_DETAILS"\";"\"$VERSION_ID"\";"\"$KERNEL"\";"\"$SERIAL\"
+  become: true
+  become_user: "{{ become_user | default('root') }}"
+  footer: >
+    #### </OS_INFO>
+
+{% if ('sshd_path' in check_list or 'all' in check_list) and '-sshd_path' not in check_list %}
+- header: '#### <sshd_path>'
+  command: ((which sshd) | /usr/bin/awk '{print "\"current_sshd_path\""} {print "\"" $0 "\""}') || echo "ERR(Sshd_Path_Not_Found)"
+  footer: >
+    #### </sshd_path>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_version' in check_list or 'all' in check_list) and '-ssh_version' not in check_list %}
+- header: '#### <ssh_version>'
+  command: ((/usr/bin/ssh -V 2>&1) | /usr/bin/awk '{print "\"ssh_version\""} {print "\"" $0 "\""}') || echo "ERR(No_Ssh_Version)"
+  become: true
+  footer: >
+    #### </ssh_version>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_process' in check_list or 'all' in check_list) and '-ssh_process' not in check_list %}
+- header: '#### <ssh_process>'
+  command:
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+    (ps -Ao ppid,pid,comm,ruser,args | /usr/bin/egrep -i "sshd|sshd2" | /usr/bin/awk 'BEGIN {OFS=";"; print "\"parent_process_id\"","\"process_id\"","\"command_name\"","\"real_user\"","\"command_line_args\""} tolower($3) ~ /sshd2?$/ {print "\""$1"\"", "\""$2"\"", "\""$3"\"", "\""$4"\"", "\"" substr($0, index($0,$5)) "\""}') || echo "ERR(No_Ssh_Process_Found)"
+{% else %}
+    (ps -Ao ppid,pid,comm,ruser,args | /usr/bin/grep -Ei "sshd|sshd2" | /usr/bin/awk 'BEGIN {OFS=";"; print "\"parent_process_id\"","\"process_id\"","\"command_name\"","\"real_user\"","\"command_line_args\""} tolower($3) ~ /^sshd$/ {print "\""$1"\"", "\""$2"\"", "\""$3"\"", "\""$4"\"", "\"" substr($0, index($0,$5)) "\""}') || echo "ERR(No_Ssh_Process_Found)"
+{% endif %}
+  footer: >
+    #### </ssh_process>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_sshd_config_settings' in check_list or 'all' in check_list) and '-ssh_sshd_config_settings' not in check_list %}
+{# Sections AV.1.4.8, AV.1.5.2, AV.2.1.1.2, AV.2.1.1.3,AV.1.1.1, AV.1.2.1.2, AV.1.2.1.2.1, AV.1.4.1, AV.1.4.2, AV.1.4.3, AV.1.4.5, AV.1.5.1,
+ AV.1.5.5, AV.1.7.1.1, AV.1.7.6 #}
+- header: '#### <ssh_sshd_config_settings>'
+  command: |
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+    sshd_paths=$(ps -Ao args | /usr/bin/egrep -i "sshd|sshd2" | /usr/bin/nawk '{ for (i = 1; i <= NF; i++) { if ($i ~ /^\/[^ ]+\/sshd2?$/) { print $i } } }' | sort -u || echo "ERR(No_sshd_found)") ;
+     echo "$sshd_paths" | while read -r sshd_path; do
+      ($sshd_path -tT | /usr/bin/nawk -v sshdaemon_path="$sshd_path" 'BEGIN { OFS=";"; print "\"sshd_path\"","\"sshd_config\"" } { print "\"" sshdaemon_path "\"", "\"" $0 "\"" }') || echo "$sshd_path;ERR(Unable to list the sshd configurations:'$sshd_path')"
+    done || echo "ERR(No_sshd_found)" ;
+{% else %}
+    sshd_paths=$(ps -Ao args | /usr/bin/grep -Ei "sshd|sshd2" | /usr/bin/grep -Eo "/[^ ]+/sshd[2]?" | /usr/bin/grep -vE "grep|ps" | sort -u || echo "ERR(No_sshd_found)") ;
+    echo "$sshd_paths" | while read -r sshd_path; do
+      ($sshd_path -tT | /usr/bin/awk -v sshdaemon_path="$sshd_path" 'BEGIN { OFS=";"; print "\"sshd_path\"","\"sshd_config\"" } { print "\"" sshdaemon_path "\"", "\"" $0 "\"" }') || echo "$sshd_path;ERR(Unable to list the sshd configurations:'$sshd_path')"
+    done || echo "ERR(No_sshd_found)" ;
+{% endif %}
+  become: true
+  footer: >
+    #### </ssh_sshd_config_settings>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_file_permissions' in check_list or 'all' in check_list) and '-ssh_file_permissions' not in check_list %}
+{# Sections AV.1.8.2.1, AV.1.8.2.2, AV.1.8.2.3, AV.1.8.2.4, AV.1.8.2.5, AV.1.8.2.6, AV.1.8.2.7, AV.1.8.2.8, AV.1.8.2.9, AV.1.8.2.10, AV.1.8.2.11,
+ AV.1.8.2.12, AV.1.8.2.13, AV.1.8.2.14, AV.1.8.2.15, AV.1.8.2.16, AV.1.8.2.17, AV.1.8.2.18, AV.1.8.2.19, AV.1.8.2.20, AV.1.8.2.21, AV.1.8.2.22,
+ AV.1.8.2.23, AV.1.8.2.24, AV.1.8.2.25, AV.1.8.2.26, AV.1.8.2.27, AV.1.8.2.28, AV.1.8.2.29, AV.1.8.2.30, AV.1.8.2.31, AV.1.8.2.32, AV.1.8.2.33,
+ AV.1.8.2.34, AV.1.8.2.35, AV.1.8.2.36, AV.1.8.2.37, AV.1.8.2.38, AV.1.8.2.39, AV.1.8.2.40, AV.1.8.2.41, AV.1.8.2.42, AV.1.8.2.43, AV.1.8.2.44,
+ AV.1.8.2.45, AV.1.8.2.46, AV.1.8.2.47, AV.1.8.2.49, AV.1.8.2.50, AV.1.8.3.1, AV.1.8.3.2, AV.1.8.3.3, AV.1.8.3.4, AV.1.8.3.5, AV.1.8.3.6,
+ AV.1.8.3.7, AV.1.8.3.8, AV.1.8.3.9, AV.1.8.3.10 #}
+- header: '#### <ssh_file_permissions>'
+  command: |
+    files='''
+    /lib/svc/method/sshd
+    /usr/bin/openssl
+    /usr/bin/scp
+    /usr/bin/scp2
+    /usr/bin/sftp
+    /usr/bin/sftp-server
+    /usr/bin/sftp-server2
+    /usr/bin/sftp2
+    /usr/bin/slogin
+    /usr/bin/ssh
+    /usr/bin/ssh-add
+    /usr/bin/ssh-add2
+    /usr/bin/ssh-agent
+    /usr/bin/ssh-agent2
+    /usr/bin/ssh-askpass
+    /usr/bin/ssh-askpass2
+    /usr/bin/ssh-certenroll2
+    /usr/bin/ssh-chrootmgr
+    /usr/bin/ssh-dummy-shell
+    /usr/bin/ssh-keygen
+    /usr/bin/ssh-keygen2
+    /usr/bin/ssh-keyscan
+    /usr/bin/ssh-pam-client
+    /usr/bin/ssh-probe
+    /usr/bin/ssh-probe2
+    /usr/bin/ssh-pubkeymgr
+    /usr/bin/ssh-signer
+    /usr/bin/ssh-signer2
+    /usr/bin/ssh2
+    /opt/freeware/bin/openssl
+    /opt/freeware/bin/scp
+    /opt/freeware/bin/scp2
+    /opt/freeware/bin/sftp
+    /opt/freeware/bin/sftp-server
+    /opt/freeware/bin/sftp-server2
+    /opt/freeware/bin/sftp2
+    /opt/freeware/bin/slogin
+    /opt/freeware/bin/ssh
+    /opt/freeware/bin/ssh-add
+    /opt/freeware/bin/ssh-add2
+    /opt/freeware/bin/ssh-agent
+    /opt/freeware/bin/ssh-agent2
+    /opt/freeware/bin/ssh-askpass
+    /opt/freeware/bin/ssh-askpass2
+    /opt/freeware/bin/ssh-certenroll2
+    /opt/freeware/bin/ssh-chrootmgr
+    /opt/freeware/bin/ssh-dummy-shell
+    /opt/freeware/bin/ssh-keygen
+    /opt/freeware/bin/ssh-keygen2
+    /opt/freeware/bin/ssh-keyscan
+    /opt/freeware/bin/ssh-pam-client
+    /opt/freeware/bin/ssh-probe
+    /opt/freeware/bin/ssh-probe2
+    /opt/freeware/bin/ssh-pubkeymgr
+    /opt/freeware/bin/ssh-signer
+    /opt/freeware/bin/ssh-signer2
+    /opt/freeware/bin/ssh2
+    /opt/freeware/lib-exec/openssh/sftp-server
+    /opt/freeware/lib-exec/openssh/ssh-askpass
+    /opt/freeware/lib-exec/openssh/ssh-keysign
+    /opt/freeware/lib-exec/sftp-server
+    /opt/freeware/lib-exec/ssh-keysign
+    /opt/freeware/lib-exec/ssh-rand-helper
+    /opt/freeware/lib/libcrypto.a
+    /opt/freeware/lib/libssh.a
+    /opt/freeware/lib/libssl.a
+    /opt/freeware/lib/libz.a
+    /opt/freeware/libexec/openssh/sftp-server
+    /opt/freeware/libexec/openssh/ssh-askpass
+    /opt/freeware/libexec/openssh/ssh-keysign
+    /opt/freeware/libexec/sftp-server
+    /opt/freeware/libexec/ssh-keysign
+    /opt/freeware/libexec/ssh-rand-helper
+    /opt/freeware/sbin/sshd
+    /opt/freeware/sbin/sshd-check-conf
+    /opt/freeware/sbin/sshd2
+    /usr/bin/ssh-keygen
+    /usr/lib-exec/openssh/sftp-server
+    /usr/lib-exec/openssh/ssh-askpass
+    /usr/lib-exec/openssh/ssh-keysign
+    /usr/lib-exec/sftp-server
+    /usr/lib-exec/ssh-keysign
+    /usr/lib-exec/ssh-rand-helper
+    /usr/lib/libcrypto.a
+    /usr/lib/libssh.a
+    /usr/lib/libssl.a
+    /usr/lib/libz.a
+    /usr/lib/ssh/ssh-keysign
+    /usr/lib/ssh/sshd
+    /usr/libexec/openssh/sftp-server
+    /usr/libexec/openssh/ssh-askpass
+    /usr/libexec/openssh/ssh-keysign
+    /usr/libexec/sftp-server
+    /usr/libexec/ssh-keysign
+    /usr/libexec/ssh-rand-helper
+    /usr/local/bin/openssl
+    /usr/local/bin/scp
+    /usr/local/bin/scp2
+    /usr/local/bin/sftp
+    /usr/local/bin/sftp-server
+    /usr/local/bin/sftp-server2
+    /usr/local/bin/sftp2
+    /usr/local/bin/slogin
+    /usr/local/bin/ssh
+    /usr/local/bin/ssh-add
+    /usr/local/bin/ssh-add2
+    /usr/local/bin/ssh-agent
+    /usr/local/bin/ssh-agent2
+    /usr/local/bin/ssh-askpass
+    /usr/local/bin/ssh-askpass2
+    /usr/local/bin/ssh-certenroll2
+    /usr/local/bin/ssh-chrootmgr
+    /usr/local/bin/ssh-dummy-shell
+    /usr/local/bin/ssh-keygen
+    /usr/local/bin/ssh-keygen2
+    /usr/local/bin/ssh-keyscan
+    /usr/local/bin/ssh-pam-client
+    /usr/local/bin/ssh-probe
+    /usr/local/bin/ssh-probe2
+    /usr/local/bin/ssh-pubkeymgr
+    /usr/local/bin/ssh-signer
+    /usr/local/bin/ssh-signer2
+    /usr/local/bin/ssh2
+    /usr/local/etc/sshd2_config
+    /usr/local/etc/sshd_config
+    /usr/local/lib-exec/openssh/sftp-server
+    /usr/local/lib-exec/openssh/ssh-askpass
+    /usr/local/lib-exec/openssh/ssh-keysign
+    /usr/local/lib-exec/sftp-server
+    /usr/local/lib-exec/ssh-keysign
+    /usr/local/lib-exec/ssh-rand-helper
+    /usr/local/lib/libcrypto.a
+    /usr/local/lib/libssh.a
+    /usr/local/lib/libssl.a
+    /usr/local/lib/libz.a
+    /usr/local/libexec/openssh/sftp-server
+    /usr/local/libexec/openssh/ssh-askpass
+    /usr/local/libexec/openssh/ssh-keysign
+    /usr/local/libexec/sftp-server
+    /usr/local/libexec/ssh-keysign
+    /usr/local/libexec/ssh-rand-helper
+    /usr/local/sbin/sshd
+    /usr/local/sbin/sshd-check-conf
+    /usr/local/sbin/sshd2
+    /usr/openssh/bin/openssl
+    /usr/openssh/bin/scp
+    /usr/openssh/bin/scp2
+    /usr/openssh/bin/sftp
+    /usr/openssh/bin/sftp-server
+    /usr/openssh/bin/sftp-server2
+    /usr/openssh/bin/sftp2
+    /usr/openssh/bin/slogin
+    /usr/openssh/bin/ssh
+    /usr/openssh/bin/ssh-add
+    /usr/openssh/bin/ssh-add2
+    /usr/openssh/bin/ssh-agent
+    /usr/openssh/bin/ssh-agent2
+    /usr/openssh/bin/ssh-askpass
+    /usr/openssh/bin/ssh-askpass2
+    /usr/openssh/bin/ssh-certenroll2
+    /usr/openssh/bin/ssh-chrootmgr
+    /usr/openssh/bin/ssh-dummy-shell
+    /usr/openssh/bin/ssh-keygen
+    /usr/openssh/bin/ssh-keygen2
+    /usr/openssh/bin/ssh-keyscan
+    /usr/openssh/bin/ssh-pam-client
+    /usr/openssh/bin/ssh-probe
+    /usr/openssh/bin/ssh-probe2
+    /usr/openssh/bin/ssh-pubkeymgr
+    /usr/openssh/bin/ssh-signer
+    /usr/openssh/bin/ssh-signer2
+    /usr/openssh/bin/ssh2
+    /usr/openssh/lib-exec/openssh/sftp-server
+    /usr/openssh/lib-exec/openssh/ssh-askpass
+    /usr/openssh/lib-exec/openssh/ssh-keysign
+    /usr/openssh/lib-exec/sftp-server
+    /usr/openssh/lib-exec/ssh-keysign
+    /usr/openssh/lib-exec/ssh-rand-helper
+    /usr/openssh/lib/libcrypto.a
+    /usr/openssh/lib/libssh.a
+    /usr/openssh/lib/libssl.a
+    /usr/openssh/lib/libz.a
+    /usr/openssh/libexec/openssh/sftp-server
+    /usr/openssh/libexec/openssh/ssh-askpass
+    /usr/openssh/libexec/openssh/ssh-keysign
+    /usr/openssh/libexec/sftp-server
+    /usr/openssh/libexec/ssh-keysign
+    /usr/openssh/libexec/ssh-rand-helper
+    /usr/openssh/sbin/sshd
+    /usr/openssh/sbin/sshd-check-conf
+    /usr/openssh/sbin/sshd2
+    /usr/ssh/bin/openssl
+    /usr/ssh/bin/scp
+    /usr/ssh/bin/scp2
+    /usr/ssh/bin/sftp
+    /usr/ssh/bin/sftp-server
+    /usr/ssh/bin/sftp-server2
+    /usr/ssh/bin/sftp2
+    /usr/ssh/bin/slogin
+    /usr/ssh/bin/ssh
+    /usr/ssh/bin/ssh-add
+    /usr/ssh/bin/ssh-add2
+    /usr/ssh/bin/ssh-agent
+    /usr/ssh/bin/ssh-agent2
+    /usr/ssh/bin/ssh-askpass
+    /usr/ssh/bin/ssh-askpass2
+    /usr/ssh/bin/ssh-certenroll2
+    /usr/ssh/bin/ssh-chrootmgr
+    /usr/ssh/bin/ssh-dummy-shell
+    /usr/ssh/bin/ssh-keygen
+    /usr/ssh/bin/ssh-keygen2
+    /usr/ssh/bin/ssh-keyscan
+    /usr/ssh/bin/ssh-pam-client
+    /usr/ssh/bin/ssh-probe
+    /usr/ssh/bin/ssh-probe2
+    /usr/ssh/bin/ssh-pubkeymgr
+    /usr/ssh/bin/ssh-signer
+    /usr/ssh/bin/ssh-signer2
+    /usr/ssh/bin/ssh2
+    /usr/ssh/lib-exec/openssh/sftp-server
+    /usr/ssh/lib-exec/openssh/ssh-askpass
+    /usr/ssh/lib-exec/openssh/ssh-keysign
+    /usr/ssh/lib-exec/sftp-server
+    /usr/ssh/lib-exec/ssh-keysign
+    /usr/ssh/lib-exec/ssh-rand-helper
+    /usr/ssh/lib/libcrypto.a
+    /usr/ssh/lib/libssh.a
+    /usr/ssh/lib/libssl.a
+    /usr/ssh/lib/libz.a
+    /usr/ssh/libexec/openssh/sftp-server
+    /usr/ssh/libexec/openssh/ssh-askpass
+    /usr/ssh/libexec/openssh/ssh-keysign
+    /usr/ssh/libexec/sftp-server
+    /usr/ssh/libexec/ssh-keysign
+    /usr/ssh/libexec/ssh-rand-helper
+    /usr/ssh/sbin/sshd
+    /usr/ssh/sbin/sshd-check-conf
+    /usr/ssh/sbin/sshd2
+    /etc/openssh/sshd_config
+    /etc/ssh/sshd_config
+    /etc/ssh/sshd2_config
+    /etc/ssh2/sshd_config
+    /etc/ssh2/sshd2_config
+    '''
+    all_files=$(echo "$files" | /usr/bin/sort | /usr/bin/uniq)
+    echo "\"file_name\";\"octal_file_permission\";\"file_owner\";\"file_group\";\"file_uid\";\"file_guid\";\"file_size\";\"human_readble_file_perms\";\"file_type\""
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+    get_special_perms() {
+      special=0
+      [ "$(echo "$1" | cut -c3)" = "s" ] && special=$(expr $special + 4)
+      [ "$(echo "$2" | cut -c3)" = "s" ] && special=$(expr $special + 2)
+      [ "$(echo "$3" | cut -c3)" = "t" ] && special=$(expr $special + 1)
+      echo "$special"
+    }
+    rwx_to_digit() {
+      str="$1"
+      val=0
+      case "$(printf '%s' "$str" | cut -c1)" in	r)
+        val=$((val + 4)) ;;
+      esac
+      case "$(printf '%s' "$str" | cut -c2)" in w)
+        val=$((val + 2)) ;;
+      esac
+      case "$(printf '%s' "$str" | cut -c3)" in [xstST])
+        val=$((val + 1)) ;;
+      esac
+      echo "$val"
+    }
+    for file in ${all_files} ;  do
+      [ "$(echo "$file" | cut -c1)" != "/" ] && continue || true ;
+      if [ -e "$file" ]; then
+        set -- $(/usr/bin/ls -ldn $file | /usr/bin/awk '{print $3, $4}')
+        file_uid=$1
+        file_gid=$2
+        set -- $(/usr/bin/ls -ld $file | /usr/bin/awk '{print $1, $3, $4, $5}')
+        perm=$1
+        file_owner=$2
+        file_group=$3
+        file_size=$4
+        user=$(echo "$perm" | cut -c2-4)
+        group=$(echo "$perm" | cut -c5-7)
+        other=$(echo "$perm" | cut -c8-10)
+        octal_perm="$(get_special_perms "$user" "$group" "$other")$(rwx_to_digit "$user")$(rwx_to_digit "$group")$(rwx_to_digit "$other")"
+        echo "\"$file\";\"$octal_perm\";\"$file_owner\";\"$file_group\";\"$file_uid\";\"$file_gid\";\"$file_size\";\"$perm\";\"\";"
+      else
+        echo "\"${file}\";\"File_Does_Not_Exist\";\"\";\"\";\"\";\"\";\"\";\"\";\"\""
+      fi
+    done || echo "ERR=for_all_files" ;
+{% else %}
+    for file in ${all_files} ;  do
+      [ "${file:0:1}" != "/" ] && continue || true ;
+      stat_output=$((/usr/bin/stat -L -c "%n %a %U %G %u %g  %s %A %F" "${file}") | /usr/bin/awk '{ OFS=";"; print "\"" $1 "\"", "\"" $2 "\"", "\"" $3 "\"", "\"" $4 "\"", "\"" $5 "\"", "\"" $6 "\"", "\"" $7 "\"", "\"" $8 "\"", "\"" $9 "\""}') || true ;
+      [ -n "$stat_output" ] && echo "$stat_output" || echo "\"${file}\";\"File_Does_Not_Exist\";\"\";\"\";\"\";\"\";\"\";\"\";\"\""
+    done || echo "ERR=for_all_files" ;
+{% endif %}
+  become: true
+  footer: '#### </ssh_file_permissions>'
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_sshd_config_file_contents' in check_list or 'all' in check_list) and '-ssh_sshd_config_file_contents' not in check_list %}
+{# Sections AV.1.1.1, AV.1.2.1.2, AV.1.2.1.2.1, AV.1.4.1, AV.1.4.2, AV.1.4.3, AV.1.4.5, AV.1.5.1, AV.1.5.5, AV.1.7.1.1, AV.1.7.6 #}
+- header: '#### <ssh_sshd_config_file_contents>'
+  command: |
+    default_sshd_config_file="/etc/ssh/sshd_config"
+{% if ansible_facts.distribution | lower in ["solaris"] %}
+    (ps -Ao args | /usr/bin/egrep -i "sshd|sshd2" | /usr/bin/nawk '{ if ($0 ~ /^\/[^ ]+\/sshd2?/) { print $0 }  }' | sort -u || echo "ERR(No_sshd_found)") | while read -r sshd_config_file_list;
+    do
+      if echo "$sshd_config_file_list" | /usr/bin/egrep "\-f"; then
+        sshd_config_file=$(echo "$sshd_config_file_list" | /usr/bin/egrep -i "\-f [^ ]+" | /usr/bin/nawk '{print $2}')
+        (/usr/bin/egrep '^[    ]*[^#    ]' "$sshd_config_file" | /usr/bin/nawk -v sshd_config_file="$sshd_config_file" 'BEGIN { OFS=";"; print "\"sshd_config_file\"", "\"config_file_content\"" }
+          { print "\"" sshd_config_file "\"", "\"" $0 "\""}') || echo "ERR(Unable to read contents from '$sshd_config_file')"
+      else
+        (/usr/bin/egrep -i '^[    ]*[^#    ]' "$default_sshd_config_file" | /usr/bin/nawk -v sshd_config_file=$default_sshd_config_file 'BEGIN { OFS=";"; print "\"sshd_config_file\"", "\"config_file_content\"" }
+          { print "\"" sshd_config_file "\"", "\"" $0 "\""}') || echo "ERR(Unable to read the contents from '$default_sshd_config_file')"
+      fi
+    done || echo "ERR(Error while getting config file contents, check SSHD Config file path)" ;
+{% else %}
+    (ps -Ao args | /usr/bin/grep -Ei "sshd|sshd2" | /usr/bin/grep -Ei "/[^ ]+/sshd[2]?($|[ ])" | /usr/bin/grep -vE "grep|ps" || echo "ERR(No_sshd_found)") | while read sshd_config_file_list;
+    do
+      if echo "$sshd_config_file_list" | /usr/bin/grep -q "\-f"; then
+        sshd_config_file=$(echo "$sshd_config_file_list" | /usr/bin/grep -Eo "\-f [^ ]+" | /usr/bin/awk '{print $2}')
+        (/usr/bin/grep -E '^[[:space:]]*[^#[:space:]]' "$sshd_config_file" | /usr/bin/awk -v sshd_config_file="$sshd_config_file" 'BEGIN { OFS=";"; print "\"sshd_config_file\"", "\"config_file_content\"" }
+          { print "\"" sshd_config_file "\"", "\"" $0 "\""}') || echo "ERR(Unable to read contents from '$sshd_config_file')"
+      else
+        (/usr/bin/grep -E '^[[:space:]]*[^#[:space:]]' "$default_sshd_config_file" | /usr/bin/awk -v sshd_config_file=$default_sshd_config_file 'BEGIN { OFS=";"; print "\"sshd_config_file\"", "\"config_file_content\"" }
+          { print "\"" sshd_config_file "\"", "\"" $0 "\""}') || echo "ERR(Unable to read the contents from '$default_sshd_config_file')"
+      fi
+    done || echo "ERR(Error while getting config file contents, check SSHD Config file path)" ;
+{% endif %}
+  become: true
+  footer: >
+    #### </ssh_sshd_config_file_contents>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_data_transmission_server_keys_encryption' in check_list or 'all' in check_list) and '-ssh_data_transmission_server_keys_encryption' not in check_list %}
+{# Sections AV.2.1.1.4 #}
+- header: '#### <ssh_data_transmission_server_keys_encryption>'
+  command: |
+    DATA_TRANSMISSION_SERVER_HOST_KEYS="/etc/ssh/ssh_host_rsa_key /etc/ssh/ssh_host_ecdsa_key /etc/ssh/ssh_host_ed25519_key"
+
+    set_header=true
+    awk_os="/usr/bin/awk"
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+    awk_os="/usr/bin/nawk"
+{% endif %}
+    for file in $DATA_TRANSMISSION_SERVER_HOST_KEYS; do
+      if [ "$set_header" = "true" ]; then
+        echo "\"data_transmission_server_host_key\";\"key_details\""
+        set_header=false
+      fi
+
+      if [ -f "$file" ]; then
+        /usr/bin/ssh-keygen -lf "$file" | $awk_os -v file="$file" 'BEGIN {OFS=";"} { print "\"" file "\"", "\"" $0 "\"" }' || echo "ERR(Unable to get the key details: $file)"
+      else
+        echo "\"$file\";\"File_Does_Not_Exist\""
+      fi
+    done || echo "ERR(DATA_TRANSMISSION_SERVER_HOST_KEYS)"
+  become: true
+  footer: >
+    #### </ssh_data_transmission_server_keys_encryption>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_pub_key_auth_details' in check_list or 'all' in check_list) and '-ssh_pub_key_auth_details' not in check_list %}
+{# Sections AV.1.7.2 #}
+- header: '#### <ssh_pub_key_auth_details>'
+  command: |
+      cmd='
+        set_header=true;
+        awk_os="/usr/bin/awk"
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+        awk_os="/usr/bin/nawk"
+{% endif %}
+        (cat /etc/passwd | $awk_os -F: '\''$1 !~ /^(halt|sync|shutdown|nfsnobody)$/ && $NF !~ /nologin$/ {print $1, $6}'\'' ||
+         echo "ERR(Unable to list the active users)") |
+          while read -r username home_directory; do
+            if [ "$set_header" = "true" ]; then
+              echo "\"username\";\"home\";\"file_name\";\"auth_key_details\""
+              set_header=false
+            fi
+            ssh_absolute_path="$home_directory/.ssh"
+            if [ -d "$ssh_absolute_path" ]; then
+              (find "$ssh_absolute_path" -type f \( -name "id_*" -o -name "authorized_keys*" \) ! -name "*.pub" ||
+               echo "ERR(Unable to find files under $ssh_absolute_path)") |
+                while read -r ssh_auth_key_file; do
+                  (/usr/bin/ssh-keygen -lf "$ssh_auth_key_file" | $awk_os -v user="$username" -v home="$home_directory" -v file="$ssh_auth_key_file" '\''BEGIN {OFS=";";}{print "\"" user "\"", "\"" home "\"", "\"" file "\"", "\"" $0 "\""}'\'') ||
+                   echo "ERR(Unable to get ssh key details from file '\''$ssh_auth_key_file'\'')"
+                done || echo "ERR(Error while reading ssh_auth_key_file)"
+            else
+              echo "\"$username\";\"$home_directory\";\"$ssh_absolute_path\";\"Folder_Does_Not_Exist\""
+            fi
+          done || echo "ERR(Unable to get active users)"
+      '
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+      sh -c "$cmd"
+{% else %}
+      timeout 30m sh -c "$cmd"
+{% endif %}
+  become: true
+  footer: >
+    #### </ssh_pub_key_auth_details>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_authorized_keys_file' in check_list or 'all' in check_list) and '-ssh_authorized_keys_file' not in check_list %}
+{# Sections AV.1.7.2.1, AV.1.1.6 #}
+- header: '#### <ssh_authorized_keys_file>'
+  command: |
+      cmd='
+        set_header=true;
+        AUTHORIZED_KEY_FILES="authorized_keys authorized_keys2"
+
+        awk_os="/usr/bin/awk"
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+        awk_os="/usr/bin/nawk"
+{% endif %}
+        (cat /etc/passwd | $awk_os -F: '\''$1 !~ /^(halt|sync|shutdown|nfsnobody)$/ && $NF !~ /nologin$/ {print $1, $6}'\'' || echo "ERR(Unable to list the active users)") |
+        while read -r username home_directory; do
+          if [ "$set_header" = true ]; then
+            echo "\"username\";\"file_name\";\"auth_key_file_content\""
+            set_header=false
+          fi
+          for file_name in $AUTHORIZED_KEY_FILES; do
+            ssh_auth_key_file="${home_directory}/.ssh/$file_name"
+            if [ -f "$ssh_auth_key_file" ]; then
+              /usr/bin/grep -v "^$" "$ssh_auth_key_file" | $awk_os -v user="$username" -v file="$ssh_auth_key_file" '\''{OFS=";"; print "\"" user "\"", "\"" file "\"", "\"" $0 "\"" }'\'' || echo "ERR(Unable to read contents from $ssh_auth_key_file)"
+            else
+              echo "\"$username\";\"$ssh_auth_key_file\";\"File_Does_Not_Exist\""
+            fi
+          done || echo "ERR(No authorized_key_files found)"
+        done || echo "ERR(Unable to get active users)"
+      '
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+      sh -c "$cmd"
+{% else %}
+      timeout 30m sh -c "$cmd"
+{% endif %}
+  become: true
+  footer: >
+    #### </ssh_authorized_keys_file>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}
+{% if ('ssh_private_key_passphrase' in check_list or 'all' in check_list) and '-ssh_private_key_passphrase' not in check_list %}
+{# Sections AV.1.1.4 #}
+- header: '#### <ssh_private_key_passphrase>'
+  command: |
+      cmd='
+        set_header=true
+        awk_os="/usr/bin/awk"
+        ssh_auth_key_grep='\''/usr/bin/grep -qE "^[0-9]+\$"'\''
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+        awk_os="/usr/bin/nawk"
+        ssh_auth_key_grep='\''/usr/bin/egrep "^[0-9]+\$"'\''
+{% endif %}
+        cat /etc/passwd | $awk_os -F: '\''$1 !~ /^(halt|sync|shutdown|nfsnobody)$/ && $NF !~ /nologin$/ {print $1, $6}'\'' |
+        while read username home_directory; do
+          if [ "$set_header" = "true" ]; then
+            echo "\"username\";\"file_name\";\"return_code\";\"auth_key_details\""
+            set_header=false
+          fi
+          ssh_absolute_path="$home_directory/.ssh"
+          if [ -d "$ssh_absolute_path" ]; then
+            private_key_found=false
+            /usr/bin/find "$ssh_absolute_path" -type f \( -name "id_*" ! -name "*.pub" ! -name "authorized_keys*" \) |
+            while read ssh_auth_key_file; do
+              private_key_found=true
+              return_code=0
+              (/usr/bin/ssh-keygen -y -P "" -f "$ssh_auth_key_file" || echo $?) |
+              while read ssh_auth_key_details; do
+                if echo "$ssh_auth_key_details" | eval "$ssh_auth_key_grep"; then
+                  echo "\"$username\";\"$ssh_auth_key_file\";\"$ssh_auth_key_details\";\"Incorrect_Passphrase_Supplied_To_Decrypt_Private_Key\""
+                else
+                  echo "\"$username\";\"$ssh_auth_key_file\";\"0\";\"$ssh_auth_key_details\""
+                fi
+              done || echo "ERR(Error while reading ssh_auth_key_details)"
+            done || echo "ERR(Error while reading ssh_auth_key_file)"
+            if [ "$private_key_found" = "false" ]; then
+              echo "\"$username\";\"$ssh_absolute_path\";\"\";\"No_Private_Keys_Found\""
+            fi
+          else
+            echo "\"$username\";\"$ssh_absolute_path\";\"\";\"Folder_Does_Not_Exist\""
+          fi
+        done || echo "ERR(Unable to get active users)"
+      '
+{% if ansible_facts.distribution | lower in ["aix", "solaris"] %}
+      sh -c "$cmd"
+{% else %}
+      timeout 30m sh -c "$cmd"
+{% endif %}
+  become: true
+  footer: >
+    #### </ssh_private_key_passphrase>
+
+{% endif %}
+{# ---------------------------------------------------------------------------------------------------------------------------------------------------------- #}

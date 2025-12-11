@@ -1,0 +1,130 @@
+---
+- name: Make sure created files are always cleaned up from the endpoint
+  block:
+    - name: Include fact gathering
+      ansible.builtin.include_tasks: "tasks/role_tasks/fact_gathering.yml"
+      args:
+        apply:
+          vars:
+            error_msg: compute_conn
+            applied_gather_subset: "{{ udc_gather_subset_unix }}"
+
+    - name: Create temp directories
+      ansible.builtin.include_tasks: "tasks/role_tasks/create_temp_dirs.yml"
+      args:
+        apply:
+          vars:
+            error_msg: compute_conn
+
+    - name: Set os_version and policy patterns on each host individually
+      ansible.builtin.include_tasks: "tasks/role_tasks/set_os_version_and_policy_patterns.yml"
+
+    - name: Construct variables on each host individually
+      ansible.builtin.include_tasks: "tasks/role_tasks/generate_from_j2.yml"
+      args:
+        apply:
+          delegate_to: localhost
+
+    # This could be dynamic in the future if we have more collectors
+    # requiring extra steps
+    - name: Include namebase-specific tasks
+      when: '["unix_mw_sudo"] is ansible.builtin.contains(namebase)'
+      ansible.builtin.include_tasks: "tasks/{{ namebase }}.yml"
+
+    - name: Generate the outputfile from template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/outbase.j2"
+        dest: "{{ temp_dir }}/{{ out_file }}"
+        mode: "0600"
+        force: true
+
+    - name: Initialize logfile
+      ansible.builtin.copy:
+        content: "{{ '%Y-%m-%d %H:%M:%S' | strftime }} - DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} STARTED"
+        dest: "{{ temp_dir }}/{{ log_file }}"
+        mode: "0600"
+        force: true
+
+    - name: Block for gathering data
+      environment:
+        PATH: "/usr/sbin:/sbin:{{ ansible_env.PATH }}"
+        CATALINA_HOME: "{{ udc_catalina_home | default('') }}"
+        CATALINA_BASE: "{{ udc_catalina_base | default('') }}"
+      block:
+        - name: Initialize exec_rc
+          ansible.builtin.set_fact:
+            exec_rc: 0
+            error_on_exec: false
+            fatal_on_exec: false
+
+        - name: Gather data
+          ansible.builtin.include_tasks: tasks/shell.yml
+          loop: "{{ settings }}"
+          loop_control:
+            loop_var: commands
+
+    - name: Data collection finished block
+      block:
+        - name: Finalize logfile
+          ansible.builtin.lineinfile:
+            path: "{{ temp_dir }}/{{ log_file }}"
+            line: "{{ item }}"
+          loop:
+            - "{{ '%Y-%m-%d %H:%M:%S' | strftime }} - DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} FINISHED \
+              {% if error_on_exec is defined and error_on_exec | bool %}WITH ERRORS ({{ exec_rc }}){% else %}SUCCESSFULLY ({{ exec_rc }}){% endif %}"
+            - "{{ '%a %b %d %H:%M:%S %Y' | strftime }}: Data collection status: {% if exec_rc != '3' and error_on_exec is defined and error_on_exec | bool %}\
+              Failed{% else %}OK{% endif %}"
+
+        - name: Set udc_collection_result variable
+          ansible.builtin.set_fact:
+            udc_collection_result: |-
+              DATA COLLECTION ON {{ satdevicename | default(inventory_hostname) | upper }} FINISHED {% if error_on_exec is defined and error_on_exec | bool %}\
+              WITH ERRORS ({{ exec_rc }}){% else %}SUCCESSFULLY ({{ exec_rc }}){% endif %}.
+              Data collection status: {% if exec_rc != '3' and error_on_exec is defined and error_on_exec | bool %}Failed{% else %}OK{% endif %}
+
+        - name: Copy policy files to destination on the Control Node
+          ansible.builtin.copy:
+            src: "{{ item }}"
+            dest: "{{ control_temp_dir }}/{{ item | basename }}"
+            mode: "0600"
+          delegate_to: localhost
+          loop: "{{ policy_files.files | map(attribute='path') | list }}"
+          when: policy_files.files[0] is defined
+
+        - name: Register the files to be fetched
+          ansible.builtin.find:
+            paths: '{{ temp_dir }}'
+            excludes:
+              - "*.yml"
+              - "*.pl"
+          register: bundle_elements
+
+        - name: Fetch files from Endpoint
+          ansible.builtin.fetch:
+            src: "{{ temp_dir }}/{{ item | basename }}"
+            dest: "{{ control_temp_dir }}/{{ item | basename }}"
+            flat: true
+          loop: "{{ bundle_elements.files | map(attribute='path') | list }}"
+
+        - name: Compress files into Bundle
+          community.general.archive:
+            path:
+              - "{{ control_temp_dir }}/*"
+            exclude_path:
+              - "{{ control_temp_dir }}/*.yml"
+              - "{{ control_temp_dir }}/*.ps1"
+            dest: "{{ control_temp_dir }}/../{{ bundle_file }}"
+            mode: "0600"
+            format: zip
+            remove: true
+          delegate_to: localhost
+  always:
+    - name: Delete created directory from the Endpoint
+      ansible.builtin.file:
+        path: "{{ temp_dir }}"
+        state: absent
+    - name: Delete created directory from the Control Node
+      ansible.builtin.file:
+        path: "{{ control_temp_dir }}"
+        state: absent
+      delegate_to: localhost

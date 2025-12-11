@@ -1,0 +1,19 @@
+---
+# Tasks file for unix_mw_sudo specific tasks
+- name: Check perl in $PATH
+  ansible.builtin.command: 'perl -v 2>/dev/null || echo "perl not installed"'
+  changed_when: false
+  failed_when: perl_check.rc != 0
+  register: perl_check
+
+- name: Set fact for perl installed
+  ansible.builtin.set_fact:
+    perl_version: "{{ perl_check.stdout | regex_search('5.[0-9]{1,2}.[0-9]{1,2}') }}"
+
+- name: Deploy sfit.pl
+  # sfit's dependency is perl 5.10.0 or greater
+  when: perl_version | length > 0 and perl_version.split('.')[1] | int >= 10
+  ansible.builtin.copy:
+    src: "{{ namebase }}/sfit.pl"
+    dest: "{{ temp_dir }}/sfit.pl"
+    mode: "0700"

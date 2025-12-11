@@ -1,0 +1,18 @@
+#jinja2:lstrip_blocks: True,trim_blocks: True
+---
+- header: '#### <uname>'
+  command: 'uname -X; echo""'
+  footer: >
+    #### </uname>
+
+- header: '#### <prtconf-b>'
+  command: 'prtconf -b; echo ""'
+  become: true
+  footer: >
+    #### </prtconf-b>
+
+- header: '#### <smbios-i1>'
+  command: 'smbios -i1; echo ""'
+  become: true
+  footer: >
+    #### </smbios-i1>

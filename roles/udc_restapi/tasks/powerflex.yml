@@ -1,0 +1,12 @@
+---
+- name: Gather data
+  sat.udc.powerflex:
+    out_file: "{{ control_temp_dir }}/{{ out_file }}"
+    log_file: "{{ control_temp_dir }}/{{ log_file }}"
+    api_url: "{{ udc_api_url | default(lookup('env', 'Endpoint_URL')) }}"
+    api_user: "{{ udc_api_user | default(lookup('env', 'Endpoint_USERNAME')) }}"
+    api_password: "{{ udc_api_password | default(lookup('env', 'Endpoint_PASSWORD')) }}"
+    verify_ssl: "{{ udc_verify_ssl | default(False) }}"
+    timeout: "{{ udc_api_timeout | default('300') }}"
+    udc_debug: "{{ udc_debug | default(False) }}"
+  register: module_result
